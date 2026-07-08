@@ -6,19 +6,35 @@ const includePadrao = ['categoria', 'autor'];
 
 router.get('/', async (req, res, next) => {
   try {
-    const destaques = await Post.findAll({
-      where: { status: 'publicado', destaque: true },
-      include: includePadrao,
-      order: [['publicadoEm', 'DESC']],
-      limit: 5
-    });
-    const recentes = await Post.findAll({
-      where: { status: 'publicado' },
-      include: includePadrao,
-      order: [['publicadoEm', 'DESC']],
-      limit: 10
-    });
-    res.render('site/home', { titulo: 'Início', destaques, recentes });
+    const [destaques, recentes, categorias] = await Promise.all([
+      Post.findAll({
+        where: { status: 'publicado', destaque: true },
+        include: includePadrao,
+        order: [['publicadoEm', 'DESC']],
+        limit: 5
+      }),
+      Post.findAll({
+        where: { status: 'publicado' },
+        include: includePadrao,
+        order: [['publicadoEm', 'DESC']],
+        limit: 10
+      }),
+      Category.findAll({ order: [['ordem', 'ASC'], ['nome', 'ASC']] })
+    ]);
+
+    // Blocos editoriais por categoria (apenas categorias com posts)
+    const blocosCategorias = [];
+    for (const categoria of categorias) {
+      const posts = await Post.findAll({
+        where: { categoriaId: categoria.id, status: 'publicado' },
+        include: includePadrao,
+        order: [['publicadoEm', 'DESC']],
+        limit: 4
+      });
+      if (posts.length) blocosCategorias.push({ categoria, posts });
+    }
+
+    res.render('site/home', { titulo: 'Início', destaques, recentes, blocosCategorias });
   } catch (e) { next(e); }
 });
 
@@ -26,16 +42,22 @@ router.get('/categoria/:slug', async (req, res, next) => {
   try {
     const categoria = await Category.findOne({ where: { slug: req.params.slug } });
     if (!categoria) return next();
-    const posts = await Post.findAll({
+    const porPagina = 12;
+    const paginaAtual = Math.max(parseInt(req.query.pagina, 10) || 1, 1);
+    const { rows: posts, count: total } = await Post.findAndCountAll({
       where: { categoriaId: categoria.id, status: 'publicado' },
       include: includePadrao,
-      order: [['publicadoEm', 'DESC']]
+      order: [['publicadoEm', 'DESC']],
+      limit: porPagina,
+      offset: (paginaAtual - 1) * porPagina
     });
     res.render('site/categoria', {
       titulo: categoria.nome,
       metaDescricao: categoria.descricao || null,
       categoria,
-      posts
+      posts,
+      paginaAtual,
+      totalPaginas: Math.max(Math.ceil(total / porPagina), 1)
     });
   } catch (e) { next(e); }
 });
@@ -47,11 +69,20 @@ router.get('/post/:slug', async (req, res, next) => {
       include: includePadrao
     });
     if (!post) return next();
+    const relacionados = post.categoriaId
+      ? await Post.findAll({
+          where: { categoriaId: post.categoriaId, status: 'publicado', id: { [Op.ne]: post.id } },
+          include: includePadrao,
+          order: [['publicadoEm', 'DESC']],
+          limit: 4
+        })
+      : [];
     res.render('site/post', {
       titulo: post.titulo,
-      metaDescricao: post.resumo || null,
+      metaDescricao: post.metaDescription || post.resumo || null,
       artigo: post,
-      post
+      post,
+      relacionados
     });
   } catch (e) { next(e); }
 });
@@ -122,9 +153,13 @@ router.get('/sitemap.xml', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-// Robots.txt
+// Robots.txt — respeita o toggle "indexar no Google" das configurações
 router.get('/robots.txt', (req, res) => {
   const base = `${req.protocol}://${req.get('host')}`;
+  const indexar = (res.locals.config.seo_indexar || 'sim') !== 'nao';
+  if (!indexar) {
+    return res.type('text/plain').send('User-agent: *\nDisallow: /\n');
+  }
   res.type('text/plain').send(
     'User-agent: *\n' +
     'Allow: /\n' +

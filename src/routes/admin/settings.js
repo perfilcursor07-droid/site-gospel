@@ -14,26 +14,45 @@ router.get('/', async (req, res, next) => {
 
 router.post('/', upload.fields([
   { name: 'logo', maxCount: 1 },
+  { name: 'favicon', maxCount: 1 },
   { name: 'og_imagem', maxCount: 1 }
 ]), async (req, res) => {
   try {
     const campos = [
       'site_nome',
+      'site_slogan',
       'site_descricao',
+      'cor_primaria',
       'seo_titulo',
       'seo_descricao',
       'seo_palavras_chave',
+      'social_facebook',
+      'social_instagram',
+      'social_youtube',
+      'social_whatsapp',
       'google_site_verification',
-      'google_analytics'
+      'google_analytics',
+      'head_custom',
+      'footer_copyright',
+      'footer_links'
     ];
     for (const campo of campos) {
       if (campo in req.body) await Setting.definir(campo, (req.body[campo] || '').trim());
     }
 
+    // Toggle de indexação: quando desligado, aplica noindex + bloqueia no robots.txt
+    await Setting.definir('seo_indexar', req.body.seo_indexar === 'on' ? 'sim' : 'nao');
+
     if (req.files && req.files.logo) {
       await Setting.definir('logo', `/uploads/${req.files.logo[0].filename}`);
     } else if (req.body.remover_logo === 'on') {
       await Setting.definir('logo', '');
+    }
+
+    if (req.files && req.files.favicon) {
+      await Setting.definir('favicon', `/uploads/${req.files.favicon[0].filename}`);
+    } else if (req.body.remover_favicon === 'on') {
+      await Setting.definir('favicon', '');
     }
 
     if (req.files && req.files.og_imagem) {

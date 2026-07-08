@@ -6,7 +6,7 @@ router.use(permitir('administrador', 'gestor'));
 
 router.get('/', async (req, res, next) => {
   try {
-    const categorias = await Category.findAll({ order: [['nome', 'ASC']] });
+    const categorias = await Category.findAll({ order: [['ordem', 'ASC'], ['nome', 'ASC']] });
     res.render('admin/categories/index', { titulo: 'Categorias', categorias });
   } catch (e) { next(e); }
 });
@@ -17,7 +17,12 @@ router.get('/nova', (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    await Category.create({ nome: req.body.nome, descricao: req.body.descricao });
+    await Category.create({
+      nome: req.body.nome,
+      descricao: req.body.descricao,
+      corHex: req.body.cor_hex || '#ea580c',
+      ordem: parseInt(req.body.ordem, 10) || 0
+    });
     req.flash('sucesso', 'Categoria criada com sucesso.');
     res.redirect('/admin/categorias');
   } catch (e) {
@@ -46,6 +51,8 @@ router.post('/:id', async (req, res) => {
     }
     categoria.nome = req.body.nome;
     categoria.descricao = req.body.descricao;
+    categoria.corHex = req.body.cor_hex || '#ea580c';
+    categoria.ordem = parseInt(req.body.ordem, 10) || 0;
     await categoria.save();
     req.flash('sucesso', 'Categoria atualizada com sucesso.');
     res.redirect('/admin/categorias');

@@ -33,7 +33,7 @@ app.use(async (req, res, next) => {
   res.locals.urlAtual = res.locals.urlBase + req.originalUrl.split('?')[0];
   try {
     const [categorias, config] = await Promise.all([
-      Category.findAll({ order: [['nome', 'ASC']] }),
+      Category.findAll({ order: [['ordem', 'ASC'], ['nome', 'ASC']] }),
       Setting.obterTodas()
     ]);
     res.locals.categoriasNav = categorias;

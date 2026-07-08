@@ -14,11 +14,15 @@ const Post = sequelize.define('Post', {
     defaultValue: 'rascunho'
   },
   destaque: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
+  metaTitle: { type: DataTypes.STRING, allowNull: true },
+  metaDescription: { type: DataTypes.STRING, allowNull: true },
   publicadoEm: { type: DataTypes.DATE, allowNull: true }
 }, { tableName: 'posts' });
 
+// Slug editável: usa o slug informado ou gera a partir do título
 Post.beforeValidate((post) => {
-  if (post.titulo) post.slug = slugify(post.titulo, { lower: true, strict: true });
+  const base = (post.slug && post.slug.trim()) ? post.slug : post.titulo;
+  if (base) post.slug = slugify(base, { lower: true, strict: true });
 });
 
 Post.beforeSave((post) => {

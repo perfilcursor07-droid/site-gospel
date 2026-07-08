@@ -16,7 +16,7 @@ router.get('/', async (req, res, next) => {
 
 router.get('/novo', async (req, res, next) => {
   try {
-    const categorias = await Category.findAll({ order: [['nome', 'ASC']] });
+    const categorias = await Category.findAll({ order: [['ordem', 'ASC'], ['nome', 'ASC']] });
     res.render('admin/posts/form', { titulo: 'Novo Post', post: null, categorias });
   } catch (e) { next(e); }
 });
@@ -26,12 +26,15 @@ router.post('/', upload.single('imagem'), async (req, res) => {
     const ehUsuario = req.session.user.papel === 'usuario';
     await Post.create({
       titulo: req.body.titulo,
+      slug: (req.body.slug || '').trim(),
       resumo: req.body.resumo,
       conteudo: req.body.conteudo,
       categoriaId: req.body.categoriaId || null,
       autorId: req.session.user.id,
       status: ehUsuario ? 'rascunho' : (req.body.status || 'rascunho'),
       destaque: ehUsuario ? false : req.body.destaque === 'on',
+      metaTitle: (req.body.meta_title || '').trim() || null,
+      metaDescription: (req.body.meta_description || '').trim() || null,
       imagem: req.file ? `/uploads/${req.file.filename}` : null
     });
     req.flash('sucesso', 'Post criado com sucesso.');
@@ -49,7 +52,7 @@ router.get('/:id/editar', async (req, res, next) => {
       req.flash('erro', 'Post não encontrado ou sem permissão.');
       return res.redirect('/admin/posts');
     }
-    const categorias = await Category.findAll({ order: [['nome', 'ASC']] });
+    const categorias = await Category.findAll({ order: [['ordem', 'ASC'], ['nome', 'ASC']] });
     res.render('admin/posts/form', { titulo: 'Editar Post', post, categorias });
   } catch (e) { next(e); }
 });
@@ -63,9 +66,12 @@ router.post('/:id', upload.single('imagem'), async (req, res) => {
     }
     const ehUsuario = req.session.user.papel === 'usuario';
     post.titulo = req.body.titulo;
+    post.slug = (req.body.slug || '').trim();
     post.resumo = req.body.resumo;
     post.conteudo = req.body.conteudo;
     post.categoriaId = req.body.categoriaId || null;
+    post.metaTitle = (req.body.meta_title || '').trim() || null;
+    post.metaDescription = (req.body.meta_description || '').trim() || null;
     if (!ehUsuario) {
       post.status = req.body.status || 'rascunho';
       post.destaque = req.body.destaque === 'on';
