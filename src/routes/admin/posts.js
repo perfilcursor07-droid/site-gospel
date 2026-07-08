@@ -2,6 +2,8 @@ const router = require('express').Router();
 const { Post, Category } = require('../../models');
 const upload = require('../../config/upload');
 
+router.use('/ia', require('./aiPosts'));
+
 function podeEditar(user, post) {
   return ['administrador', 'gestor'].includes(user.papel) || post.autorId === user.id;
 }
@@ -24,6 +26,10 @@ router.get('/novo', async (req, res, next) => {
 router.post('/', upload.single('imagem'), async (req, res) => {
   try {
     const ehUsuario = req.session.user.papel === 'usuario';
+    let imagem = req.file ? `/uploads/${req.file.filename}` : null;
+    if (!imagem && req.body.imagem_ia_url && req.body.imagem_ia_url.startsWith('/uploads/')) {
+      imagem = req.body.imagem_ia_url;
+    }
     await Post.create({
       titulo: req.body.titulo,
       slug: (req.body.slug || '').trim(),
@@ -35,7 +41,7 @@ router.post('/', upload.single('imagem'), async (req, res) => {
       destaque: ehUsuario ? false : req.body.destaque === 'on',
       metaTitle: (req.body.meta_title || '').trim() || null,
       metaDescription: (req.body.meta_description || '').trim() || null,
-      imagem: req.file ? `/uploads/${req.file.filename}` : null
+      imagem
     });
     req.flash('sucesso', 'Post criado com sucesso.');
     res.redirect('/admin/posts');

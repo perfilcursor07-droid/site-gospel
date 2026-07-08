@@ -6,6 +6,7 @@ const { Post, Page, Category, User } = require('../../models');
 router.use(autenticado);
 router.use((req, res, next) => {
   res.locals.layout = 'layouts/admin';
+  res.locals.adminPath = req.path;
   next();
 });
 

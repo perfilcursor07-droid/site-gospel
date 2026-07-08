@@ -1,29 +1,52 @@
 <% if (destaques.length) { %>
 <% const principal = destaques[0]; %>
-<% const laterais = destaques.length > 1 ? destaques.slice(1, 5) : recentes.filter(function (p) { return p.id !== principal.id; }).slice(0, 4); %>
-<section class="grid lg:grid-cols-3 gap-6 mb-12">
-  <article class="lg:col-span-2 relative rounded-lg overflow-hidden bg-gray-900 min-h-[16rem] sm:min-h-[22rem] lg:min-h-[26rem] group">
+<%
+  const idsUsados = new Set([principal.id]);
+  let laterais = destaques.slice(1, 5);
+  laterais.forEach(function (p) { idsUsados.add(p.id); });
+  if (laterais.length < 4) {
+    recentes.forEach(function (p) {
+      if (laterais.length >= 4) return;
+      if (!idsUsados.has(p.id)) {
+        laterais.push(p);
+        idsUsados.add(p.id);
+      }
+    });
+  }
+  const preencherColuna = laterais.length >= 3;
+%>
+<section class="grid lg:grid-cols-3 gap-4 mb-8 lg:items-stretch">
+  <article class="lg:col-span-2 relative overflow-hidden bg-gray-900 min-h-[11rem] sm:min-h-[14rem] lg:min-h-[17rem] group">
     <a href="/post/<%= principal.slug %>" class="absolute inset-0">
       <% if (principal.imagem) { %>
         <img src="<%= principal.imagem %>" alt="<%= principal.titulo %>" class="absolute inset-0 w-full h-full object-cover opacity-85 group-hover:scale-105 transition duration-500">
       <% } %>
-      <div class="absolute inset-x-0 bottom-0 p-4 sm:p-6 pt-20 sm:pt-28 bg-gradient-to-t from-black/90 via-black/50 to-transparent">
-        <% if (principal.categoria) { %><span class="text-xs font-extrabold uppercase tracking-widest" style="color: <%= principal.categoria.corHex || '#fb923c' %>"><%= principal.categoria.nome %></span><% } %>
-        <h1 class="mt-1 text-xl sm:text-2xl lg:text-4xl font-extrabold text-white leading-tight group-hover:underline"><%= principal.titulo %></h1>
-        <% if (principal.resumo) { %><p class="mt-2 text-gray-200 text-sm lg:text-base line-clamp-2 hidden sm:block"><%= principal.resumo %></p><% } %>
+      <div class="absolute inset-x-0 bottom-0 p-3 sm:p-4 pt-14 sm:pt-16 bg-gradient-to-t from-black/90 via-black/50 to-transparent">
+        <% if (principal.categoria) { %><span class="text-[10px] sm:text-xs font-extrabold uppercase tracking-widest" style="color: <%= principal.categoria.corHex || '#fb923c' %>"><%= principal.categoria.nome %></span><% } %>
+        <h1 class="mt-0.5 text-lg sm:text-xl lg:text-2xl font-extrabold text-white leading-tight group-hover:underline line-clamp-3"><%= principal.titulo %></h1>
+        <% if (principal.resumo) { %><p class="mt-1 text-gray-200 text-xs sm:text-sm line-clamp-2 hidden sm:block"><%= principal.resumo %></p><% } %>
       </div>
     </a>
   </article>
 
-  <div class="bg-white rounded-lg border border-gray-200 divide-y divide-gray-100">
+  <div class="flex flex-col bg-white divide-y divide-gray-100 lg:min-h-[17rem] <%= preencherColuna ? 'justify-stretch' : 'justify-start' %>">
     <% laterais.forEach(function (post) { %>
-      <article class="p-5 group">
-        <a href="/post/<%= post.slug %>">
-          <% if (post.categoria) { %><span class="text-xs font-extrabold uppercase tracking-widest" style="color: <%= post.categoria.corHex || '#ea580c' %>"><%= post.categoria.nome %></span><% } %>
-          <h2 class="mt-1 text-base font-extrabold leading-snug text-gray-900 group-hover:underline"><%= post.titulo %></h2>
+      <article class="group <%= preencherColuna ? 'flex-1 flex' : '' %>">
+        <a href="/post/<%= post.slug %>" class="flex gap-2 sm:gap-3 p-3 sm:p-3.5 w-full <%= preencherColuna ? 'items-center h-full' : 'items-start' %>">
+          <div class="flex-1 min-w-0">
+            <% if (post.categoria) { %><span class="text-[10px] sm:text-xs font-extrabold uppercase tracking-widest" style="color: <%= post.categoria.corHex || '#ea580c' %>"><%= post.categoria.nome %></span><% } %>
+            <h2 class="mt-0.5 text-xs sm:text-sm font-extrabold leading-snug text-gray-900 group-hover:underline line-clamp-2"><%= post.titulo %></h2>
+            <% if (post.resumo) { %><p class="mt-1 text-[11px] sm:text-xs text-gray-500 line-clamp-1 hidden sm:block"><%= post.resumo %></p><% } %>
+          </div>
+          <% if (post.imagem) { %>
+            <img src="<%= post.imagem %>" alt="<%= post.titulo %>" class="w-14 h-11 sm:w-16 sm:h-12 object-cover flex-shrink-0 hidden sm:block">
+          <% } %>
         </a>
       </article>
     <% }) %>
+    <% if (!laterais.length) { %>
+      <p class="p-5 text-sm text-gray-400">Nenhuma outra matéria em destaque.</p>
+    <% } %>
   </div>
 </section>
 <% } %>

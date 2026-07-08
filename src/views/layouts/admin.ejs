@@ -5,38 +5,90 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title><%= titulo %> | Painel Admin</title>
   <% if (config.favicon) { %><link rel="icon" href="<%= config.favicon %>"><% } %>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/admin.css">
 </head>
-<body class="admin">
+<body class="admin" id="admin-body">
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-topo">
-      <div class="sidebar-logo">
-        <% if (config.logo) { %><img src="<%= config.logo %>" alt="<%= config.site_nome || 'Site Gospel' %>"><% } else { %>site<strong>gospel</strong><% } %>
-      </div>
-      <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Abrir menu">☰</button>
+      <a href="/admin" class="sidebar-brand">
+        <% if (config.logo) { %>
+          <img src="<%= config.logo %>" alt="<%= config.site_nome || 'Site Gospel' %>" class="sidebar-brand-img">
+        <% } else { %>
+          <span class="sidebar-brand-icon">S</span>
+          <span class="sidebar-brand-text">site<strong>gospel</strong></span>
+        <% } %>
+      </a>
+      <button class="sidebar-toggle-mobile" id="sidebar-toggle" aria-label="Abrir menu" aria-expanded="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
     </div>
-    <nav id="sidebar-nav">
-      <a href="/admin">Dashboard</a>
-      <a href="/admin/posts">Posts</a>
+
+    <% const path = typeof adminPath !== 'undefined' ? adminPath : ''; %>
+    <nav id="sidebar-nav" class="sidebar-nav">
+      <p class="sidebar-secao">Menu</p>
+      <a href="/admin" class="nav-item <%= path === '/' ? 'ativo' : '' %>" data-tooltip="Dashboard">
+        <span class="nav-icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></span>
+        <span class="nav-texto">Dashboard</span>
+      </a>
+      <a href="/admin/posts" class="nav-item <%= path.startsWith('/posts') ? 'ativo' : '' %>" data-tooltip="Posts">
+        <span class="nav-icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span>
+        <span class="nav-texto">Posts</span>
+      </a>
       <% if (usuarioLogado.papel !== 'usuario') { %>
-        <a href="/admin/paginas">Páginas</a>
-        <a href="/admin/categorias">Categorias</a>
+        <a href="/admin/paginas" class="nav-item <%= path.startsWith('/paginas') ? 'ativo' : '' %>" data-tooltip="Páginas">
+          <span class="nav-icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg></span>
+          <span class="nav-texto">Páginas</span>
+        </a>
+        <a href="/admin/categorias" class="nav-item <%= path.startsWith('/categorias') ? 'ativo' : '' %>" data-tooltip="Categorias">
+          <span class="nav-icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg></span>
+          <span class="nav-texto">Categorias</span>
+        </a>
       <% } %>
       <% if (usuarioLogado.papel === 'administrador') { %>
-        <a href="/admin/usuarios">Usuários</a>
-        <a href="/admin/configuracoes">Configurações</a>
+        <a href="/admin/usuarios" class="nav-item <%= path.startsWith('/usuarios') ? 'ativo' : '' %>" data-tooltip="Usuários">
+          <span class="nav-icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
+          <span class="nav-texto">Usuários</span>
+        </a>
+        <a href="/admin/configuracoes" class="nav-item <%= path.startsWith('/configuracoes') ? 'ativo' : '' %>" data-tooltip="Configurações">
+          <span class="nav-icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
+          <span class="nav-texto">Configurações</span>
+        </a>
       <% } %>
-      <a href="/" target="_blank">Ver site</a>
-      <a href="/logout" class="sair">Sair</a>
+
+      <p class="sidebar-secao">Ações</p>
+      <a href="/" target="_blank" class="nav-item" data-tooltip="Ver site">
+        <span class="nav-icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></span>
+        <span class="nav-texto">Ver site</span>
+      </a>
+      <a href="/logout" class="nav-item nav-sair" data-tooltip="Sair">
+        <span class="nav-icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></span>
+        <span class="nav-texto">Sair</span>
+      </a>
     </nav>
+
+    <div class="sidebar-rodape">
+      <button type="button" class="sidebar-collapse" id="sidebar-collapse" aria-label="Recolher menu">
+        <svg class="icone-collapse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        <span class="nav-texto">Recolher menu</span>
+      </button>
+    </div>
   </aside>
+
   <div class="conteudo">
     <header class="topbar">
-      <span class="topbar-titulo"><%= config.site_nome || 'Site Gospel' %></span>
+      <button class="topbar-menu-btn" id="topbar-menu-btn" aria-label="Abrir menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+      <span class="topbar-titulo"><%= titulo %></span>
       <span class="topbar-usuario">
         <span class="avatar"><%= usuarioLogado.nome.charAt(0).toUpperCase() %></span>
-        <strong><%= usuarioLogado.nome %></strong>
-        <span class="papel"><%= usuarioLogado.papel %></span>
+        <span class="topbar-usuario-info">
+          <strong><%= usuarioLogado.nome %></strong>
+          <span class="papel"><%= usuarioLogado.papel %></span>
+        </span>
       </span>
     </header>
     <main>
@@ -45,11 +97,45 @@
       <%- body %>
     </main>
   </div>
+
   <script>
     (function () {
-      var btn = document.getElementById('sidebar-toggle');
+      var body = document.getElementById('admin-body');
+      var sidebar = document.getElementById('sidebar');
       var nav = document.getElementById('sidebar-nav');
-      if (btn && nav) btn.addEventListener('click', function () { nav.classList.toggle('aberto'); });
+      var btnMobile = document.getElementById('sidebar-toggle');
+      var btnTopbar = document.getElementById('topbar-menu-btn');
+      var btnCollapse = document.getElementById('sidebar-collapse');
+
+      if (localStorage.getItem('sidebar-recolhida') === '1') {
+        body.classList.add('sidebar-recolhida');
+      }
+
+      function toggleMobile() {
+        var aberto = sidebar.classList.toggle('mobile-aberto');
+        body.classList.toggle('sidebar-overlay', aberto);
+        if (btnMobile) btnMobile.setAttribute('aria-expanded', String(aberto));
+      }
+
+      if (btnMobile) btnMobile.addEventListener('click', toggleMobile);
+      if (btnTopbar) btnTopbar.addEventListener('click', toggleMobile);
+
+      if (btnCollapse) {
+        btnCollapse.addEventListener('click', function () {
+          body.classList.toggle('sidebar-recolhida');
+          localStorage.setItem('sidebar-recolhida', body.classList.contains('sidebar-recolhida') ? '1' : '0');
+        });
+      }
+
+      document.addEventListener('click', function (e) {
+        if (window.innerWidth <= 720 && sidebar.classList.contains('mobile-aberto')) {
+          if (!sidebar.contains(e.target) && e.target !== btnTopbar && !btnTopbar.contains(e.target)) {
+            sidebar.classList.remove('mobile-aberto');
+            body.classList.remove('sidebar-overlay');
+            if (btnMobile) btnMobile.setAttribute('aria-expanded', 'false');
+          }
+        }
+      });
     })();
   </script>
 </body>

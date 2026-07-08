@@ -1,61 +1,169 @@
 <% const corCategoria = post.categoria ? (post.categoria.corHex || '#ea580c') : '#ea580c'; %>
-<nav class="max-w-3xl mx-auto mb-4 text-sm text-gray-400" aria-label="Breadcrumb">
-  <a href="/" class="hover:text-gray-600 transition">Início</a>
-  <% if (post.categoria) { %>
-    <span class="mx-1">›</span>
-    <a href="/categoria/<%= post.categoria.slug %>" class="hover:text-gray-600 transition"><%= post.categoria.nome %></a>
-  <% } %>
-  <span class="mx-1">›</span>
-  <span class="text-gray-500"><%= post.titulo %></span>
-</nav>
 
-<article class="max-w-3xl mx-auto bg-white rounded-lg border border-gray-200 p-6 lg:p-10">
-  <% if (post.categoria) { %>
-    <a href="/categoria/<%= post.categoria.slug %>" class="text-xs font-extrabold uppercase tracking-widest hover:underline" style="color: <%= corCategoria %>"><%= post.categoria.nome %></a>
-  <% } %>
-  <h1 class="mt-2 text-2xl sm:text-3xl lg:text-4xl font-extrabold leading-tight text-gray-900"><%= post.titulo %></h1>
-  <% if (post.resumo) { %><p class="mt-3 text-lg text-gray-500"><%= post.resumo %></p><% } %>
+<section class="bg-white">
+  <div class="max-w-6xl mx-auto px-3 sm:px-4 pt-2 sm:pt-4 pb-10">
+    <nav class="max-w-4xl mx-auto mb-5 text-sm text-gray-400" aria-label="Breadcrumb">
+      <a href="/" class="hover:text-gray-700 transition">Início</a>
+      <% if (post.categoria) { %>
+        <span class="mx-1">›</span>
+        <a href="/categoria/<%= post.categoria.slug %>" class="hover:text-gray-700 transition"><%= post.categoria.nome %></a>
+      <% } %>
+      <span class="mx-1">›</span>
+      <span class="text-gray-500"><%= post.titulo %></span>
+    </nav>
 
-  <div class="mt-4 pb-6 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3">
-    <p class="text-sm text-gray-400">
-      <% if (post.autor) { %>Por <span class="font-bold text-gray-600"><%= post.autor.nome %></span><% } %>
-      <% if (post.publicadoEm) { %> • <%= new Date(post.publicadoEm).toLocaleDateString('pt-BR') %><% } %>
-    </p>
-    <div class="flex items-center gap-2 text-xs font-bold">
-      <span class="text-gray-400 uppercase tracking-widest">Compartilhar</span>
-      <a href="https://wa.me/?text=<%= encodeURIComponent(post.titulo + ' ' + urlAtual) %>" target="_blank" rel="noopener"
-        class="px-3 py-1.5 rounded-full bg-green-600 text-white hover:opacity-90 transition">WhatsApp</a>
-      <a href="https://www.facebook.com/sharer/sharer.php?u=<%= encodeURIComponent(urlAtual) %>" target="_blank" rel="noopener"
-        class="px-3 py-1.5 rounded-full bg-blue-700 text-white hover:opacity-90 transition">Facebook</a>
-      <a href="https://twitter.com/intent/tweet?text=<%= encodeURIComponent(post.titulo) %>&url=<%= encodeURIComponent(urlAtual) %>" target="_blank" rel="noopener"
-        class="px-3 py-1.5 rounded-full bg-gray-900 text-white hover:opacity-90 transition">X</a>
-    </div>
+    <article class="max-w-4xl mx-auto">
+      <% if (post.categoria) { %>
+        <a href="/categoria/<%= post.categoria.slug %>" class="text-xs font-extrabold uppercase tracking-[0.18em] hover:underline" style="color: <%= corCategoria %>"><%= post.categoria.nome %></a>
+      <% } %>
+      <h1 class="mt-3 text-3xl sm:text-4xl lg:text-5xl font-extrabold leading-tight tracking-tight text-gray-950"><%= post.titulo %></h1>
+      <% if (post.resumo) { %><p class="mt-4 text-lg sm:text-xl leading-relaxed text-gray-500 max-w-3xl"><%= post.resumo %></p><% } %>
+
+      <div class="post-meta-bar">
+        <div class="post-meta-info">
+          <% if (post.autor) { %>Por <span class="post-meta-autor"><%= post.autor.nome %></span><% } %>
+          <% if (post.publicadoEm) { %>
+            <% if (post.autor) { %><span class="post-meta-sep" aria-hidden="true">|</span><% } %>
+            <time datetime="<%= new Date(post.publicadoEm).toISOString() %>"><%= new Date(post.publicadoEm).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }) %></time>
+          <% } %>
+        </div>
+        <div class="post-share" data-url="<%= urlAtual %>" data-titulo="<%= post.titulo %>">
+          <span class="post-share-label">Compartilhe</span>
+          <div class="post-share-buttons" role="group" aria-label="Compartilhar matéria">
+            <a href="https://wa.me/?text=<%= encodeURIComponent(post.titulo + ' ' + urlAtual) %>" target="_blank" rel="noopener noreferrer"
+              class="post-share-btn post-share-btn--whatsapp" aria-label="Compartilhar no WhatsApp" title="WhatsApp">
+              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.435 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+            </a>
+            <a href="https://www.facebook.com/sharer/sharer.php?u=<%= encodeURIComponent(urlAtual) %>" target="_blank" rel="noopener noreferrer"
+              class="post-share-btn post-share-btn--facebook" aria-label="Compartilhar no Facebook" title="Facebook">
+              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+            </a>
+            <a href="https://twitter.com/intent/tweet?text=<%= encodeURIComponent(post.titulo) %>&url=<%= encodeURIComponent(urlAtual) %>" target="_blank" rel="noopener noreferrer"
+              class="post-share-btn post-share-btn--x" aria-label="Compartilhar no X" title="X">
+              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+            </a>
+            <button type="button" class="post-share-btn post-share-btn--link" id="btn-copiar-link" aria-label="Copiar link da matéria" title="Copiar link">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <% if (post.imagem) { %>
+        <figure class="mt-7 bg-gray-100">
+          <img src="<%= post.imagem %>" alt="<%= post.titulo %>" class="w-full h-auto max-h-[34rem] object-contain mx-auto">
+        </figure>
+      <% } %>
+
+      <div class="mt-8 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_300px] gap-10">
+        <div>
+          <div class="max-w-none text-[1.06rem] leading-8 text-gray-700 [&_p]:mb-6 [&_h2]:mt-10 [&_h2]:mb-4 [&_h2]:text-2xl [&_h2]:font-extrabold [&_h2]:leading-tight [&_h3]:mt-8 [&_h3]:mb-3 [&_h3]:text-xl [&_h3]:font-bold [&_a]:text-primary [&_a]:underline-offset-2 hover:[&_a]:underline [&_strong]:font-extrabold [&_ul]:my-6 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:my-6 [&_ol]:list-decimal [&_ol]:pl-6 [&_li]:mb-2 [&_blockquote]:my-8 [&_blockquote]:border-l-4 [&_blockquote]:border-primary [&_blockquote]:pl-5 [&_blockquote]:italic [&_blockquote]:text-gray-600">
+            <%- post.conteudo %>
+          </div>
+
+          <% if (typeof leiaMais !== 'undefined' && leiaMais.length) { %>
+          <section class="mt-12 border-t border-gray-200 pt-8">
+            <h2 class="flex items-center gap-3 text-lg font-extrabold uppercase tracking-wide text-gray-900 mb-5">
+              <span class="w-1.5 h-6 rounded-full" style="background: <%= corCategoria %>"></span> Leia mais
+            </h2>
+            <div class="space-y-5">
+              <% leiaMais.slice(0, 3).forEach(function (item) { %>
+                <article class="grid grid-cols-[1fr_110px] sm:grid-cols-[1fr_180px] gap-4 items-start border-b border-gray-100 pb-5">
+                  <div>
+                    <% if (item.categoria) { %><span class="text-xs font-extrabold uppercase tracking-widest" style="color: <%= item.categoria.corHex || '#ea580c' %>"><%= item.categoria.nome %></span><% } %>
+                    <h3 class="mt-1 text-lg sm:text-xl font-extrabold leading-snug text-gray-950">
+                      <a href="/post/<%= item.slug %>" class="hover:underline"><%= item.titulo %></a>
+                    </h3>
+                    <% if (item.resumo) { %><p class="mt-2 text-sm sm:text-base text-gray-500 line-clamp-2"><%= item.resumo %></p><% } %>
+                  </div>
+                  <% if (item.imagem) { %>
+                    <a href="/post/<%= item.slug %>"><img src="<%= item.imagem %>" alt="<%= item.titulo %>" class="w-full aspect-[4/3] object-cover"></a>
+                  <% } %>
+                </article>
+              <% }) %>
+            </div>
+          </section>
+          <% } %>
+        </div>
+
+        <aside class="lg:pl-2">
+          <% if (typeof ultimas !== 'undefined' && ultimas.length) { %>
+          <section class="border-t-4 pt-4" style="border-color: <%= corCategoria %>">
+            <h2 class="text-sm font-extrabold uppercase tracking-[0.16em] text-gray-900 mb-4">Mais recentes</h2>
+            <div class="space-y-4">
+              <% ultimas.slice(0, 5).forEach(function (item) { %>
+                <article class="pb-4 border-b border-gray-100">
+                  <% if (item.categoria) { %><span class="text-[11px] font-extrabold uppercase tracking-widest" style="color: <%= item.categoria.corHex || '#ea580c' %>"><%= item.categoria.nome %></span><% } %>
+                  <h3 class="mt-1 text-base font-extrabold leading-snug text-gray-900">
+                    <a href="/post/<%= item.slug %>" class="hover:underline"><%= item.titulo %></a>
+                  </h3>
+                  <% if (item.publicadoEm) { %><p class="mt-2 text-xs text-gray-400"><%= new Date(item.publicadoEm).toLocaleDateString('pt-BR') %></p><% } %>
+                </article>
+              <% }) %>
+            </div>
+          </section>
+          <% } %>
+        </aside>
+      </div>
+    </article>
   </div>
-
-  <% if (post.imagem) { %><img src="<%= post.imagem %>" alt="<%= post.titulo %>" class="mt-6 w-full max-h-[28rem] object-cover rounded-lg"><% } %>
-  <div class="mt-6 text-lg leading-relaxed text-gray-700 space-y-4 [&_a]:text-primary [&_a:hover]:underline">
-    <%- post.conteudo %>
-  </div>
-</article>
+</section>
 
 <% if (typeof relacionados !== 'undefined' && relacionados.length) { %>
-<section class="max-w-3xl mx-auto mt-10">
-  <h2 class="flex items-center gap-3 text-lg font-extrabold uppercase tracking-wide text-gray-900 mb-5">
-    <span class="w-1.5 h-6 rounded-full" style="background: <%= corCategoria %>"></span> Leia também
-  </h2>
-  <div class="grid sm:grid-cols-2 gap-4">
-    <% relacionados.forEach(function (rel) { %>
-      <article class="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-md transition group">
-        <a href="/post/<%= rel.slug %>" class="flex flex-col h-full">
-          <% if (rel.imagem) { %><img src="<%= rel.imagem %>" alt="<%= rel.titulo %>" class="w-full aspect-video object-cover"><% } %>
-          <div class="p-4 flex-1 flex flex-col">
-            <% if (rel.categoria) { %><span class="text-xs font-extrabold uppercase tracking-widest" style="color: <%= rel.categoria.corHex || '#ea580c' %>"><%= rel.categoria.nome %></span><% } %>
-            <h3 class="mt-1 text-base font-extrabold leading-snug text-gray-900 group-hover:underline"><%= rel.titulo %></h3>
-            <% if (rel.publicadoEm) { %><p class="mt-auto pt-3 text-xs text-gray-400"><%= new Date(rel.publicadoEm).toLocaleDateString('pt-BR') %></p><% } %>
-          </div>
-        </a>
-      </article>
-    <% }) %>
+<section class="bg-white border-t border-gray-100">
+  <div class="max-w-6xl mx-auto px-3 sm:px-4 py-10">
+    <div class="max-w-4xl mx-auto">
+      <h2 class="flex items-center gap-3 text-lg font-extrabold uppercase tracking-wide text-gray-900 mb-6">
+        <span class="w-1.5 h-6 rounded-full" style="background: <%= corCategoria %>"></span> Matérias relacionadas
+      </h2>
+      <div class="grid sm:grid-cols-2 gap-x-8 gap-y-6">
+        <% relacionados.forEach(function (rel) { %>
+          <article class="group">
+            <% if (rel.imagem) { %>
+              <a href="/post/<%= rel.slug %>" class="block overflow-hidden">
+                <img src="<%= rel.imagem %>" alt="<%= rel.titulo %>" class="w-full aspect-video object-cover transition duration-300 group-hover:scale-[1.02]">
+              </a>
+            <% } %>
+            <div class="pt-3">
+              <% if (rel.categoria) { %><span class="text-xs font-extrabold uppercase tracking-widest" style="color: <%= rel.categoria.corHex || '#ea580c' %>"><%= rel.categoria.nome %></span><% } %>
+              <h3 class="mt-1 text-lg font-extrabold leading-snug text-gray-950">
+                <a href="/post/<%= rel.slug %>" class="group-hover:underline"><%= rel.titulo %></a>
+              </h3>
+              <% if (rel.resumo) { %><p class="mt-2 text-sm text-gray-500 line-clamp-2"><%= rel.resumo %></p><% } %>
+            </div>
+          </article>
+        <% }) %>
+      </div>
+    </div>
   </div>
 </section>
 <% } %>
+
+<script>
+(function () {
+  var btn = document.getElementById('btn-copiar-link');
+  var share = document.querySelector('.post-share');
+  if (!btn || !share) return;
+
+  btn.addEventListener('click', function () {
+    var url = share.dataset.url || window.location.href;
+
+    function feedback() {
+      btn.classList.add('is-copied');
+      btn.setAttribute('title', 'Link copiado!');
+      setTimeout(function () {
+        btn.classList.remove('is-copied');
+        btn.setAttribute('title', 'Copiar link');
+      }, 2000);
+    }
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(feedback).catch(function () {
+        window.prompt('Copie o link:', url);
+      });
+    } else {
+      window.prompt('Copie o link:', url);
+    }
+  });
+})();
+</script>

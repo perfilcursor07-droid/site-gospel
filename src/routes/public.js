@@ -69,20 +69,36 @@ router.get('/post/:slug', async (req, res, next) => {
       include: includePadrao
     });
     if (!post) return next();
-    const relacionados = post.categoriaId
-      ? await Post.findAll({
-          where: { categoriaId: post.categoriaId, status: 'publicado', id: { [Op.ne]: post.id } },
-          include: includePadrao,
-          order: [['publicadoEm', 'DESC']],
-          limit: 4
-        })
-      : [];
+    const [relacionados, leiaMais, ultimas] = await Promise.all([
+      post.categoriaId
+        ? Post.findAll({
+            where: { categoriaId: post.categoriaId, status: 'publicado', id: { [Op.ne]: post.id } },
+            include: includePadrao,
+            order: [['publicadoEm', 'DESC']],
+            limit: 4
+          })
+        : [],
+      Post.findAll({
+        where: { status: 'publicado', id: { [Op.ne]: post.id } },
+        include: includePadrao,
+        order: [['publicadoEm', 'DESC']],
+        limit: 6
+      }),
+      Post.findAll({
+        where: { status: 'publicado', id: { [Op.ne]: post.id } },
+        include: includePadrao,
+        order: [['publicadoEm', 'DESC']],
+        limit: 8
+      })
+    ]);
     res.render('site/post', {
       titulo: post.titulo,
       metaDescricao: post.metaDescription || post.resumo || null,
       artigo: post,
       post,
-      relacionados
+      relacionados,
+      leiaMais,
+      ultimas
     });
   } catch (e) { next(e); }
 });

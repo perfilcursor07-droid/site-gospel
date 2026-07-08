@@ -1,100 +1,601 @@
-<h1><%= post ? 'Editar post' : 'Novo post' %></h1>
-<form action="<%= post ? '/admin/posts/' + post.id : '/admin/posts' %>" method="post" enctype="multipart/form-data" class="form form-largo">
-  <label>Título
-    <input type="text" name="titulo" id="campo-titulo" value="<%= post ? post.titulo : '' %>" required>
-  </label>
-  <label>Slug (URL do post)
-    <input type="text" name="slug" id="campo-slug" value="<%= post ? post.slug : '' %>" placeholder="gerado automaticamente a partir do título">
-  </label>
-  <p class="dica">Endereço final: /post/<span id="slug-previa"><%= post ? post.slug : '...' %></span></p>
-  <label>Resumo
-    <textarea name="resumo" rows="2"><%= post ? (post.resumo || '') : '' %></textarea>
-  </label>
-  <label>Conteúdo (aceita HTML)
-    <textarea name="conteudo" rows="14" required><%= post ? post.conteudo : '' %></textarea>
-  </label>
-  <label>Categoria
-    <select name="categoriaId">
-      <option value="">Sem categoria</option>
-      <% categorias.forEach(function (c) { %>
-        <option value="<%= c.id %>" <%= post && post.categoriaId === c.id ? 'selected' : '' %>><%= c.nome %></option>
-      <% }) %>
-    </select>
-  </label>
+<% const ehNovo = !post; const podeIa = ehNovo && usuarioLogado.papel !== 'usuario'; %>
 
-  <div class="campo-upload">
-    <label>Imagem destacada
-      <input type="file" name="imagem" id="campo-imagem" accept="image/*">
-    </label>
-    <img id="preview-imagem" src="<%= post && post.imagem ? post.imagem : '' %>" alt="Prévia da imagem" class="preview-img preview-og" <%= post && post.imagem ? '' : 'hidden' %>>
-    <p class="dica">Esta imagem também é usada como imagem de compartilhamento (OG) do post. Sem imagem, o site usa a imagem OG padrão das configurações<%= config.og_imagem ? '' : ' (ainda não definida)' %>.</p>
-  </div>
+<link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
 
-  <h3>SEO do post (opcional)</h3>
-  <label>Meta título
-    <input type="text" name="meta_title" maxlength="60" value="<%= post ? (post.metaTitle || '') : '' %>" data-contador="cont-meta-titulo" placeholder="Título alternativo para o Google">
-  </label>
-  <p class="dica"><span id="cont-meta-titulo">0</span>/60 caracteres</p>
-  <label>Meta descrição
-    <textarea name="meta_description" rows="2" maxlength="160" data-contador="cont-meta-desc" placeholder="Descrição alternativa para o Google"><%= post ? (post.metaDescription || '') : '' %></textarea>
-  </label>
-  <p class="dica"><span id="cont-meta-desc">0</span>/160 caracteres</p>
+<div class="post-editor">
+  <header class="post-editor-header">
+    <div class="post-editor-titulo">
+      <a href="/admin/posts" class="voltar-posts">← Posts</a>
+      <h1><%= post ? 'Editar post' : 'Novo post' %></h1>
+    </div>
+    <% if (podeIa) { %>
+    <div class="modo-tabs" role="tablist">
+      <button type="button" class="modo-tab ativa" data-modo="manual" role="tab">Escrever</button>
+      <button type="button" class="modo-tab" data-modo="ia" role="tab">Gerar com IA</button>
+    </div>
+    <% } %>
+  </header>
 
-  <% if (usuarioLogado.papel !== 'usuario') { %>
-    <label>Status
-      <select name="status">
-        <option value="rascunho" <%= post && post.status === 'rascunho' ? 'selected' : '' %>>Rascunho</option>
-        <option value="publicado" <%= post && post.status === 'publicado' ? 'selected' : '' %>>Publicado</option>
-      </select>
-    </label>
-    <label class="checkbox">
-      <input type="checkbox" name="destaque" <%= post && post.destaque ? 'checked' : '' %>> Destaque na página inicial
-    </label>
-  <% } else { %>
-    <p class="dica">Seu post será salvo como rascunho e revisado por um gestor ou administrador.</p>
+  <% if (podeIa) { %>
+  <section class="painel-ia modo-painel" id="painel-ia" hidden>
+    <div class="painel-ia-intro">
+      <div>
+        <h2>Reportagem automática com IA</h2>
+        <p class="dica">Pesquisa fontes reais na internet, apura assuntos em alta e gera matéria original com tom jornalístico (estilo g1), capa e SEO.</p>
+      </div>
+      <span class="badge-ia">DeepSeek V4 Flash</span>
+    </div>
+
+    <div class="ia-passos">
+      <div class="ia-passo ativo" data-passo="1"><span>1</span> Nichos</div>
+      <div class="ia-passo" data-passo="2"><span>2</span> Tópicos</div>
+      <div class="ia-passo" data-passo="3"><span>3</span> Publicar</div>
+    </div>
+
+    <div class="ia-passo-conteudo" id="ia-passo-1">
+      <div class="ia-grid">
+        <div class="ia-campo ia-campo-largo">
+          <label for="ia-palavras">Palavras-chave / nichos</label>
+          <input type="text" id="ia-palavras" placeholder="gospel, pastor, pastora, louvor, igreja" value="gospel, pastor, pastora, louvor">
+          <p class="dica">Separe por vírgula. Ex: culto, adoração, testemunho, congresso</p>
+        </div>
+        <div class="ia-campo">
+          <label for="ia-quantidade">Tópicos por nicho</label>
+          <select id="ia-quantidade">
+            <option value="3">3</option>
+            <option value="5" selected>5</option>
+            <option value="8">8</option>
+          </select>
+        </div>
+      </div>
+      <div class="tags-rapidas">
+        <span class="dica">Sugestões:</span>
+        <% ['gospel', 'pastor', 'pastora', 'louvor', 'adoração', 'congresso', 'testemunho'].forEach(function (tag) { %>
+          <button type="button" class="tag-rapida" data-tag="<%= tag %>"><%= tag %></button>
+        <% }) %>
+      </div>
+      <button type="button" class="btn btn-primario" id="btn-ia-pesquisar">Buscar tópicos na internet</button>
+    </div>
+
+    <div class="ia-passo-conteudo" id="ia-passo-2" hidden>
+      <div class="ia-passo-topo">
+        <h3>Tópicos encontrados</h3>
+        <label class="checkbox ia-selecionar-todos">
+          <input type="checkbox" id="ia-selecionar-todos" checked> Selecionar todos
+        </label>
+      </div>
+      <div id="ia-lista-topicos" class="ia-lista-topicos"></div>
+      <div class="ia-passo-acoes">
+        <button type="button" class="btn btn-sec" id="btn-ia-voltar-1">← Voltar</button>
+        <button type="button" class="btn btn-sec" id="btn-ia-uma">Gerar 1 no formulário</button>
+        <button type="button" class="btn btn-primario" id="btn-ia-continuar-2">Continuar →</button>
+      </div>
+    </div>
+
+    <div class="ia-passo-conteudo" id="ia-passo-3" hidden>
+      <div class="ia-grid ia-grid-3">
+        <div class="ia-campo">
+          <label for="ia-categoria">Categoria</label>
+          <select id="ia-categoria">
+            <option value="">Sem categoria</option>
+            <% categorias.forEach(function (c) { %>
+              <option value="<%= c.id %>"><%= c.nome %></option>
+            <% }) %>
+          </select>
+        </div>
+        <div class="ia-campo">
+          <label for="ia-status">Salvar como</label>
+          <select id="ia-status">
+            <option value="rascunho">Rascunho</option>
+            <option value="publicado">Publicado</option>
+          </select>
+        </div>
+        <div class="ia-campo ia-campo-acao">
+          <label>&nbsp;</label>
+          <button type="button" class="btn btn-primario btn-bloco" id="btn-ia-lote">Gerar matérias selecionadas</button>
+        </div>
+      </div>
+      <button type="button" class="btn btn-sec btn-link" id="btn-ia-voltar-2">← Voltar aos tópicos</button>
+    </div>
+
+    <div id="ia-status-msg" class="ia-status-msg" hidden></div>
+  </section>
   <% } %>
 
-  <div class="form-acoes">
-    <button class="btn btn-primario">Salvar</button>
-    <% if (post && post.status === 'publicado') { %>
-      <a href="/post/<%= post.slug %>" target="_blank" class="btn btn-sec">Ver no site</a>
-    <% } %>
-    <a href="/admin/posts" class="btn btn-sec">Cancelar</a>
-  </div>
-</form>
+  <form action="<%= post ? '/admin/posts/' + post.id : '/admin/posts' %>" method="post" enctype="multipart/form-data" class="post-editor-form modo-painel ativa" id="form-post">
+    <div class="post-editor-corpo">
+      <div class="post-editor-main">
+        <section class="editor-bloco">
+          <label class="editor-label" for="campo-titulo">Título da matéria</label>
+          <input type="text" name="titulo" id="campo-titulo" class="input-titulo" value="<%= post ? post.titulo : '' %>" placeholder="Digite um título chamativo..." required>
+        </section>
 
+        <section class="editor-bloco">
+          <label class="editor-label" for="campo-resumo">Subtítulo / linha fina</label>
+          <textarea name="resumo" id="campo-resumo" rows="2" class="input-resumo" placeholder="Resumo curto que aparece na listagem e abaixo do título"><%= post ? (post.resumo || '') : '' %></textarea>
+          <p class="dica contador-linha"><span id="cont-resumo">0</span>/200 caracteres</p>
+        </section>
+
+        <section class="editor-bloco editor-bloco-conteudo">
+          <div class="editor-conteudo-header">
+            <label class="editor-label" for="quill-editor">Conteúdo da matéria</label>
+            <div class="editor-modo-tabs" role="tablist">
+              <button type="button" class="editor-modo-btn ativa" data-editor-modo="visual" role="tab">Visual</button>
+              <button type="button" class="editor-modo-btn" data-editor-modo="html" role="tab">HTML</button>
+            </div>
+          </div>
+          <div class="editor-visual-wrap" id="editor-visual-wrap">
+            <div id="quill-editor"></div>
+          </div>
+          <textarea name="conteudo" id="campo-conteudo" class="editor-html-textarea" hidden><%= post ? post.conteudo : '' %></textarea>
+        </section>
+
+        <section class="editor-bloco editor-bloco-seo" id="bloco-seo">
+          <button type="button" class="seo-toggle" id="seo-toggle" aria-expanded="false">
+            <span>SEO avançado</span>
+            <span class="seo-toggle-icone">▼</span>
+          </button>
+          <div class="seo-conteudo" id="seo-conteudo" hidden>
+            <label class="editor-label-sm" for="meta-title">Meta título <span class="contador-inline" id="cont-meta-titulo">0</span>/60</label>
+            <input type="text" name="meta_title" id="meta-title" maxlength="60" value="<%= post ? (post.metaTitle || '') : '' %>" data-contador="cont-meta-titulo" placeholder="Título para o Google (opcional)">
+            <label class="editor-label-sm" for="meta-desc">Meta descrição <span class="contador-inline" id="cont-meta-desc">0</span>/160</label>
+            <textarea name="meta_description" id="meta-desc" rows="2" maxlength="160" data-contador="cont-meta-desc" placeholder="Descrição para resultados de busca (opcional)"><%= post ? (post.metaDescription || '') : '' %></textarea>
+            <div class="snippet-google" id="snippet-preview">
+              <div class="snippet-url"><%= config.site_nome || 'Site Gospel' %> › post › <span id="slug-previa"><%= post ? post.slug : '...' %></span></div>
+              <div class="snippet-titulo" id="snippet-titulo"><%= post ? post.titulo : 'Título da matéria' %></div>
+              <div class="snippet-desc" id="snippet-desc"><%= post ? (post.resumo || 'Descrição da matéria...') : 'Descrição da matéria...' %></div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <aside class="post-editor-sidebar">
+        <div class="sidebar-card sidebar-publicar">
+          <h3 class="sidebar-card-titulo">Publicação</h3>
+          <% if (usuarioLogado.papel !== 'usuario') { %>
+            <label class="sidebar-label">Status</label>
+            <select name="status" class="sidebar-select">
+              <option value="rascunho" <%= post && post.status === 'rascunho' ? 'selected' : (!post ? 'selected' : '') %>>Rascunho</option>
+              <option value="publicado" <%= post && post.status === 'publicado' ? 'selected' : '' %>>Publicado</option>
+            </select>
+            <label class="checkbox sidebar-check">
+              <input type="checkbox" name="destaque" <%= post && post.destaque ? 'checked' : '' %>>
+              Destaque na home
+            </label>
+          <% } else { %>
+            <p class="dica sidebar-aviso">Salvo como rascunho para revisão.</p>
+          <% } %>
+          <div class="sidebar-botoes">
+            <button type="submit" class="btn btn-primario btn-bloco" id="btn-salvar">
+              <%= post ? 'Atualizar' : 'Publicar matéria' %>
+            </button>
+            <% if (post && post.status === 'publicado') { %>
+              <a href="/post/<%= post.slug %>" target="_blank" class="btn btn-sec btn-bloco">Ver no site</a>
+            <% } %>
+            <a href="/admin/posts" class="btn btn-sec btn-bloco btn-ghost">Cancelar</a>
+          </div>
+        </div>
+
+        <div class="sidebar-card">
+          <h3 class="sidebar-card-titulo">Categoria</h3>
+          <select name="categoriaId" class="sidebar-select">
+            <option value="">Sem categoria</option>
+            <% categorias.forEach(function (c) { %>
+              <option value="<%= c.id %>" <%= post && post.categoriaId === c.id ? 'selected' : '' %>><%= c.nome %></option>
+            <% }) %>
+          </select>
+        </div>
+
+        <div class="sidebar-card">
+          <h3 class="sidebar-card-titulo">Imagem de capa</h3>
+          <div class="upload-zona<%= post && post.imagem ? ' has-preview' : '' %>" id="upload-zona">
+            <img id="preview-imagem" src="<%= post && post.imagem ? post.imagem : '' %>" alt="Prévia" class="preview-img preview-cap" <%= post && post.imagem ? '' : 'hidden' %>>
+            <div class="upload-placeholder" id="upload-placeholder" <%= post && post.imagem ? 'hidden' : '' %>>
+              <span class="upload-icone">+</span>
+              <span>Clique ou arraste uma imagem</span>
+              <span class="dica">JPG, PNG ou WebP · máx. 5 MB</span>
+            </div>
+            <input type="file" name="imagem" id="campo-imagem" accept="image/*" class="upload-input">
+          </div>
+          <input type="hidden" name="imagem_ia_url" id="imagem-ia-url" value="">
+          <p class="dica">Usada na capa e ao compartilhar nas redes.</p>
+        </div>
+
+        <div class="sidebar-card">
+          <h3 class="sidebar-card-titulo">URL do post</h3>
+          <div class="slug-box">
+            <span class="slug-prefix">/post/</span>
+            <input type="text" name="slug" id="campo-slug" value="<%= post ? post.slug : '' %>" placeholder="auto" class="slug-input">
+          </div>
+          <p class="dica">Gerado automaticamente pelo título.</p>
+        </div>
+
+        <div class="sidebar-card sidebar-checklist" id="checklist">
+          <h3 class="sidebar-card-titulo">Checklist</h3>
+          <ul class="checklist-itens">
+            <li id="check-titulo" class="pendente">Título preenchido</li>
+            <li id="check-conteudo" class="pendente">Conteúdo escrito</li>
+            <li id="check-categoria" class="opcional">Categoria (opcional)</li>
+            <li id="check-imagem" class="opcional">Imagem de capa (opcional)</li>
+          </ul>
+        </div>
+      </aside>
+    </div>
+  </form>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
 <script>
-  // Slug auto-gerado (editável)
+(function () {
   var titulo = document.getElementById('campo-titulo');
   var slug = document.getElementById('campo-slug');
+  var resumo = document.getElementById('campo-resumo');
+  var conteudo = document.getElementById('campo-conteudo');
   var previa = document.getElementById('slug-previa');
-  var slugEditado = slug.value !== '';
+  var slugEditado = slug && slug.value !== '';
+  var quill = null;
+  var formPost = document.getElementById('form-post');
+
+  function sincronizarConteudo() {
+    if (quill && conteudo) conteudo.value = quill.root.innerHTML;
+  }
+
+  function definirConteudoEditor(html) {
+    if (!conteudo) return;
+    conteudo.value = html || '';
+    if (quill) {
+      quill.setText('');
+      if (html && html.trim()) quill.clipboard.dangerouslyPasteHTML(html);
+    }
+    atualizarChecklist();
+  }
+
+  if (typeof Quill !== 'undefined' && document.getElementById('quill-editor')) {
+    quill = new Quill('#quill-editor', {
+      theme: 'snow',
+      modules: {
+        toolbar: [
+          [{ header: [2, 3, false] }],
+          ['bold', 'italic', 'underline'],
+          ['blockquote'],
+          [{ list: 'ordered' }, { list: 'bullet' }],
+          ['link'],
+          ['clean']
+        ]
+      },
+      placeholder: 'Escreva o texto completo da matéria...'
+    });
+    if (conteudo.value.trim()) quill.clipboard.dangerouslyPasteHTML(conteudo.value);
+    quill.on('text-change', function () { sincronizarConteudo(); atualizarChecklist(); });
+
+    var modoBtns = document.querySelectorAll('.editor-modo-btn');
+    var visualWrap = document.getElementById('editor-visual-wrap');
+    modoBtns.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var modo = btn.dataset.editorModo;
+        modoBtns.forEach(function (b) { b.classList.toggle('ativa', b === btn); });
+        if (modo === 'html') {
+          sincronizarConteudo();
+          if (visualWrap) visualWrap.hidden = true;
+          conteudo.hidden = false;
+        } else {
+          definirConteudoEditor(conteudo.value);
+          if (visualWrap) visualWrap.hidden = false;
+          conteudo.hidden = true;
+        }
+      });
+    });
+  }
+
+  if (formPost) {
+    formPost.addEventListener('submit', function (e) {
+      sincronizarConteudo();
+      var texto = conteudo.value.replace(/<[^>]+>/g, '').trim();
+      if (!texto) {
+        e.preventDefault();
+        alert('Preencha o conteúdo da matéria.');
+        document.querySelector('[data-editor-modo="visual"]')?.click();
+      }
+    });
+  }
+
+  window.definirConteudoEditor = definirConteudoEditor;
+
   function gerarSlug(t) {
     return t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
       .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
   }
-  function atualizarPrevia() { previa.textContent = slug.value || gerarSlug(titulo.value) || '...'; }
-  titulo.addEventListener('input', function () {
-    if (!slugEditado) slug.value = gerarSlug(titulo.value);
+
+  function atualizarPrevia() {
+    if (previa) previa.textContent = (slug && slug.value) || gerarSlug(titulo.value) || '...';
+    var st = document.getElementById('snippet-titulo');
+    var sd = document.getElementById('snippet-desc');
+    if (st) st.textContent = document.getElementById('meta-title')?.value || titulo.value || 'Título da matéria';
+    if (sd) sd.textContent = document.getElementById('meta-desc')?.value || resumo.value || 'Descrição da matéria...';
+    atualizarChecklist();
+  }
+
+  if (titulo) {
+    titulo.addEventListener('input', function () {
+      if (!slugEditado && slug) slug.value = gerarSlug(titulo.value);
+      atualizarPrevia();
+    });
+  }
+  if (slug) slug.addEventListener('input', function () { slugEditado = slug.value !== ''; atualizarPrevia(); });
+  if (resumo) resumo.addEventListener('input', function () {
+    var c = document.getElementById('cont-resumo');
+    if (c) c.textContent = resumo.value.length;
     atualizarPrevia();
   });
-  slug.addEventListener('input', function () { slugEditado = slug.value !== ''; atualizarPrevia(); });
+  if (conteudo) conteudo.addEventListener('input', atualizarChecklist);
 
-  // Prévia da imagem destacada
-  var inputImagem = document.getElementById('campo-imagem');
-  var previewImagem = document.getElementById('preview-imagem');
-  inputImagem.addEventListener('change', function () {
-    if (inputImagem.files && inputImagem.files[0]) {
-      previewImagem.src = URL.createObjectURL(inputImagem.files[0]);
-      previewImagem.hidden = false;
-    }
-  });
-
-  // Contadores de caracteres
   document.querySelectorAll('[data-contador]').forEach(function (campo) {
     var contador = document.getElementById(campo.dataset.contador);
-    function atualizar() { if (contador) contador.textContent = campo.value.length; }
+    function atualizar() {
+      if (contador) contador.textContent = campo.value.length;
+      atualizarPrevia();
+    }
     campo.addEventListener('input', atualizar);
     atualizar();
   });
+  if (resumo) {
+    var cr = document.getElementById('cont-resumo');
+    if (cr) cr.textContent = resumo.value.length;
+  }
+
+  function atualizarChecklist() {
+    var ct = document.getElementById('check-titulo');
+    var cc = document.getElementById('check-conteudo');
+    var ccat = document.getElementById('check-categoria');
+    var cimg = document.getElementById('check-imagem');
+    if (ct) ct.className = titulo.value.trim() ? 'ok' : 'pendente';
+    if (cc) {
+      var html = conteudo ? conteudo.value : '';
+      var texto = html.replace(/<[^>]+>/g, '').trim();
+      cc.className = texto ? 'ok' : 'pendente';
+    }
+    var cat = document.querySelector('[name="categoriaId"]');
+    if (ccat) ccat.className = cat && cat.value ? 'ok' : 'opcional';
+    var img = document.getElementById('preview-imagem');
+    if (cimg) cimg.className = (img && !img.hidden) ? 'ok' : 'opcional';
+  }
+  atualizarChecklist();
+  document.querySelector('[name="categoriaId"]')?.addEventListener('change', atualizarChecklist);
+
+  var seoToggle = document.getElementById('seo-toggle');
+  var seoConteudo = document.getElementById('seo-conteudo');
+  if (seoToggle && seoConteudo) {
+    seoToggle.addEventListener('click', function () {
+      var aberto = seoConteudo.hidden;
+      seoConteudo.hidden = !aberto;
+      seoToggle.setAttribute('aria-expanded', aberto);
+      seoToggle.querySelector('.seo-toggle-icone').textContent = aberto ? '▲' : '▼';
+    });
+  }
+
+  var inputImagem = document.getElementById('campo-imagem');
+  var previewImagem = document.getElementById('preview-imagem');
+  var uploadPlaceholder = document.getElementById('upload-placeholder');
+  var uploadZona = document.getElementById('upload-zona');
+
+  function mostrarImagem(src) {
+    previewImagem.src = src;
+    previewImagem.hidden = false;
+    if (uploadPlaceholder) uploadPlaceholder.hidden = true;
+    if (uploadZona) uploadZona.classList.add('has-preview');
+    atualizarChecklist();
+  }
+
+  if (inputImagem) {
+    inputImagem.addEventListener('change', function () {
+      if (inputImagem.files && inputImagem.files[0]) {
+        mostrarImagem(URL.createObjectURL(inputImagem.files[0]));
+      }
+    });
+  }
+  if (uploadZona) {
+    uploadZona.addEventListener('dragover', function (e) { e.preventDefault(); uploadZona.classList.add('drag-over'); });
+    uploadZona.addEventListener('dragleave', function () { uploadZona.classList.remove('drag-over'); });
+    uploadZona.addEventListener('drop', function (e) {
+      e.preventDefault();
+      uploadZona.classList.remove('drag-over');
+      if (e.dataTransfer.files.length) {
+        inputImagem.files = e.dataTransfer.files;
+        mostrarImagem(URL.createObjectURL(e.dataTransfer.files[0]));
+      }
+    });
+  }
+
+  var statusSelect = document.querySelector('[name="status"]');
+  var btnSalvar = document.getElementById('btn-salvar');
+  var ehEdicao = <%= post ? 'true' : 'false' %>;
+  if (statusSelect && btnSalvar) {
+    function atualizarBotao() {
+      if (statusSelect.value === 'publicado') {
+        btnSalvar.textContent = ehEdicao ? 'Atualizar' : 'Publicar matéria';
+      } else {
+        btnSalvar.textContent = ehEdicao ? 'Salvar rascunho' : 'Salvar rascunho';
+      }
+    }
+    statusSelect.addEventListener('change', atualizarBotao);
+    atualizarBotao();
+  }
+
+  <% if (podeIa) { %>
+  var modoTabs = document.querySelectorAll('.modo-tab');
+  var painelIa = document.getElementById('painel-ia');
+
+  modoTabs.forEach(function (tab) {
+    tab.addEventListener('click', function () {
+      var modo = tab.dataset.modo;
+      modoTabs.forEach(function (t) { t.classList.toggle('ativa', t === tab); });
+      painelIa.hidden = modo !== 'ia';
+      formPost.classList.toggle('ativa', modo === 'manual');
+      formPost.hidden = modo !== 'manual';
+    });
+  });
+
+  document.querySelectorAll('.tag-rapida').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var input = document.getElementById('ia-palavras');
+      var tags = input.value.split(/[,;]/).map(function (t) { return t.trim(); }).filter(Boolean);
+      if (tags.indexOf(btn.dataset.tag) === -1) tags.push(btn.dataset.tag);
+      input.value = tags.join(', ');
+    });
+  });
+
+  function irPasso(n) {
+    document.querySelectorAll('.ia-passo').forEach(function (p) {
+      p.classList.toggle('ativo', parseInt(p.dataset.passo, 10) === n);
+      p.classList.toggle('concluido', parseInt(p.dataset.passo, 10) < n);
+    });
+    document.getElementById('ia-passo-1').hidden = n !== 1;
+    document.getElementById('ia-passo-2').hidden = n !== 2;
+    document.getElementById('ia-passo-3').hidden = n !== 3;
+  }
+
+  var topicosEncontrados = [];
+  var btnPesquisar = document.getElementById('btn-ia-pesquisar');
+  var btnUma = document.getElementById('btn-ia-uma');
+  var btnLote = document.getElementById('btn-ia-lote');
+  var statusMsg = document.getElementById('ia-status-msg');
+  var listaTopicos = document.getElementById('ia-lista-topicos');
+  var selecionarTodos = document.getElementById('ia-selecionar-todos');
+
+  function mostrarStatus(texto, tipo) {
+    statusMsg.hidden = false;
+    statusMsg.className = 'ia-status-msg ia-status-' + (tipo || 'info');
+    statusMsg.textContent = texto;
+  }
+
+  function setCarregando(btn, ativo, texto) {
+    if (!btn) return;
+    btn.disabled = ativo;
+    btn.dataset.orig = btn.dataset.orig || btn.textContent;
+    btn.textContent = ativo ? 'Aguarde...' : (texto || btn.dataset.orig);
+  }
+
+  async function chamarApi(url, body) {
+    var res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    var data = await res.json();
+    if (!data.ok) throw new Error(data.erro || 'Erro na requisição');
+    return data;
+  }
+
+  function escapar(s) { var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+
+  function renderizarTopicos(topicos) {
+    topicosEncontrados = topicos;
+    listaTopicos.innerHTML = '';
+    topicos.forEach(function (t, i) {
+      var label = document.createElement('label');
+      label.className = 'ia-topico-item';
+      label.innerHTML = '<input type="checkbox" class="ia-topico-check" data-index="' + i + '" checked>' +
+        '<div><strong>' + escapar(t.titulo) + '</strong>' +
+        '<span class="ia-topico-meta">' + escapar(t.nicho || '') +
+        (t.emAlta ? ' · <em class="ia-em-alta">em alta</em>' : '') +
+        (t.fonte ? ' · ' + escapar(t.fonte) : '') +
+        (t.veiculo ? ' · ' + escapar(t.veiculo) : '') + '</span>' +
+        (t.resumo ? '<p class="ia-topico-resumo">' + escapar(t.resumo) + '</p>' : '') + '</div>';
+      listaTopicos.appendChild(label);
+    });
+    irPasso(2);
+  }
+
+  function topicosSelecionados() {
+    return Array.from(document.querySelectorAll('.ia-topico-check:checked'))
+      .map(function (cb) { return topicosEncontrados[parseInt(cb.dataset.index, 10)]; }).filter(Boolean);
+  }
+
+  function preencherFormulario(artigo) {
+    titulo.value = artigo.titulo || '';
+    slug.value = '';
+    slugEditado = false;
+    resumo.value = artigo.resumo || '';
+    definirConteudoEditor(artigo.conteudo || '');
+    var mt = document.getElementById('meta-title');
+    var md = document.getElementById('meta-desc');
+    if (mt) { mt.value = artigo.meta_title || ''; mt.dispatchEvent(new Event('input')); }
+    if (md) { md.value = artigo.meta_description || ''; md.dispatchEvent(new Event('input')); }
+    titulo.dispatchEvent(new Event('input'));
+    resumo.dispatchEvent(new Event('input'));
+    var catIa = document.getElementById('ia-categoria').value;
+    if (catIa) document.querySelector('[name="categoriaId"]').value = catIa;
+    if (artigo.imagem) {
+      mostrarImagem(artigo.imagem);
+      document.getElementById('imagem-ia-url').value = artigo.imagem;
+    } else {
+      document.getElementById('imagem-ia-url').value = '';
+    }
+    modoTabs[0].click();
+    mostrarStatus('Matéria gerada! Revise o texto e a capa antes de publicar.', 'sucesso');
+    formPost.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  btnPesquisar.addEventListener('click', async function () {
+    setCarregando(btnPesquisar, true);
+    mostrarStatus('Buscando tópicos na internet...', 'info');
+    try {
+      var data = await chamarApi('/admin/posts/ia/pesquisar', {
+        palavrasChave: document.getElementById('ia-palavras').value,
+        quantidadePorNicho: document.getElementById('ia-quantidade').value
+      });
+      renderizarTopicos(data.topicos);
+      mostrarStatus(data.topicos.length + ' tópico(s) encontrado(s).', 'sucesso');
+    } catch (e) { mostrarStatus(e.message, 'erro'); }
+    finally { setCarregando(btnPesquisar, false, 'Buscar tópicos na internet'); }
+  });
+
+  document.getElementById('btn-ia-voltar-1').addEventListener('click', function () { irPasso(1); });
+  document.getElementById('btn-ia-continuar-2').addEventListener('click', function () {
+    if (!topicosSelecionados().length) { mostrarStatus('Selecione ao menos um tópico.', 'erro'); return; }
+    irPasso(3);
+  });
+  document.getElementById('btn-ia-voltar-2').addEventListener('click', function () { irPasso(2); });
+
+  btnUma.addEventListener('click', async function () {
+    var sel = topicosSelecionados();
+    setCarregando(btnUma, true);
+    mostrarStatus('Gerando matéria com IA...', 'info');
+    try {
+      if (sel.length) {
+        var prev = await chamarApi('/admin/posts/ia/gerar-preview', { topico: sel[0] });
+        preencherFormulario(prev.artigo);
+        if (prev.avisoImagem) mostrarStatus(prev.avisoImagem, 'aviso');
+      } else {
+        var data = await chamarApi('/admin/posts/ia/preencher-formulario', {
+          palavrasChave: document.getElementById('ia-palavras').value
+        });
+        preencherFormulario(data.artigo);
+        if (data.avisoImagem) mostrarStatus(data.avisoImagem, 'aviso');
+      }
+    } catch (e) { mostrarStatus(e.message, 'erro'); }
+    finally { setCarregando(btnUma, false, 'Gerar 1 no formulário'); }
+  });
+
+  btnLote.addEventListener('click', async function () {
+    var sel = topicosSelecionados();
+    if (!sel.length) { mostrarStatus('Selecione ao menos um tópico.', 'erro'); return; }
+    if (!confirm('Gerar ' + sel.length + ' matéria(s)? Pode levar alguns minutos.')) return;
+    setCarregando(btnLote, true);
+    mostrarStatus('Gerando ' + sel.length + ' matéria(s)...', 'info');
+    try {
+      var data = await chamarApi('/admin/posts/ia/gerar-lote', {
+        topicos: sel,
+        categoriaId: document.getElementById('ia-categoria').value || null,
+        status: document.getElementById('ia-status').value,
+        destaque: false
+      });
+      mostrarStatus(data.mensagem, data.erros.length ? 'aviso' : 'sucesso');
+      if (data.criados.length === 1) window.location.href = '/admin/posts/' + data.criados[0].id + '/editar';
+      else if (data.criados.length > 1) setTimeout(function () { window.location.href = '/admin/posts'; }, 2000);
+    } catch (e) { mostrarStatus(e.message, 'erro'); }
+    finally { setCarregando(btnLote, false, 'Gerar matérias selecionadas'); }
+  });
+
+  selecionarTodos.addEventListener('change', function () {
+    document.querySelectorAll('.ia-topico-check').forEach(function (cb) { cb.checked = selecionarTodos.checked; });
+  });
+  <% } %>
+})();
 </script>
