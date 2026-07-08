@@ -6,6 +6,13 @@
   <label>Descrição
     <textarea name="descricao" rows="3"><%= categoria ? (categoria.descricao || '') : '' %></textarea>
   </label>
+  <label>Cor de destaque
+    <input type="color" name="cor_hex" value="<%= categoria ? (categoria.corHex || '#ea580c') : '#ea580c' %>" class="input-cor">
+  </label>
+  <p class="dica">Usada nos títulos de seção, no menu e nos cards do site.</p>
+  <label>Ordem de exibição no menu
+    <input type="number" name="ordem" min="0" value="<%= categoria ? categoria.ordem : 0 %>">
+  </label>
   <div class="form-acoes">
     <button class="btn btn-primario">Salvar</button>
     <a href="/admin/categorias" class="btn btn-sec">Cancelar</a>

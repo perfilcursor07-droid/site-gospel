@@ -1,13 +1,17 @@
 <h1><%= post ? 'Editar post' : 'Novo post' %></h1>
-<form action="<%= post ? '/admin/posts/' + post.id : '/admin/posts' %>" method="post" enctype="multipart/form-data" class="form">
+<form action="<%= post ? '/admin/posts/' + post.id : '/admin/posts' %>" method="post" enctype="multipart/form-data" class="form form-largo">
   <label>Título
-    <input type="text" name="titulo" value="<%= post ? post.titulo : '' %>" required>
+    <input type="text" name="titulo" id="campo-titulo" value="<%= post ? post.titulo : '' %>" required>
   </label>
+  <label>Slug (URL do post)
+    <input type="text" name="slug" id="campo-slug" value="<%= post ? post.slug : '' %>" placeholder="gerado automaticamente a partir do título">
+  </label>
+  <p class="dica">Endereço final: /post/<span id="slug-previa"><%= post ? post.slug : '...' %></span></p>
   <label>Resumo
     <textarea name="resumo" rows="2"><%= post ? (post.resumo || '') : '' %></textarea>
   </label>
   <label>Conteúdo (aceita HTML)
-    <textarea name="conteudo" rows="12" required><%= post ? post.conteudo : '' %></textarea>
+    <textarea name="conteudo" rows="14" required><%= post ? post.conteudo : '' %></textarea>
   </label>
   <label>Categoria
     <select name="categoriaId">
@@ -17,12 +21,25 @@
       <% }) %>
     </select>
   </label>
-  <label>Imagem destacada
-    <input type="file" name="imagem" accept="image/*">
+
+  <div class="campo-upload">
+    <label>Imagem destacada
+      <input type="file" name="imagem" id="campo-imagem" accept="image/*">
+    </label>
+    <img id="preview-imagem" src="<%= post && post.imagem ? post.imagem : '' %>" alt="Prévia da imagem" class="preview-img preview-og" <%= post && post.imagem ? '' : 'hidden' %>>
+    <p class="dica">Esta imagem também é usada como imagem de compartilhamento (OG) do post. Sem imagem, o site usa a imagem OG padrão das configurações<%= config.og_imagem ? '' : ' (ainda não definida)' %>.</p>
+  </div>
+
+  <h3>SEO do post (opcional)</h3>
+  <label>Meta título
+    <input type="text" name="meta_title" maxlength="60" value="<%= post ? (post.metaTitle || '') : '' %>" data-contador="cont-meta-titulo" placeholder="Título alternativo para o Google">
   </label>
-  <% if (post && post.imagem) { %>
-    <p class="dica">Imagem atual: <a href="<%= post.imagem %>" target="_blank"><%= post.imagem %></a></p>
-  <% } %>
+  <p class="dica"><span id="cont-meta-titulo">0</span>/60 caracteres</p>
+  <label>Meta descrição
+    <textarea name="meta_description" rows="2" maxlength="160" data-contador="cont-meta-desc" placeholder="Descrição alternativa para o Google"><%= post ? (post.metaDescription || '') : '' %></textarea>
+  </label>
+  <p class="dica"><span id="cont-meta-desc">0</span>/160 caracteres</p>
+
   <% if (usuarioLogado.papel !== 'usuario') { %>
     <label>Status
       <select name="status">
@@ -36,8 +53,48 @@
   <% } else { %>
     <p class="dica">Seu post será salvo como rascunho e revisado por um gestor ou administrador.</p>
   <% } %>
+
   <div class="form-acoes">
     <button class="btn btn-primario">Salvar</button>
+    <% if (post && post.status === 'publicado') { %>
+      <a href="/post/<%= post.slug %>" target="_blank" class="btn btn-sec">Ver no site</a>
+    <% } %>
     <a href="/admin/posts" class="btn btn-sec">Cancelar</a>
   </div>
 </form>
+
+<script>
+  // Slug auto-gerado (editável)
+  var titulo = document.getElementById('campo-titulo');
+  var slug = document.getElementById('campo-slug');
+  var previa = document.getElementById('slug-previa');
+  var slugEditado = slug.value !== '';
+  function gerarSlug(t) {
+    return t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  }
+  function atualizarPrevia() { previa.textContent = slug.value || gerarSlug(titulo.value) || '...'; }
+  titulo.addEventListener('input', function () {
+    if (!slugEditado) slug.value = gerarSlug(titulo.value);
+    atualizarPrevia();
+  });
+  slug.addEventListener('input', function () { slugEditado = slug.value !== ''; atualizarPrevia(); });
+
+  // Prévia da imagem destacada
+  var inputImagem = document.getElementById('campo-imagem');
+  var previewImagem = document.getElementById('preview-imagem');
+  inputImagem.addEventListener('change', function () {
+    if (inputImagem.files && inputImagem.files[0]) {
+      previewImagem.src = URL.createObjectURL(inputImagem.files[0]);
+      previewImagem.hidden = false;
+    }
+  });
+
+  // Contadores de caracteres
+  document.querySelectorAll('[data-contador]').forEach(function (campo) {
+    var contador = document.getElementById(campo.dataset.contador);
+    function atualizar() { if (contador) contador.textContent = campo.value.length; }
+    campo.addEventListener('input', atualizar);
+    atualizar();
+  });
+</script>

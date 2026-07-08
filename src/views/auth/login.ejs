@@ -3,12 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Login | Site Gospel</title>
+  <title>Login | <%= config.site_nome || 'Site Gospel' %></title>
+  <% if (config.favicon) { %><link rel="icon" href="<%= config.favicon %>"><% } %>
   <link rel="stylesheet" href="/css/admin.css">
 </head>
 <body class="login-page">
   <div class="login-card">
-    <h1>site<strong>gospel</strong></h1>
+    <% if (config.logo) { %>
+      <img src="<%= config.logo %>" alt="<%= config.site_nome || 'Site Gospel' %>" class="login-logo">
+    <% } else { %>
+      <h1>site<strong>gospel</strong></h1>
+    <% } %>
     <p class="subtitulo">Acesse o painel administrativo</p>
     <% mensagens.erro.forEach(function (m) { %><div class="alert alert-erro"><%= m %></div><% }) %>
     <% mensagens.sucesso.forEach(function (m) { %><div class="alert alert-sucesso"><%= m %></div><% }) %>

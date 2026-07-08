@@ -1,49 +1,145 @@
 <h1>Configurações</h1>
-<form action="/admin/configuracoes" method="post" enctype="multipart/form-data" class="form">
-  <h3>Identidade do site</h3>
-  <label>Nome do site
-    <input type="text" name="site_nome" value="<%= config.site_nome || '' %>" placeholder="Site Gospel">
-  </label>
-  <label>Descrição do site
-    <textarea name="site_descricao" rows="2" placeholder="Breve descrição do site"><%= config.site_descricao || '' %></textarea>
-  </label>
-  <label>Logomarca
-    <input type="file" name="logo" accept="image/*">
-  </label>
-  <% if (config.logo) { %>
-    <p class="dica">Logomarca atual: <a href="<%= config.logo %>" target="_blank"><%= config.logo %></a></p>
-    <label class="checkbox"><input type="checkbox" name="remover_logo"> Remover logomarca atual</label>
-  <% } %>
 
-  <h3>SEO</h3>
-  <label>Título SEO (título da página inicial no Google)
-    <input type="text" name="seo_titulo" maxlength="60" value="<%= config.seo_titulo || '' %>" placeholder="Ex.: Site Gospel - Notícias, louvor e edificação">
-  </label>
-  <p class="dica">Recomendado: até 60 caracteres.</p>
-  <label>Meta descrição
-    <textarea name="seo_descricao" rows="3" maxlength="160" placeholder="Descrição que aparece nos resultados do Google"><%= config.seo_descricao || '' %></textarea>
-  </label>
-  <p class="dica">Recomendado: entre 120 e 160 caracteres.</p>
-  <label>Palavras-chave
-    <input type="text" name="seo_palavras_chave" value="<%= config.seo_palavras_chave || '' %>" placeholder="gospel, louvor, estudos bíblicos, devocionais">
-  </label>
-  <label>Imagem padrão de compartilhamento (Open Graph)
-    <input type="file" name="og_imagem" accept="image/*">
-  </label>
-  <% if (config.og_imagem) { %>
-    <p class="dica">Imagem atual: <a href="<%= config.og_imagem %>" target="_blank"><%= config.og_imagem %></a></p>
-  <% } %>
-  <p class="dica">Usada quando o site é compartilhado em redes sociais. Recomendado: 1200x630px.</p>
+<div class="abas" id="abas">
+  <button type="button" class="aba-btn ativa" data-aba="identidade">Identidade</button>
+  <button type="button" class="aba-btn" data-aba="seo">SEO</button>
+  <button type="button" class="aba-btn" data-aba="redes">Redes sociais</button>
+  <button type="button" class="aba-btn" data-aba="google">Integrações Google</button>
+  <button type="button" class="aba-btn" data-aba="rodape">Rodapé</button>
+</div>
 
-  <h3>Integrações Google</h3>
-  <label>Código de verificação do Google Search Console
-    <input type="text" name="google_site_verification" value="<%= config.google_site_verification || '' %>" placeholder="Conteúdo da meta tag google-site-verification">
-  </label>
-  <label>ID do Google Analytics
-    <input type="text" name="google_analytics" value="<%= config.google_analytics || '' %>" placeholder="G-XXXXXXXXXX">
-  </label>
+<form action="/admin/configuracoes" method="post" enctype="multipart/form-data" class="form form-largo">
+
+  <div class="aba-conteudo" data-aba="identidade">
+    <label>Nome do site
+      <input type="text" name="site_nome" value="<%= config.site_nome || '' %>" placeholder="Site Gospel">
+    </label>
+    <label>Slogan / tagline
+      <input type="text" name="site_slogan" value="<%= config.site_slogan || '' %>" placeholder="Notícias, louvor e edificação">
+    </label>
+    <label>Descrição do site
+      <textarea name="site_descricao" rows="2" placeholder="Breve descrição do site"><%= config.site_descricao || '' %></textarea>
+    </label>
+    <div class="campo-upload">
+      <label>Logomarca
+        <input type="file" name="logo" accept="image/*">
+      </label>
+      <% if (config.logo) { %>
+        <img src="<%= config.logo %>" alt="Logomarca atual" class="preview-img preview-logo">
+        <label class="checkbox"><input type="checkbox" name="remover_logo"> Remover logomarca atual</label>
+      <% } %>
+    </div>
+    <div class="campo-upload">
+      <label>Favicon
+        <input type="file" name="favicon" accept="image/*">
+      </label>
+      <% if (config.favicon) { %>
+        <img src="<%= config.favicon %>" alt="Favicon atual" class="preview-img preview-favicon">
+        <label class="checkbox"><input type="checkbox" name="remover_favicon"> Remover favicon atual</label>
+      <% } %>
+      <p class="dica">Recomendado: imagem quadrada (32x32 ou 64x64).</p>
+    </div>
+    <label>Cor primária do site
+      <input type="color" name="cor_primaria" value="<%= config.cor_primaria || '#ea580c' %>" class="input-cor">
+    </label>
+  </div>
+
+  <div class="aba-conteudo" data-aba="seo" hidden>
+    <label>Título SEO da home
+      <input type="text" name="seo_titulo" maxlength="60" value="<%= config.seo_titulo || '' %>" data-contador="cont-titulo" data-snippet="snippet-titulo" placeholder="Ex.: Site Gospel — Notícias, louvor e edificação">
+    </label>
+    <p class="dica"><span id="cont-titulo">0</span>/60 caracteres</p>
+    <label>Meta descrição
+      <textarea name="seo_descricao" rows="3" maxlength="160" data-contador="cont-desc" data-snippet="snippet-desc" placeholder="Descrição que aparece nos resultados do Google"><%= config.seo_descricao || '' %></textarea>
+    </label>
+    <p class="dica"><span id="cont-desc">0</span>/160 caracteres</p>
+    <label>Palavras-chave
+      <input type="text" name="seo_palavras_chave" value="<%= config.seo_palavras_chave || '' %>" placeholder="gospel, louvor, estudos bíblicos, devocionais">
+    </label>
+    <div class="campo-upload">
+      <label>Imagem padrão de compartilhamento (Open Graph)
+        <input type="file" name="og_imagem" accept="image/*">
+      </label>
+      <% if (config.og_imagem) { %><img src="<%= config.og_imagem %>" alt="Imagem OG atual" class="preview-img preview-og"><% } %>
+      <p class="dica">Usada quando o site é compartilhado em redes sociais. Recomendado: 1200x630px.</p>
+    </div>
+    <label class="checkbox">
+      <input type="checkbox" name="seo_indexar" <%= (config.seo_indexar || 'sim') !== 'nao' ? 'checked' : '' %>> Permitir indexação no Google
+    </label>
+    <p class="dica">Quando desligado, o site aplica noindex e bloqueia robôs no robots.txt.</p>
+
+    <div class="snippet-google">
+      <p class="dica" style="margin-bottom: 8px;">Prévia no Google:</p>
+      <p class="snippet-url"><%= urlBase %></p>
+      <p class="snippet-titulo" id="snippet-titulo"><%= config.seo_titulo || config.site_nome || 'Site Gospel' %></p>
+      <p class="snippet-desc" id="snippet-desc"><%= config.seo_descricao || 'A meta descrição do site aparecerá aqui.' %></p>
+    </div>
+  </div>
+
+  <div class="aba-conteudo" data-aba="redes" hidden>
+    <label>Facebook (URL)
+      <input type="url" name="social_facebook" value="<%= config.social_facebook || '' %>" placeholder="https://facebook.com/seusite">
+    </label>
+    <label>Instagram (URL)
+      <input type="url" name="social_instagram" value="<%= config.social_instagram || '' %>" placeholder="https://instagram.com/seusite">
+    </label>
+    <label>YouTube (URL)
+      <input type="url" name="social_youtube" value="<%= config.social_youtube || '' %>" placeholder="https://youtube.com/@seusite">
+    </label>
+    <label>WhatsApp (URL)
+      <input type="url" name="social_whatsapp" value="<%= config.social_whatsapp || '' %>" placeholder="https://wa.me/5511999999999">
+    </label>
+    <p class="dica">Os ícones das redes preenchidas aparecem no rodapé do site.</p>
+  </div>
+
+  <div class="aba-conteudo" data-aba="google" hidden>
+    <label>Google Search Console (meta verification)
+      <input type="text" name="google_site_verification" value="<%= config.google_site_verification || '' %>" placeholder="Conteúdo da meta tag google-site-verification">
+    </label>
+    <label>Google Analytics
+      <input type="text" name="google_analytics" value="<%= config.google_analytics || '' %>" placeholder="G-XXXXXXXXXX">
+    </label>
+    <label>Código customizado no &lt;head&gt;
+      <textarea name="head_custom" rows="5" placeholder="Scripts ou tags extras inseridos no <head> do site"><%= config.head_custom || '' %></textarea>
+    </label>
+    <p class="dica">Atenção: o conteúdo é inserido sem filtro no site público.</p>
+  </div>
+
+  <div class="aba-conteudo" data-aba="rodape" hidden>
+    <label>Texto do copyright
+      <input type="text" name="footer_copyright" value="<%= config.footer_copyright || '' %>" placeholder="© 2026 Site Gospel. Todos os direitos reservados.">
+    </label>
+    <label>Links do rodapé (um por linha, formato: Texto|URL)
+      <textarea name="footer_links" rows="5" placeholder="Sobre|/pagina/sobre&#10;Contato|/pagina/contato"><%= config.footer_links || '' %></textarea>
+    </label>
+  </div>
 
   <div class="form-acoes">
     <button class="btn btn-primario">Salvar configurações</button>
   </div>
 </form>
+
+<script>
+  // Abas
+  document.querySelectorAll('.aba-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('.aba-btn').forEach(function (b) { b.classList.remove('ativa'); });
+      btn.classList.add('ativa');
+      document.querySelectorAll('.aba-conteudo').forEach(function (sec) {
+        sec.hidden = sec.dataset.aba !== btn.dataset.aba;
+      });
+    });
+  });
+
+  // Contadores de caracteres + prévia do snippet Google
+  document.querySelectorAll('[data-contador]').forEach(function (campo) {
+    var contador = document.getElementById(campo.dataset.contador);
+    var snippet = campo.dataset.snippet ? document.getElementById(campo.dataset.snippet) : null;
+    function atualizar() {
+      if (contador) contador.textContent = campo.value.length;
+      if (snippet && campo.value.trim()) snippet.textContent = campo.value;
+    }
+    campo.addEventListener('input', atualizar);
+    atualizar();
+  });
+</script>

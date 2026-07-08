@@ -7,12 +7,13 @@
   <tbody>
     <% posts.forEach(function (post) { %>
     <tr>
-      <td><%= post.titulo %></td>
+      <td><%= post.destaque ? '★ ' : '' %><%= post.titulo %></td>
       <td><%= post.categoria ? post.categoria.nome : '-' %></td>
       <td><%= post.autor ? post.autor.nome : '-' %></td>
       <td><span class="badge badge-<%= post.status %>"><%= post.status %></span></td>
       <td class="acoes">
         <a href="/admin/posts/<%= post.id %>/editar" class="btn btn-sec">Editar</a>
+        <% if (post.status === 'publicado') { %><a href="/post/<%= post.slug %>" target="_blank" class="btn btn-sec">Ver</a><% } %>
         <form action="/admin/posts/<%= post.id %>/excluir" method="post" onsubmit="return confirm('Excluir este post?')">
           <button class="btn btn-perigo">Excluir</button>
         </form>

@@ -3,10 +3,12 @@
   <a href="/admin/categorias/nova" class="btn btn-primario">+ Nova categoria</a>
 </div>
 <table class="tabela">
-  <thead><tr><th>Nome</th><th>Slug</th><th>Descrição</th><th>Ações</th></tr></thead>
+  <thead><tr><th>Ordem</th><th>Cor</th><th>Nome</th><th>Slug</th><th>Descrição</th><th>Ações</th></tr></thead>
   <tbody>
     <% categorias.forEach(function (categoria) { %>
     <tr>
+      <td><%= categoria.ordem %></td>
+      <td><span class="cor-amostra" style="background: <%= categoria.corHex || '#ea580c' %>"></span></td>
       <td><%= categoria.nome %></td>
       <td>/categoria/<%= categoria.slug %></td>
       <td><%= categoria.descricao || '-' %></td>
@@ -18,6 +20,6 @@
       </td>
     </tr>
     <% }) %>
-    <% if (!categorias.length) { %><tr><td colspan="4">Nenhuma categoria encontrada.</td></tr><% } %>
+    <% if (!categorias.length) { %><tr><td colspan="6">Nenhuma categoria encontrada.</td></tr><% } %>
   </tbody>
 </table>

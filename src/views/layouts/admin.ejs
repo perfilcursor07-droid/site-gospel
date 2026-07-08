@@ -4,12 +4,18 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title><%= titulo %> | Painel Admin</title>
+  <% if (config.favicon) { %><link rel="icon" href="<%= config.favicon %>"><% } %>
   <link rel="stylesheet" href="/css/admin.css">
 </head>
 <body class="admin">
-  <aside class="sidebar">
-    <div class="sidebar-logo">site<strong>gospel</strong></div>
-    <nav>
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-topo">
+      <div class="sidebar-logo">
+        <% if (config.logo) { %><img src="<%= config.logo %>" alt="<%= config.site_nome || 'Site Gospel' %>"><% } else { %>site<strong>gospel</strong><% } %>
+      </div>
+      <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Abrir menu">☰</button>
+    </div>
+    <nav id="sidebar-nav">
       <a href="/admin">Dashboard</a>
       <a href="/admin/posts">Posts</a>
       <% if (usuarioLogado.papel !== 'usuario') { %>
@@ -26,7 +32,12 @@
   </aside>
   <div class="conteudo">
     <header class="topbar">
-      <span>Olá, <strong><%= usuarioLogado.nome %></strong> <span class="papel"><%= usuarioLogado.papel %></span></span>
+      <span class="topbar-titulo"><%= config.site_nome || 'Site Gospel' %></span>
+      <span class="topbar-usuario">
+        <span class="avatar"><%= usuarioLogado.nome.charAt(0).toUpperCase() %></span>
+        <strong><%= usuarioLogado.nome %></strong>
+        <span class="papel"><%= usuarioLogado.papel %></span>
+      </span>
     </header>
     <main>
       <% mensagens.sucesso.forEach(function (m) { %><div class="alert alert-sucesso"><%= m %></div><% }) %>
@@ -34,5 +45,12 @@
       <%- body %>
     </main>
   </div>
+  <script>
+    (function () {
+      var btn = document.getElementById('sidebar-toggle');
+      var nav = document.getElementById('sidebar-nav');
+      if (btn && nav) btn.addEventListener('click', function () { nav.classList.toggle('aberto'); });
+    })();
+  </script>
 </body>
 </html>

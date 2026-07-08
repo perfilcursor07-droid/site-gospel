@@ -1,14 +1,37 @@
-<h1>Dashboard</h1>
+<div class="page-header">
+  <h1>Dashboard</h1>
+  <div class="atalhos">
+    <a href="/admin/posts/novo" class="btn btn-primario">+ Novo post</a>
+    <% if (usuarioLogado.papel !== 'usuario') { %><a href="/admin/paginas/nova" class="btn btn-sec">+ Nova página</a><% } %>
+    <% if (usuarioLogado.papel === 'administrador') { %><a href="/admin/configuracoes" class="btn btn-sec">Configurações</a><% } %>
+  </div>
+</div>
+
 <div class="cards-stats">
   <div class="stat"><span class="numero"><%= totalPosts %></span><span>Posts</span></div>
+  <div class="stat"><span class="numero"><%= totalPublicados %></span><span>Publicados</span></div>
+  <div class="stat"><span class="numero"><%= totalRascunhos %></span><span>Rascunhos</span></div>
   <div class="stat"><span class="numero"><%= totalPaginas %></span><span>Páginas</span></div>
   <div class="stat"><span class="numero"><%= totalCategorias %></span><span>Categorias</span></div>
   <div class="stat"><span class="numero"><%= totalUsuarios %></span><span>Usuários</span></div>
 </div>
 
+<div class="card">
+  <h2>Posts por mês (últimos 6 meses)</h2>
+  <div class="grafico">
+    <% postsPorMes.forEach(function (m) { %>
+      <div class="grafico-col">
+        <span class="grafico-valor"><%= m.total %></span>
+        <div class="grafico-barra" style="height: <%= Math.max(Math.round((m.total / maxPorMes) * 100), 3) %>%"></div>
+        <span class="grafico-label"><%= m.label %></span>
+      </div>
+    <% }) %>
+  </div>
+</div>
+
 <h2>Últimos posts</h2>
 <table class="tabela">
-  <thead><tr><th>Título</th><th>Categoria</th><th>Autor</th><th>Status</th></tr></thead>
+  <thead><tr><th>Título</th><th>Categoria</th><th>Autor</th><th>Status</th><th>Ações</th></tr></thead>
   <tbody>
     <% ultimosPosts.forEach(function (post) { %>
     <tr>
@@ -16,8 +39,12 @@
       <td><%= post.categoria ? post.categoria.nome : '-' %></td>
       <td><%= post.autor ? post.autor.nome : '-' %></td>
       <td><span class="badge badge-<%= post.status %>"><%= post.status %></span></td>
+      <td class="acoes">
+        <a href="/admin/posts/<%= post.id %>/editar" class="btn btn-sec">Editar</a>
+        <% if (post.status === 'publicado') { %><a href="/post/<%= post.slug %>" target="_blank" class="btn btn-sec">Ver no site</a><% } %>
+      </td>
     </tr>
     <% }) %>
-    <% if (!ultimosPosts.length) { %><tr><td colspan="4">Nenhum post ainda.</td></tr><% } %>
+    <% if (!ultimosPosts.length) { %><tr><td colspan="5">Nenhum post ainda.</td></tr><% } %>
   </tbody>
 </table>
