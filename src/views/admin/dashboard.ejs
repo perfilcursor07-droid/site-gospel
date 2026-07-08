@@ -1,0 +1,23 @@
+<h1>Dashboard</h1>
+<div class="cards-stats">
+  <div class="stat"><span class="numero"><%= totalPosts %></span><span>Posts</span></div>
+  <div class="stat"><span class="numero"><%= totalPaginas %></span><span>Páginas</span></div>
+  <div class="stat"><span class="numero"><%= totalCategorias %></span><span>Categorias</span></div>
+  <div class="stat"><span class="numero"><%= totalUsuarios %></span><span>Usuários</span></div>
+</div>
+
+<h2>Últimos posts</h2>
+<table class="tabela">
+  <thead><tr><th>Título</th><th>Categoria</th><th>Autor</th><th>Status</th></tr></thead>
+  <tbody>
+    <% ultimosPosts.forEach(function (post) { %>
+    <tr>
+      <td><a href="/admin/posts/<%= post.id %>/editar"><%= post.titulo %></a></td>
+      <td><%= post.categoria ? post.categoria.nome : '-' %></td>
+      <td><%= post.autor ? post.autor.nome : '-' %></td>
+      <td><span class="badge badge-<%= post.status %>"><%= post.status %></span></td>
+    </tr>
+    <% }) %>
+    <% if (!ultimosPosts.length) { %><tr><td colspan="4">Nenhum post ainda.</td></tr><% } %>
+  </tbody>
+</table>

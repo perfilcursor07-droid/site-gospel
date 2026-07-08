@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title><%= titulo %> | Site Gospel</title>
+  <link rel="stylesheet" href="/css/site.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="/" class="logo">✝ Site Gospel</a>
+      <nav class="nav">
+        <a href="/">Início</a>
+        <% categoriasNav.forEach(function (c) { %>
+          <a href="/categoria/<%= c.slug %>"><%= c.nome %></a>
+        <% }) %>
+        <a href="/pagina/sobre">Sobre</a>
+      </nav>
+      <form class="busca" action="/busca" method="get">
+        <input type="text" name="q" placeholder="Buscar..." value="<%= typeof q !== 'undefined' ? q : '' %>">
+      </form>
+    </div>
+  </header>
+  <main class="container">
+    <% mensagens.sucesso.forEach(function (m) { %><div class="alert alert-sucesso"><%= m %></div><% }) %>
+    <% mensagens.erro.forEach(function (m) { %><div class="alert alert-erro"><%= m %></div><% }) %>
+    <%- body %>
+  </main>
+  <footer class="site-footer">
+    <div class="container">
+      <p>© <%= new Date().getFullYear() %> Site Gospel. Todos os direitos reservados.</p>
+      <a href="/login">Área administrativa</a>
+    </div>
+  </footer>
+</body>
+</html>

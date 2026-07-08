@@ -1,0 +1,19 @@
+<h1><%= pagina ? 'Editar página' : 'Nova página' %></h1>
+<form action="<%= pagina ? '/admin/paginas/' + pagina.id : '/admin/paginas' %>" method="post" class="form">
+  <label>Título
+    <input type="text" name="titulo" value="<%= pagina ? pagina.titulo : '' %>" required>
+  </label>
+  <label>Conteúdo (aceita HTML)
+    <textarea name="conteudo" rows="12" required><%= pagina ? pagina.conteudo : '' %></textarea>
+  </label>
+  <label>Status
+    <select name="status">
+      <option value="publicado" <%= pagina && pagina.status === 'publicado' ? 'selected' : '' %>>Publicado</option>
+      <option value="rascunho" <%= pagina && pagina.status === 'rascunho' ? 'selected' : '' %>>Rascunho</option>
+    </select>
+  </label>
+  <div class="form-acoes">
+    <button class="btn btn-primario">Salvar</button>
+    <a href="/admin/paginas" class="btn btn-sec">Cancelar</a>
+  </div>
+</form>

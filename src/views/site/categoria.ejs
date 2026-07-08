@@ -1,0 +1,19 @@
+<section class="secao">
+  <h1>Categoria: <%= categoria.nome %></h1>
+  <% if (categoria.descricao) { %><p><%= categoria.descricao %></p><% } %>
+  <% if (posts.length) { %>
+  <div class="grid">
+    <% posts.forEach(function (post) { %>
+      <article class="card">
+        <% if (post.imagem) { %><img src="<%= post.imagem %>" alt="<%= post.titulo %>"><% } %>
+        <div class="card-body">
+          <h3><a href="/post/<%= post.slug %>"><%= post.titulo %></a></h3>
+          <% if (post.resumo) { %><p><%= post.resumo %></p><% } %>
+        </div>
+      </article>
+    <% }) %>
+  </div>
+  <% } else { %>
+    <p>Nenhum post nesta categoria ainda.</p>
+  <% } %>
+</section>

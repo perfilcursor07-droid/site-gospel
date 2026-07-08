@@ -1,0 +1,42 @@
+<section class="hero">
+  <h1>Bem-vindo ao Site Gospel</h1>
+  <p>Palavra, louvor e edificação para sua vida.</p>
+</section>
+
+<% if (destaques.length) { %>
+<section class="secao">
+  <h2>Destaques</h2>
+  <div class="grid">
+    <% destaques.forEach(function (post) { %>
+      <article class="card">
+        <% if (post.imagem) { %><img src="<%= post.imagem %>" alt="<%= post.titulo %>"><% } %>
+        <div class="card-body">
+          <% if (post.categoria) { %><span class="badge"><%= post.categoria.nome %></span><% } %>
+          <h3><a href="/post/<%= post.slug %>"><%= post.titulo %></a></h3>
+          <% if (post.resumo) { %><p><%= post.resumo %></p><% } %>
+        </div>
+      </article>
+    <% }) %>
+  </div>
+</section>
+<% } %>
+
+<section class="secao">
+  <h2>Posts recentes</h2>
+  <% if (recentes.length) { %>
+  <div class="grid">
+    <% recentes.forEach(function (post) { %>
+      <article class="card">
+        <% if (post.imagem) { %><img src="<%= post.imagem %>" alt="<%= post.titulo %>"><% } %>
+        <div class="card-body">
+          <% if (post.categoria) { %><span class="badge"><%= post.categoria.nome %></span><% } %>
+          <h3><a href="/post/<%= post.slug %>"><%= post.titulo %></a></h3>
+          <% if (post.resumo) { %><p><%= post.resumo %></p><% } %>
+        </div>
+      </article>
+    <% }) %>
+  </div>
+  <% } else { %>
+    <p>Nenhum post publicado ainda.</p>
+  <% } %>
+</section>

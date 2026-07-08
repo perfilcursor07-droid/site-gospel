@@ -1,0 +1,18 @@
+<section class="secao">
+  <h1>Resultados para: "<%= q %>"</h1>
+  <% if (posts.length) { %>
+  <div class="grid">
+    <% posts.forEach(function (post) { %>
+      <article class="card">
+        <div class="card-body">
+          <% if (post.categoria) { %><span class="badge"><%= post.categoria.nome %></span><% } %>
+          <h3><a href="/post/<%= post.slug %>"><%= post.titulo %></a></h3>
+          <% if (post.resumo) { %><p><%= post.resumo %></p><% } %>
+        </div>
+      </article>
+    <% }) %>
+  </div>
+  <% } else { %>
+    <p>Nenhum resultado encontrado.</p>
+  <% } %>
+</section>

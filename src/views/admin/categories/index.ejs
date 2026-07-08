@@ -1,0 +1,23 @@
+<div class="page-header">
+  <h1>Categorias</h1>
+  <a href="/admin/categorias/nova" class="btn btn-primario">+ Nova categoria</a>
+</div>
+<table class="tabela">
+  <thead><tr><th>Nome</th><th>Slug</th><th>Descrição</th><th>Ações</th></tr></thead>
+  <tbody>
+    <% categorias.forEach(function (categoria) { %>
+    <tr>
+      <td><%= categoria.nome %></td>
+      <td>/categoria/<%= categoria.slug %></td>
+      <td><%= categoria.descricao || '-' %></td>
+      <td class="acoes">
+        <a href="/admin/categorias/<%= categoria.id %>/editar" class="btn btn-sec">Editar</a>
+        <form action="/admin/categorias/<%= categoria.id %>/excluir" method="post" onsubmit="return confirm('Excluir esta categoria?')">
+          <button class="btn btn-perigo">Excluir</button>
+        </form>
+      </td>
+    </tr>
+    <% }) %>
+    <% if (!categorias.length) { %><tr><td colspan="4">Nenhuma categoria encontrada.</td></tr><% } %>
+  </tbody>
+</table>

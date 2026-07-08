@@ -1,0 +1,13 @@
+<h1><%= categoria ? 'Editar categoria' : 'Nova categoria' %></h1>
+<form action="<%= categoria ? '/admin/categorias/' + categoria.id : '/admin/categorias' %>" method="post" class="form">
+  <label>Nome
+    <input type="text" name="nome" value="<%= categoria ? categoria.nome : '' %>" required>
+  </label>
+  <label>Descrição
+    <textarea name="descricao" rows="3"><%= categoria ? (categoria.descricao || '') : '' %></textarea>
+  </label>
+  <div class="form-acoes">
+    <button class="btn btn-primario">Salvar</button>
+    <a href="/admin/categorias" class="btn btn-sec">Cancelar</a>
+  </div>
+</form>

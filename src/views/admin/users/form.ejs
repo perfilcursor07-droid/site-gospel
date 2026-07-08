@@ -1,0 +1,23 @@
+<h1><%= usuario ? 'Editar usuário' : 'Novo usuário' %></h1>
+<form action="<%= usuario ? '/admin/usuarios/' + usuario.id : '/admin/usuarios' %>" method="post" class="form">
+  <label>Nome
+    <input type="text" name="nome" value="<%= usuario ? usuario.nome : '' %>" required>
+  </label>
+  <label>E-mail
+    <input type="email" name="email" value="<%= usuario ? usuario.email : '' %>" required>
+  </label>
+  <label>Senha <%= usuario ? '(deixe em branco para manter a atual)' : '' %>
+    <input type="password" name="senha" <%= usuario ? '' : 'required' %>>
+  </label>
+  <label>Nível de acesso
+    <select name="papel">
+      <option value="usuario" <%= usuario && usuario.papel === 'usuario' ? 'selected' : '' %>>Usuário</option>
+      <option value="gestor" <%= usuario && usuario.papel === 'gestor' ? 'selected' : '' %>>Gestor</option>
+      <option value="administrador" <%= usuario && usuario.papel === 'administrador' ? 'selected' : '' %>>Administrador</option>
+    </select>
+  </label>
+  <div class="form-acoes">
+    <button class="btn btn-primario">Salvar</button>
+    <a href="/admin/usuarios" class="btn btn-sec">Cancelar</a>
+  </div>
+</form>

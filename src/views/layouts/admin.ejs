@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title><%= titulo %> | Painel Admin</title>
+  <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body class="admin">
+  <aside class="sidebar">
+    <div class="sidebar-logo">✝ Site Gospel</div>
+    <nav>
+      <a href="/admin">📊 Dashboard</a>
+      <a href="/admin/posts">📝 Posts</a>
+      <% if (usuarioLogado.papel !== 'usuario') { %>
+        <a href="/admin/paginas">📄 Páginas</a>
+        <a href="/admin/categorias">🏷 Categorias</a>
+      <% } %>
+      <% if (usuarioLogado.papel === 'administrador') { %>
+        <a href="/admin/usuarios">👥 Usuários</a>
+      <% } %>
+      <a href="/" target="_blank">🌐 Ver site</a>
+      <a href="/logout" class="sair">🚪 Sair</a>
+    </nav>
+  </aside>
+  <div class="conteudo">
+    <header class="topbar">
+      <span>Olá, <strong><%= usuarioLogado.nome %></strong> <span class="papel"><%= usuarioLogado.papel %></span></span>
+    </header>
+    <main>
+      <% mensagens.sucesso.forEach(function (m) { %><div class="alert alert-sucesso"><%= m %></div><% }) %>
+      <% mensagens.erro.forEach(function (m) { %><div class="alert alert-erro"><%= m %></div><% }) %>
+      <%- body %>
+    </main>
+  </div>
+</body>
+</html>

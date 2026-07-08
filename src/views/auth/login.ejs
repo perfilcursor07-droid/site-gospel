@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Login | Site Gospel</title>
+  <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body class="login-page">
+  <div class="login-card">
+    <h1>✝ Site Gospel</h1>
+    <p class="subtitulo">Acesse o painel administrativo</p>
+    <% mensagens.erro.forEach(function (m) { %><div class="alert alert-erro"><%= m %></div><% }) %>
+    <% mensagens.sucesso.forEach(function (m) { %><div class="alert alert-sucesso"><%= m %></div><% }) %>
+    <form action="/login" method="post" class="form">
+      <label>E-mail
+        <input type="email" name="email" required autofocus>
+      </label>
+      <label>Senha
+        <input type="password" name="senha" required>
+      </label>
+      <button class="btn btn-primario btn-bloco">Entrar</button>
+    </form>
+    <a class="voltar" href="/">← Voltar ao site</a>
+  </div>
+</body>
+</html>
