@@ -73,7 +73,27 @@ body.login-page { display: flex; align-items: center; justify-content: center; m
 .login-card .voltar { display: inline-block; margin-top: 20px; font-size: .9rem; color: #6b7280; }
 .login-card .voltar:hover { color: #ea580c; }
 
+@media (max-width: 900px) {
+  .tabela { display: block; overflow-x: auto; white-space: nowrap; }
+}
+
 @media (max-width: 720px) {
   body.admin { flex-direction: column; }
   .sidebar { width: 100%; }
+  .sidebar-logo { padding: 14px 16px; font-size: 1.2rem; }
+  .sidebar nav { flex-direction: row; overflow-x: auto; padding: 0; -webkit-overflow-scrolling: touch; }
+  .sidebar nav a { padding: 12px 14px; border-left: none; border-bottom: 3px solid transparent; white-space: nowrap; font-size: .85rem; }
+  .sidebar nav a:hover { border-left: none; border-bottom-color: #f97316; }
+  .sidebar nav a.sair { margin-top: 0; margin-left: auto; }
+  .topbar { padding: 12px 16px; font-size: .9rem; }
+  .conteudo main { padding: 16px; }
+  .page-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .cards-stats { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .stat { padding: 14px; }
+  .stat .numero { font-size: 1.6rem; }
+  .form { padding: 16px; }
+  .form-acoes { flex-direction: column; }
+  .form-acoes .btn { text-align: center; }
+  .tabela th, .tabela td { padding: 10px 12px; }
+  .login-card { margin: 16px; padding: 28px 22px; }
 }

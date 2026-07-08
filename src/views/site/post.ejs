@@ -2,7 +2,7 @@
   <% if (post.categoria) { %>
     <a href="/categoria/<%= post.categoria.slug %>" class="text-xs font-extrabold uppercase tracking-widest text-orange-600 hover:underline"><%= post.categoria.nome %></a>
   <% } %>
-  <h1 class="mt-2 text-3xl lg:text-4xl font-extrabold leading-tight text-gray-900"><%= post.titulo %></h1>
+  <h1 class="mt-2 text-2xl sm:text-3xl lg:text-4xl font-extrabold leading-tight text-gray-900"><%= post.titulo %></h1>
   <% if (post.resumo) { %><p class="mt-3 text-lg text-gray-500"><%= post.resumo %></p><% } %>
   <p class="mt-4 pb-6 border-b border-gray-100 text-sm text-gray-400">
     <% if (post.autor) { %>Por <span class="font-bold text-gray-600"><%= post.autor.nome %></span><% } %>
