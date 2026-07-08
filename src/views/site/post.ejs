@@ -1,15 +1,61 @@
-<article class="max-w-3xl mx-auto bg-white rounded-2xl border border-gray-200 p-6 lg:p-10">
+<% const corCategoria = post.categoria ? (post.categoria.corHex || '#ea580c') : '#ea580c'; %>
+<nav class="max-w-3xl mx-auto mb-4 text-sm text-gray-400" aria-label="Breadcrumb">
+  <a href="/" class="hover:text-gray-600 transition">Início</a>
   <% if (post.categoria) { %>
-    <a href="/categoria/<%= post.categoria.slug %>" class="text-xs font-extrabold uppercase tracking-widest text-orange-600 hover:underline"><%= post.categoria.nome %></a>
+    <span class="mx-1">›</span>
+    <a href="/categoria/<%= post.categoria.slug %>" class="hover:text-gray-600 transition"><%= post.categoria.nome %></a>
+  <% } %>
+  <span class="mx-1">›</span>
+  <span class="text-gray-500"><%= post.titulo %></span>
+</nav>
+
+<article class="max-w-3xl mx-auto bg-white rounded-lg border border-gray-200 p-6 lg:p-10">
+  <% if (post.categoria) { %>
+    <a href="/categoria/<%= post.categoria.slug %>" class="text-xs font-extrabold uppercase tracking-widest hover:underline" style="color: <%= corCategoria %>"><%= post.categoria.nome %></a>
   <% } %>
   <h1 class="mt-2 text-2xl sm:text-3xl lg:text-4xl font-extrabold leading-tight text-gray-900"><%= post.titulo %></h1>
   <% if (post.resumo) { %><p class="mt-3 text-lg text-gray-500"><%= post.resumo %></p><% } %>
-  <p class="mt-4 pb-6 border-b border-gray-100 text-sm text-gray-400">
-    <% if (post.autor) { %>Por <span class="font-bold text-gray-600"><%= post.autor.nome %></span><% } %>
-    <% if (post.publicadoEm) { %> • <%= new Date(post.publicadoEm).toLocaleDateString('pt-BR') %><% } %>
-  </p>
-  <% if (post.imagem) { %><img src="<%= post.imagem %>" alt="<%= post.titulo %>" class="mt-6 w-full max-h-[28rem] object-cover rounded-xl"><% } %>
-  <div class="mt-6 text-lg leading-relaxed text-gray-700 space-y-4 [&_a]:text-orange-600 [&_a:hover]:underline">
+
+  <div class="mt-4 pb-6 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3">
+    <p class="text-sm text-gray-400">
+      <% if (post.autor) { %>Por <span class="font-bold text-gray-600"><%= post.autor.nome %></span><% } %>
+      <% if (post.publicadoEm) { %> • <%= new Date(post.publicadoEm).toLocaleDateString('pt-BR') %><% } %>
+    </p>
+    <div class="flex items-center gap-2 text-xs font-bold">
+      <span class="text-gray-400 uppercase tracking-widest">Compartilhar</span>
+      <a href="https://wa.me/?text=<%= encodeURIComponent(post.titulo + ' ' + urlAtual) %>" target="_blank" rel="noopener"
+        class="px-3 py-1.5 rounded-full bg-green-600 text-white hover:opacity-90 transition">WhatsApp</a>
+      <a href="https://www.facebook.com/sharer/sharer.php?u=<%= encodeURIComponent(urlAtual) %>" target="_blank" rel="noopener"
+        class="px-3 py-1.5 rounded-full bg-blue-700 text-white hover:opacity-90 transition">Facebook</a>
+      <a href="https://twitter.com/intent/tweet?text=<%= encodeURIComponent(post.titulo) %>&url=<%= encodeURIComponent(urlAtual) %>" target="_blank" rel="noopener"
+        class="px-3 py-1.5 rounded-full bg-gray-900 text-white hover:opacity-90 transition">X</a>
+    </div>
+  </div>
+
+  <% if (post.imagem) { %><img src="<%= post.imagem %>" alt="<%= post.titulo %>" class="mt-6 w-full max-h-[28rem] object-cover rounded-lg"><% } %>
+  <div class="mt-6 text-lg leading-relaxed text-gray-700 space-y-4 [&_a]:text-primary [&_a:hover]:underline">
     <%- post.conteudo %>
   </div>
 </article>
+
+<% if (typeof relacionados !== 'undefined' && relacionados.length) { %>
+<section class="max-w-3xl mx-auto mt-10">
+  <h2 class="flex items-center gap-3 text-lg font-extrabold uppercase tracking-wide text-gray-900 mb-5">
+    <span class="w-1.5 h-6 rounded-full" style="background: <%= corCategoria %>"></span> Leia também
+  </h2>
+  <div class="grid sm:grid-cols-2 gap-4">
+    <% relacionados.forEach(function (rel) { %>
+      <article class="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-md transition group">
+        <a href="/post/<%= rel.slug %>" class="flex flex-col h-full">
+          <% if (rel.imagem) { %><img src="<%= rel.imagem %>" alt="<%= rel.titulo %>" class="w-full aspect-video object-cover"><% } %>
+          <div class="p-4 flex-1 flex flex-col">
+            <% if (rel.categoria) { %><span class="text-xs font-extrabold uppercase tracking-widest" style="color: <%= rel.categoria.corHex || '#ea580c' %>"><%= rel.categoria.nome %></span><% } %>
+            <h3 class="mt-1 text-base font-extrabold leading-snug text-gray-900 group-hover:underline"><%= rel.titulo %></h3>
+            <% if (rel.publicadoEm) { %><p class="mt-auto pt-3 text-xs text-gray-400"><%= new Date(rel.publicadoEm).toLocaleDateString('pt-BR') %></p><% } %>
+          </div>
+        </a>
+      </article>
+    <% }) %>
+  </div>
+</section>
+<% } %>
