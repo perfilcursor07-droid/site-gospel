@@ -1,14 +1,15 @@
-<article class="post-completo">
+<article class="max-w-3xl mx-auto bg-white rounded-2xl border border-gray-200 p-6 lg:p-10">
   <% if (post.categoria) { %>
-    <a class="badge" href="/categoria/<%= post.categoria.slug %>"><%= post.categoria.nome %></a>
+    <a href="/categoria/<%= post.categoria.slug %>" class="text-xs font-extrabold uppercase tracking-widest text-orange-600 hover:underline"><%= post.categoria.nome %></a>
   <% } %>
-  <h1><%= post.titulo %></h1>
-  <p class="meta">
-    <% if (post.autor) { %>Por <%= post.autor.nome %> • <% } %>
-    <% if (post.publicadoEm) { %><%= new Date(post.publicadoEm).toLocaleDateString('pt-BR') %><% } %>
+  <h1 class="mt-2 text-3xl lg:text-4xl font-extrabold leading-tight text-gray-900"><%= post.titulo %></h1>
+  <% if (post.resumo) { %><p class="mt-3 text-lg text-gray-500"><%= post.resumo %></p><% } %>
+  <p class="mt-4 pb-6 border-b border-gray-100 text-sm text-gray-400">
+    <% if (post.autor) { %>Por <span class="font-bold text-gray-600"><%= post.autor.nome %></span><% } %>
+    <% if (post.publicadoEm) { %> • <%= new Date(post.publicadoEm).toLocaleDateString('pt-BR') %><% } %>
   </p>
-  <% if (post.imagem) { %><img class="imagem-destaque" src="<%= post.imagem %>" alt="<%= post.titulo %>"><% } %>
-  <div class="conteudo-post">
+  <% if (post.imagem) { %><img src="<%= post.imagem %>" alt="<%= post.titulo %>" class="mt-6 w-full max-h-[28rem] object-cover rounded-xl"><% } %>
+  <div class="mt-6 text-lg leading-relaxed text-gray-700 space-y-4 [&_a]:text-orange-600 [&_a:hover]:underline">
     <%- post.conteudo %>
   </div>
 </article>

@@ -1,18 +1,23 @@
-<section class="secao">
-  <h1>Resultados para: "<%= q %>"</h1>
+<section>
+  <h1 class="flex items-center gap-3 text-2xl font-extrabold text-gray-900 mb-6">
+    <span class="w-1.5 h-7 bg-orange-600 rounded-full"></span> Resultados para: "<%= q %>"
+  </h1>
   <% if (posts.length) { %>
-  <div class="grid">
+  <div class="flex flex-col gap-3">
     <% posts.forEach(function (post) { %>
-      <article class="card">
-        <div class="card-body">
-          <% if (post.categoria) { %><span class="badge"><%= post.categoria.nome %></span><% } %>
-          <h3><a href="/post/<%= post.slug %>"><%= post.titulo %></a></h3>
-          <% if (post.resumo) { %><p><%= post.resumo %></p><% } %>
-        </div>
+      <article class="bg-white rounded-2xl border border-gray-200 hover:shadow-md transition group">
+        <a href="/post/<%= post.slug %>" class="flex justify-between gap-5 p-5">
+          <div class="flex-1 min-w-0">
+            <% if (post.categoria) { %><span class="text-xs font-extrabold uppercase tracking-widest text-orange-600"><%= post.categoria.nome %></span><% } %>
+            <h3 class="mt-1 text-lg font-extrabold leading-snug text-gray-900 group-hover:text-orange-600 transition"><%= post.titulo %></h3>
+            <% if (post.resumo) { %><p class="mt-1 text-sm text-gray-500 line-clamp-2"><%= post.resumo %></p><% } %>
+          </div>
+          <% if (post.imagem) { %><img src="<%= post.imagem %>" alt="<%= post.titulo %>" class="w-32 h-24 object-cover rounded-xl flex-shrink-0"><% } %>
+        </a>
       </article>
     <% }) %>
   </div>
   <% } else { %>
-    <p>Nenhum resultado encontrado.</p>
+    <p class="bg-white rounded-2xl border border-gray-200 p-6 text-gray-500">Nenhum resultado encontrado.</p>
   <% } %>
 </section>

@@ -1,19 +1,25 @@
-<section class="secao">
-  <h1>Categoria: <%= categoria.nome %></h1>
-  <% if (categoria.descricao) { %><p><%= categoria.descricao %></p><% } %>
+<section>
+  <h1 class="flex items-center gap-3 text-2xl font-extrabold text-gray-900">
+    <span class="w-1.5 h-7 bg-orange-600 rounded-full"></span> <%= categoria.nome %>
+  </h1>
+  <% if (categoria.descricao) { %><p class="mt-2 text-gray-500"><%= categoria.descricao %></p><% } %>
+
   <% if (posts.length) { %>
-  <div class="grid">
+  <div class="mt-6 grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
     <% posts.forEach(function (post) { %>
-      <article class="card">
-        <% if (post.imagem) { %><img src="<%= post.imagem %>" alt="<%= post.titulo %>"><% } %>
-        <div class="card-body">
-          <h3><a href="/post/<%= post.slug %>"><%= post.titulo %></a></h3>
-          <% if (post.resumo) { %><p><%= post.resumo %></p><% } %>
-        </div>
+      <article class="bg-white rounded-2xl border border-gray-200 overflow-hidden hover:shadow-md transition group">
+        <a href="/post/<%= post.slug %>">
+          <% if (post.imagem) { %><img src="<%= post.imagem %>" alt="<%= post.titulo %>" class="w-full h-40 object-cover"><% } %>
+          <div class="p-5">
+            <h3 class="text-lg font-extrabold leading-snug text-gray-900 group-hover:text-orange-600 transition"><%= post.titulo %></h3>
+            <% if (post.resumo) { %><p class="mt-2 text-sm text-gray-500 line-clamp-3"><%= post.resumo %></p><% } %>
+            <% if (post.publicadoEm) { %><p class="mt-3 text-xs text-gray-400"><%= new Date(post.publicadoEm).toLocaleDateString('pt-BR') %></p><% } %>
+          </div>
+        </a>
       </article>
     <% }) %>
   </div>
   <% } else { %>
-    <p>Nenhum post nesta categoria ainda.</p>
+    <p class="mt-6 bg-white rounded-2xl border border-gray-200 p-6 text-gray-500">Nenhum post nesta categoria ainda.</p>
   <% } %>
 </section>

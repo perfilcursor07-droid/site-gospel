@@ -4,36 +4,39 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title><%= titulo %> | Site Gospel</title>
-  <link rel="stylesheet" href="/css/site.css">
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-  <header class="topo">
-    <div class="container topo-inner">
-      <a href="/" class="logo">✝ site<strong>gospel</strong></a>
-      <form class="busca" action="/busca" method="get">
-        <input type="text" name="q" placeholder="Buscar no site..." value="<%= typeof q !== 'undefined' ? q : '' %>">
-        <button type="submit" aria-label="Buscar">🔍</button>
+<body class="bg-gray-50 text-gray-800 font-sans antialiased">
+  <header class="bg-white border-b border-gray-200 sticky top-0 z-50">
+    <div class="max-w-6xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+      <a href="/" class="text-3xl tracking-tight text-orange-600 font-light">✝ site<span class="font-extrabold">gospel</span></a>
+      <form action="/busca" method="get" class="flex w-full sm:w-auto">
+        <input type="text" name="q" value="<%= typeof q !== 'undefined' ? q : '' %>" placeholder="Buscar no site..."
+          class="w-full sm:w-64 px-4 py-2 text-sm bg-gray-100 rounded-l-full focus:outline-none focus:ring-2 focus:ring-orange-500">
+        <button class="px-5 bg-orange-600 text-white rounded-r-full text-sm font-bold hover:bg-orange-700 transition">Buscar</button>
       </form>
     </div>
-    <nav class="menu">
-      <div class="container menu-inner">
-        <a href="/">início</a>
+    <nav class="border-t border-gray-100">
+      <div class="max-w-6xl mx-auto px-4 flex gap-1 overflow-x-auto">
+        <a href="/" class="px-3 py-3 text-sm font-bold text-gray-600 whitespace-nowrap border-b-2 border-transparent hover:text-orange-600 hover:border-orange-600 transition">início</a>
         <% categoriasNav.forEach(function (c) { %>
-          <a href="/categoria/<%= c.slug %>"><%= c.nome.toLowerCase() %></a>
+          <a href="/categoria/<%= c.slug %>" class="px-3 py-3 text-sm font-bold text-gray-600 whitespace-nowrap border-b-2 border-transparent hover:text-orange-600 hover:border-orange-600 transition"><%= c.nome.toLowerCase() %></a>
         <% }) %>
-        <a href="/pagina/sobre">sobre</a>
+        <a href="/pagina/sobre" class="px-3 py-3 text-sm font-bold text-gray-600 whitespace-nowrap border-b-2 border-transparent hover:text-orange-600 hover:border-orange-600 transition">sobre</a>
       </div>
     </nav>
   </header>
-  <main class="container principal">
-    <% mensagens.sucesso.forEach(function (m) { %><div class="alert alert-sucesso"><%= m %></div><% }) %>
-    <% mensagens.erro.forEach(function (m) { %><div class="alert alert-erro"><%= m %></div><% }) %>
+
+  <main class="max-w-6xl mx-auto px-4 py-6">
+    <% mensagens.sucesso.forEach(function (m) { %><div class="mb-4 px-4 py-3 rounded-lg bg-green-100 text-green-800 text-sm"><%= m %></div><% }) %>
+    <% mensagens.erro.forEach(function (m) { %><div class="mb-4 px-4 py-3 rounded-lg bg-red-100 text-red-800 text-sm"><%= m %></div><% }) %>
     <%- body %>
   </main>
-  <footer class="rodape">
-    <div class="container rodape-inner">
+
+  <footer class="bg-gray-900 text-gray-400 mt-12">
+    <div class="max-w-6xl mx-auto px-4 py-6 flex flex-col sm:flex-row justify-between gap-2 text-sm">
       <p>© <%= new Date().getFullYear() %> Site Gospel. Todos os direitos reservados.</p>
-      <a href="/login">área administrativa</a>
+      <a href="/login" class="hover:text-white transition">área administrativa</a>
     </div>
   </footer>
 </body>
