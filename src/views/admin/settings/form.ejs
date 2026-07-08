@@ -1,0 +1,49 @@
+<h1>Configurações</h1>
+<form action="/admin/configuracoes" method="post" enctype="multipart/form-data" class="form">
+  <h3>Identidade do site</h3>
+  <label>Nome do site
+    <input type="text" name="site_nome" value="<%= config.site_nome || '' %>" placeholder="Site Gospel">
+  </label>
+  <label>Descrição do site
+    <textarea name="site_descricao" rows="2" placeholder="Breve descrição do site"><%= config.site_descricao || '' %></textarea>
+  </label>
+  <label>Logomarca
+    <input type="file" name="logo" accept="image/*">
+  </label>
+  <% if (config.logo) { %>
+    <p class="dica">Logomarca atual: <a href="<%= config.logo %>" target="_blank"><%= config.logo %></a></p>
+    <label class="checkbox"><input type="checkbox" name="remover_logo"> Remover logomarca atual</label>
+  <% } %>
+
+  <h3>SEO</h3>
+  <label>Título SEO (título da página inicial no Google)
+    <input type="text" name="seo_titulo" maxlength="60" value="<%= config.seo_titulo || '' %>" placeholder="Ex.: Site Gospel - Notícias, louvor e edificação">
+  </label>
+  <p class="dica">Recomendado: até 60 caracteres.</p>
+  <label>Meta descrição
+    <textarea name="seo_descricao" rows="3" maxlength="160" placeholder="Descrição que aparece nos resultados do Google"><%= config.seo_descricao || '' %></textarea>
+  </label>
+  <p class="dica">Recomendado: entre 120 e 160 caracteres.</p>
+  <label>Palavras-chave
+    <input type="text" name="seo_palavras_chave" value="<%= config.seo_palavras_chave || '' %>" placeholder="gospel, louvor, estudos bíblicos, devocionais">
+  </label>
+  <label>Imagem padrão de compartilhamento (Open Graph)
+    <input type="file" name="og_imagem" accept="image/*">
+  </label>
+  <% if (config.og_imagem) { %>
+    <p class="dica">Imagem atual: <a href="<%= config.og_imagem %>" target="_blank"><%= config.og_imagem %></a></p>
+  <% } %>
+  <p class="dica">Usada quando o site é compartilhado em redes sociais. Recomendado: 1200x630px.</p>
+
+  <h3>Integrações Google</h3>
+  <label>Código de verificação do Google Search Console
+    <input type="text" name="google_site_verification" value="<%= config.google_site_verification || '' %>" placeholder="Conteúdo da meta tag google-site-verification">
+  </label>
+  <label>ID do Google Analytics
+    <input type="text" name="google_analytics" value="<%= config.google_analytics || '' %>" placeholder="G-XXXXXXXXXX">
+  </label>
+
+  <div class="form-acoes">
+    <button class="btn btn-primario">Salvar configurações</button>
+  </div>
+</form>

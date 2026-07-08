@@ -36,5 +36,6 @@ router.use('/posts', require('./posts'));
 router.use('/paginas', require('./pages'));
 router.use('/categorias', require('./categories'));
 router.use('/usuarios', require('./users'));
+router.use('/configuracoes', require('./settings'));
 
 module.exports = router;
