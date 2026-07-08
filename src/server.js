@@ -51,9 +51,10 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 3000;
-sequelize.sync().then(() => {
+sequelize.authenticate().then(() => {
   app.listen(PORT, () => console.log(`Servidor rodando em http://localhost:${PORT}`));
 }).catch((e) => {
   console.error('Erro ao conectar ao banco de dados:', e.message);
+  console.error('Verifique o arquivo .env e rode: npm run db:migrate');
   process.exit(1);
 });

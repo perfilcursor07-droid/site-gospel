@@ -3,7 +3,7 @@ const { sequelize, User, Category, Post, Page } = require('./models');
 
 (async () => {
   try {
-    await sequelize.sync({ alter: true });
+    await sequelize.authenticate();
 
     const [admin] = await User.findOrCreate({
       where: { email: 'admin@sitegospel.com' },
