@@ -1,42 +1,57 @@
-<section class="hero">
-  <h1>Bem-vindo ao Site Gospel</h1>
-  <p>Palavra, louvor e edificação para sua vida.</p>
-</section>
-
 <% if (destaques.length) { %>
-<section class="secao">
-  <h2>Destaques</h2>
-  <div class="grid">
-    <% destaques.forEach(function (post) { %>
-      <article class="card">
-        <% if (post.imagem) { %><img src="<%= post.imagem %>" alt="<%= post.titulo %>"><% } %>
-        <div class="card-body">
-          <% if (post.categoria) { %><span class="badge"><%= post.categoria.nome %></span><% } %>
-          <h3><a href="/post/<%= post.slug %>"><%= post.titulo %></a></h3>
+<% const principal = destaques[0]; %>
+<section class="manchetes">
+  <article class="manchete-principal">
+    <a href="/post/<%= principal.slug %>">
+      <% if (principal.imagem) { %><img src="<%= principal.imagem %>" alt="<%= principal.titulo %>"><% } %>
+      <div class="manchete-texto">
+        <% if (principal.categoria) { %><span class="chapeu chapeu-claro"><%= principal.categoria.nome %></span><% } %>
+        <h1><%= principal.titulo %></h1>
+        <% if (principal.resumo) { %><p><%= principal.resumo %></p><% } %>
+      </div>
+    </a>
+  </article>
+  <div class="manchetes-laterais">
+    <% destaques.slice(1).forEach(function (post) { %>
+      <article class="manchete-lateral">
+        <a href="/post/<%= post.slug %>">
+          <% if (post.categoria) { %><span class="chapeu"><%= post.categoria.nome %></span><% } %>
+          <h2><%= post.titulo %></h2>
           <% if (post.resumo) { %><p><%= post.resumo %></p><% } %>
-        </div>
+        </a>
       </article>
     <% }) %>
+    <% if (destaques.length === 1) { %>
+      <article class="manchete-lateral">
+        <a href="/busca"><h2>Acompanhe as últimas notícias e mensagens de edificação</h2></a>
+      </article>
+    <% } %>
   </div>
 </section>
 <% } %>
 
-<section class="secao">
-  <h2>Posts recentes</h2>
+<section class="feed">
+  <h2 class="titulo-secao">Últimas publicações</h2>
   <% if (recentes.length) { %>
-  <div class="grid">
+  <div class="feed-lista">
     <% recentes.forEach(function (post) { %>
-      <article class="card">
-        <% if (post.imagem) { %><img src="<%= post.imagem %>" alt="<%= post.titulo %>"><% } %>
-        <div class="card-body">
-          <% if (post.categoria) { %><span class="badge"><%= post.categoria.nome %></span><% } %>
-          <h3><a href="/post/<%= post.slug %>"><%= post.titulo %></a></h3>
-          <% if (post.resumo) { %><p><%= post.resumo %></p><% } %>
-        </div>
+      <article class="feed-item">
+        <a href="/post/<%= post.slug %>" class="feed-link">
+          <div class="feed-texto">
+            <% if (post.categoria) { %><span class="chapeu"><%= post.categoria.nome %></span><% } %>
+            <h3><%= post.titulo %></h3>
+            <% if (post.resumo) { %><p><%= post.resumo %></p><% } %>
+            <span class="feed-meta">
+              <% if (post.autor) { %>Por <%= post.autor.nome %><% } %>
+              <% if (post.publicadoEm) { %> • <%= new Date(post.publicadoEm).toLocaleDateString('pt-BR') %><% } %>
+            </span>
+          </div>
+          <% if (post.imagem) { %><img src="<%= post.imagem %>" alt="<%= post.titulo %>"><% } %>
+        </a>
       </article>
     <% }) %>
   </div>
   <% } else { %>
-    <p>Nenhum post publicado ainda.</p>
+    <p class="vazio">Nenhum post publicado ainda.</p>
   <% } %>
 </section>

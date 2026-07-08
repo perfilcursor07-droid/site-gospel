@@ -7,30 +7,33 @@
   <link rel="stylesheet" href="/css/site.css">
 </head>
 <body>
-  <header class="site-header">
-    <div class="container header-inner">
-      <a href="/" class="logo">✝ Site Gospel</a>
-      <nav class="nav">
-        <a href="/">Início</a>
-        <% categoriasNav.forEach(function (c) { %>
-          <a href="/categoria/<%= c.slug %>"><%= c.nome %></a>
-        <% }) %>
-        <a href="/pagina/sobre">Sobre</a>
-      </nav>
+  <header class="topo">
+    <div class="container topo-inner">
+      <a href="/" class="logo">✝ site<strong>gospel</strong></a>
       <form class="busca" action="/busca" method="get">
-        <input type="text" name="q" placeholder="Buscar..." value="<%= typeof q !== 'undefined' ? q : '' %>">
+        <input type="text" name="q" placeholder="Buscar no site..." value="<%= typeof q !== 'undefined' ? q : '' %>">
+        <button type="submit" aria-label="Buscar">🔍</button>
       </form>
     </div>
+    <nav class="menu">
+      <div class="container menu-inner">
+        <a href="/">início</a>
+        <% categoriasNav.forEach(function (c) { %>
+          <a href="/categoria/<%= c.slug %>"><%= c.nome.toLowerCase() %></a>
+        <% }) %>
+        <a href="/pagina/sobre">sobre</a>
+      </div>
+    </nav>
   </header>
-  <main class="container">
+  <main class="container principal">
     <% mensagens.sucesso.forEach(function (m) { %><div class="alert alert-sucesso"><%= m %></div><% }) %>
     <% mensagens.erro.forEach(function (m) { %><div class="alert alert-erro"><%= m %></div><% }) %>
     <%- body %>
   </main>
-  <footer class="site-footer">
-    <div class="container">
+  <footer class="rodape">
+    <div class="container rodape-inner">
       <p>© <%= new Date().getFullYear() %> Site Gospel. Todos os direitos reservados.</p>
-      <a href="/login">Área administrativa</a>
+      <a href="/login">área administrativa</a>
     </div>
   </footer>
 </body>
