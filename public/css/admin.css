@@ -1,0 +1,73 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Segoe UI', Arial, sans-serif; color: #2d2d2d; background: #f2f3f7; }
+a { color: #4a2e7a; text-decoration: none; }
+
+/* Layout admin */
+body.admin { display: flex; min-height: 100vh; }
+.sidebar { width: 230px; background: #2c1b4d; color: #fff; display: flex; flex-direction: column; flex-shrink: 0; }
+.sidebar-logo { font-size: 1.2rem; font-weight: 700; padding: 20px; border-bottom: 1px solid rgba(255,255,255,.1); }
+.sidebar nav { display: flex; flex-direction: column; padding: 12px 0; }
+.sidebar nav a { color: #cfc6e3; padding: 12px 20px; transition: background .15s; }
+.sidebar nav a:hover { background: rgba(255,255,255,.08); color: #fff; }
+.sidebar nav a.sair { margin-top: auto; color: #f0a8a8; }
+.conteudo { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.topbar { background: #fff; padding: 14px 28px; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+.topbar .papel { background: #ede7f8; color: #4a2e7a; font-size: .75rem; font-weight: 600; padding: 2px 10px; border-radius: 12px; margin-left: 6px; }
+.conteudo main { padding: 28px; }
+.conteudo h1 { color: #2c1b4d; margin-bottom: 20px; }
+.conteudo h2 { color: #2c1b4d; margin: 28px 0 14px; }
+
+/* Cabeçalho de página */
+.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.page-header h1 { margin: 0; }
+
+/* Cards de estatísticas */
+.cards-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; margin-bottom: 12px; }
+.stat { background: #fff; border-radius: 10px; padding: 20px; text-align: center; box-shadow: 0 2px 6px rgba(0,0,0,.06); }
+.stat .numero { display: block; font-size: 2rem; font-weight: 700; color: #4a2e7a; }
+
+/* Tabelas */
+.tabela { width: 100%; border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 6px rgba(0,0,0,.06); }
+.tabela th, .tabela td { padding: 12px 16px; text-align: left; border-bottom: 1px solid #eee; }
+.tabela th { background: #f7f5fb; color: #4a2e7a; font-size: .85rem; text-transform: uppercase; }
+.tabela .acoes { display: flex; gap: 8px; align-items: center; }
+
+/* Botões */
+.btn { display: inline-block; padding: 8px 18px; border-radius: 8px; border: none; cursor: pointer; font-size: .9rem; font-weight: 600; }
+.btn:hover { opacity: .9; text-decoration: none; }
+.btn-primario { background: #4a2e7a; color: #fff; }
+.btn-sec { background: #e6e3ee; color: #4a2e7a; }
+.btn-perigo { background: #fdeaea; color: #b23434; }
+.btn-bloco { width: 100%; padding: 12px; }
+
+/* Formulários */
+.form { background: #fff; border-radius: 10px; padding: 24px; box-shadow: 0 2px 6px rgba(0,0,0,.06); max-width: 760px; display: flex; flex-direction: column; gap: 16px; }
+.form label { display: flex; flex-direction: column; gap: 6px; font-weight: 600; color: #444; }
+.form input, .form select, .form textarea { padding: 10px 12px; border: 1px solid #d8d5e2; border-radius: 8px; font-size: 1rem; font-family: inherit; }
+.form input:focus, .form select:focus, .form textarea:focus { outline: 2px solid #6b4fa0; border-color: transparent; }
+.form .checkbox { flex-direction: row; align-items: center; }
+.form-acoes { display: flex; gap: 10px; }
+.dica { color: #888; font-size: .85rem; }
+
+/* Badges de status */
+.badge { display: inline-block; background: #ede7f8; color: #4a2e7a; font-size: .75rem; font-weight: 600; padding: 3px 10px; border-radius: 12px; }
+.badge-publicado { background: #e3f6e8; color: #1e7a38; }
+.badge-rascunho { background: #fff4dd; color: #9a6b00; }
+
+/* Alertas */
+.alert { padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; }
+.alert-sucesso { background: #e3f6e8; color: #1e7a38; }
+.alert-erro { background: #fdeaea; color: #b23434; }
+
+/* Tela de login */
+body.login-page { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: linear-gradient(135deg, #2c1b4d, #4a2e7a); }
+.login-card { background: #fff; border-radius: 14px; padding: 36px; width: 100%; max-width: 400px; box-shadow: 0 8px 30px rgba(0,0,0,.25); text-align: center; }
+.login-card h1 { color: #4a2e7a; margin-bottom: 4px; }
+.login-card .subtitulo { color: #888; margin-bottom: 20px; }
+.login-card .form { box-shadow: none; padding: 0; text-align: left; }
+.login-card .voltar { display: inline-block; margin-top: 18px; font-size: .9rem; }
+
+@media (max-width: 720px) {
+  body.admin { flex-direction: column; }
+  .sidebar { width: 100%; }
+}
