@@ -1,10 +1,11 @@
 <% if (destaques.length) { %>
 <% const principal = destaques[0]; %>
-<section class="grid lg:grid-cols-3 gap-4 mb-10">
-  <article class="lg:col-span-2 relative rounded-2xl overflow-hidden bg-gray-900 min-h-[22rem] lg:min-h-[26rem] group">
+<% const laterais = destaques.length > 1 ? destaques.slice(1, 5) : recentes.filter(function (p) { return p.id !== principal.id; }).slice(0, 4); %>
+<section class="grid lg:grid-cols-3 gap-6 mb-10">
+  <article class="lg:col-span-2 relative rounded-lg overflow-hidden bg-gray-900 min-h-[22rem] lg:min-h-[26rem] group">
     <a href="/post/<%= principal.slug %>" class="absolute inset-0">
       <% if (principal.imagem) { %>
-        <img src="<%= principal.imagem %>" alt="<%= principal.titulo %>" class="absolute inset-0 w-full h-full object-cover opacity-80 group-hover:scale-105 transition duration-500">
+        <img src="<%= principal.imagem %>" alt="<%= principal.titulo %>" class="absolute inset-0 w-full h-full object-cover opacity-85 group-hover:scale-105 transition duration-500">
       <% } %>
       <div class="absolute inset-x-0 bottom-0 p-6 pt-28 bg-gradient-to-t from-black/90 via-black/50 to-transparent">
         <% if (principal.categoria) { %><span class="text-xs font-extrabold uppercase tracking-widest text-orange-400"><%= principal.categoria.nome %></span><% } %>
@@ -14,21 +15,15 @@
     </a>
   </article>
 
-  <div class="flex flex-col gap-4">
-    <% destaques.slice(1, 4).forEach(function (post) { %>
-      <article class="flex-1 bg-white rounded-2xl border border-gray-200 p-5 hover:shadow-md transition group">
+  <div class="bg-white rounded-lg border border-gray-200 divide-y divide-gray-100">
+    <% laterais.forEach(function (post) { %>
+      <article class="p-5 group">
         <a href="/post/<%= post.slug %>">
           <% if (post.categoria) { %><span class="text-xs font-extrabold uppercase tracking-widest text-orange-600"><%= post.categoria.nome %></span><% } %>
-          <h2 class="mt-1 text-lg font-extrabold leading-snug text-gray-900 group-hover:text-orange-600 transition"><%= post.titulo %></h2>
-          <% if (post.resumo) { %><p class="mt-2 text-sm text-gray-500 line-clamp-2"><%= post.resumo %></p><% } %>
+          <h2 class="mt-1 text-base font-extrabold leading-snug text-gray-900 group-hover:underline"><%= post.titulo %></h2>
         </a>
       </article>
     <% }) %>
-    <% if (destaques.length === 1) { %>
-      <article class="flex-1 bg-orange-50 rounded-2xl border border-orange-100 p-5 flex items-center">
-        <p class="text-sm font-bold text-orange-700">Acompanhe as últimas notícias e mensagens de edificação. 🙏</p>
-      </article>
-    <% } %>
   </div>
 </section>
 <% } %>
@@ -38,13 +33,13 @@
     <span class="w-1.5 h-6 bg-orange-600 rounded-full"></span> Últimas publicações
   </h2>
   <% if (recentes.length) { %>
-  <div class="flex flex-col gap-3">
+  <div class="bg-white rounded-lg border border-gray-200 divide-y divide-gray-100">
     <% recentes.forEach(function (post) { %>
-      <article class="bg-white rounded-2xl border border-gray-200 hover:shadow-md transition group">
+      <article class="group">
         <a href="/post/<%= post.slug %>" class="flex justify-between gap-5 p-5">
           <div class="flex-1 min-w-0">
             <% if (post.categoria) { %><span class="text-xs font-extrabold uppercase tracking-widest text-orange-600"><%= post.categoria.nome %></span><% } %>
-            <h3 class="mt-1 text-lg lg:text-xl font-extrabold leading-snug text-gray-900 group-hover:text-orange-600 transition"><%= post.titulo %></h3>
+            <h3 class="mt-1 text-lg lg:text-xl font-extrabold leading-snug text-gray-900 group-hover:underline"><%= post.titulo %></h3>
             <% if (post.resumo) { %><p class="mt-1 text-sm text-gray-500 line-clamp-2"><%= post.resumo %></p><% } %>
             <p class="mt-3 text-xs text-gray-400">
               <% if (post.autor) { %>Por <%= post.autor.nome %><% } %>
@@ -52,13 +47,13 @@
             </p>
           </div>
           <% if (post.imagem) { %>
-            <img src="<%= post.imagem %>" alt="<%= post.titulo %>" class="w-32 h-24 lg:w-44 lg:h-28 object-cover rounded-xl flex-shrink-0">
+            <img src="<%= post.imagem %>" alt="<%= post.titulo %>" class="w-32 h-24 lg:w-44 lg:h-28 object-cover rounded flex-shrink-0">
           <% } %>
         </a>
       </article>
     <% }) %>
   </div>
   <% } else { %>
-    <p class="bg-white rounded-2xl border border-gray-200 p-6 text-gray-500">Nenhum post publicado ainda.</p>
+    <p class="bg-white rounded-lg border border-gray-200 p-6 text-gray-500">Nenhum post publicado ainda.</p>
   <% } %>
 </section>

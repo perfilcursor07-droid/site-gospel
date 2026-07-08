@@ -8,19 +8,19 @@
 </head>
 <body class="admin">
   <aside class="sidebar">
-    <div class="sidebar-logo">✝ Site Gospel</div>
+    <div class="sidebar-logo">site<strong>gospel</strong></div>
     <nav>
-      <a href="/admin">📊 Dashboard</a>
-      <a href="/admin/posts">📝 Posts</a>
+      <a href="/admin">Dashboard</a>
+      <a href="/admin/posts">Posts</a>
       <% if (usuarioLogado.papel !== 'usuario') { %>
-        <a href="/admin/paginas">📄 Páginas</a>
-        <a href="/admin/categorias">🏷 Categorias</a>
+        <a href="/admin/paginas">Páginas</a>
+        <a href="/admin/categorias">Categorias</a>
       <% } %>
       <% if (usuarioLogado.papel === 'administrador') { %>
-        <a href="/admin/usuarios">👥 Usuários</a>
+        <a href="/admin/usuarios">Usuários</a>
       <% } %>
-      <a href="/" target="_blank">🌐 Ver site</a>
-      <a href="/logout" class="sair">🚪 Sair</a>
+      <a href="/" target="_blank">Ver site</a>
+      <a href="/logout" class="sair">Sair</a>
     </nav>
   </aside>
   <div class="conteudo">
