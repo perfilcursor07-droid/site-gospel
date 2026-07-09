@@ -481,6 +481,30 @@ body.sidebar-overlay::before {
 .snippet-titulo { color: #1a0dab; font-size: 1.15rem; line-height: 1.3; margin-top: 4px; }
 .snippet-desc { color: #4d5156; font-size: .88rem; margin-top: 4px; }
 
+/* Aba Sitemap */
+.sitemap-intro p { margin: 0; color: #4b5563; line-height: 1.5; }
+.sitemap-alerta { margin-top: 10px !important; padding: 10px 12px; border-radius: 8px; background: #fef3c7; color: #92400e; font-weight: 600; }
+.sitemap-links h3,
+.sitemap-amostra h3 { margin: 0 0 10px; font-size: 1rem; color: #111827; }
+.sitemap-link-item { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+.sitemap-link-tipo { min-width: 88px; font-size: .78rem; font-weight: 700; text-transform: uppercase; color: #6b7280; }
+.sitemap-link-campo { flex: 1; min-width: 220px; font-family: ui-monospace, monospace; font-size: .82rem; background: #f9fafb; }
+.sitemap-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; }
+.sitemap-stat { border: 1px solid #e5e7eb; border-radius: 10px; padding: 12px; background: #fff; text-align: center; }
+.sitemap-stat strong { display: block; font-size: 1.35rem; color: #ea580c; }
+.sitemap-stat span { font-size: .78rem; color: #6b7280; text-transform: uppercase; letter-spacing: .4px; }
+.sitemap-acoes-google { display: flex; gap: 8px; flex-wrap: wrap; }
+.sitemap-opcoes { border: 1px solid #e5e7eb; border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+.sitemap-opcoes legend { font-weight: 700; padding: 0 6px; }
+.sitemap-frequencias { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+.sitemap-amostra ul { margin: 0; padding-left: 18px; max-height: 180px; overflow: auto; }
+.sitemap-amostra li { margin-bottom: 6px; font-size: .82rem; color: #374151; word-break: break-all; }
+
+/* IA nas configurações */
+.painel-ia-config { margin-bottom: 20px; max-width: none; }
+.aba-ia-acao { display: flex; justify-content: flex-end; margin-bottom: -4px; }
+.btn-ia-aba { font-size: .82rem; }
+
 /* Badges de status */
 .badge { display: inline-block; background: #ffedd5; color: #c2410c; font-size: .72rem; font-weight: 700; padding: 3px 10px; border-radius: 12px; text-transform: uppercase; letter-spacing: .5px; }
 .badge-publicado { background: #dcfce7; color: #15803d; }

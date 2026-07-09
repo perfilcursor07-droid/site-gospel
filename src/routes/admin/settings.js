@@ -2,13 +2,16 @@ const router = require('express').Router();
 const { Setting } = require('../../models');
 const { permitir } = require('../../middlewares/auth');
 const upload = require('../../config/upload');
+const { obterResumo } = require('../../services/sitemap');
+const { sugerirConfiguracaoSite } = require('../../services/siteConfigAi');
 
 router.use(permitir('administrador'));
 
 router.get('/', async (req, res, next) => {
   try {
     const config = await Setting.obterTodas();
-    res.render('admin/settings/form', { titulo: 'Configurações', config });
+    const sitemap = await obterResumo(config, req);
+    res.render('admin/settings/form', { titulo: 'Configurações', config, sitemap });
   } catch (e) { next(e); }
 });
 
@@ -43,6 +46,22 @@ router.post('/', upload.fields([
     // Toggle de indexação: quando desligado, aplica noindex + bloqueia no robots.txt
     await Setting.definir('seo_indexar', req.body.seo_indexar === 'on' ? 'sim' : 'nao');
 
+    const camposSitemap = [
+      'sitemap_url_canonica',
+      'sitemap_changefreq_home',
+      'sitemap_changefreq_posts',
+      'sitemap_changefreq_categorias',
+      'sitemap_changefreq_paginas'
+    ];
+    for (const campo of camposSitemap) {
+      if (campo in req.body) await Setting.definir(campo, (req.body[campo] || '').trim());
+    }
+    await Setting.definir('sitemap_incluir_home', req.body.sitemap_incluir_home === 'on' ? 'sim' : 'nao');
+    await Setting.definir('sitemap_incluir_posts', req.body.sitemap_incluir_posts === 'on' ? 'sim' : 'nao');
+    await Setting.definir('sitemap_incluir_categorias', req.body.sitemap_incluir_categorias === 'on' ? 'sim' : 'nao');
+    await Setting.definir('sitemap_incluir_paginas', req.body.sitemap_incluir_paginas === 'on' ? 'sim' : 'nao');
+    await Setting.definir('sitemap_news_ativo', req.body.sitemap_news_ativo === 'on' ? 'sim' : 'nao');
+
     if (req.files && req.files.logo) {
       await Setting.definir('logo', `/uploads/${req.files.logo[0].filename}`);
     } else if (req.body.remover_logo === 'on') {
@@ -64,6 +83,19 @@ router.post('/', upload.fields([
     req.flash('erro', 'Erro ao salvar configurações: ' + e.message);
   }
   res.redirect('/admin/configuracoes');
+});
+
+router.post('/ia-sugerir', async (req, res) => {
+  try {
+    const descricao = (req.body.descricao || '').trim();
+    const secao = (req.body.secao || 'todas').trim();
+    const config = await Setting.obterTodas();
+    const sugestoes = await sugerirConfiguracaoSite({ descricao, secao, configAtual: config });
+    res.json({ ok: true, sugestoes });
+  } catch (e) {
+    const status = e.message.includes('DEEPSEEK_API_KEY') ? 503 : 400;
+    res.status(status).json({ ok: false, erro: e.message });
+  }
 });
 
 module.exports = router;

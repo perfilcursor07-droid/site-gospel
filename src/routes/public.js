@@ -5,6 +5,12 @@ const { dividirConteudoParaLeiaMais } = require('../utils/postContent');
 const { gerarCaptcha, validarCaptcha } = require('../utils/commentCaptcha');
 const { buscarHibrida } = require('../services/braveSearch');
 const { braveDisponivel } = require('../services/braveApi');
+const {
+  gerarSitemapPrincipal,
+  gerarSitemapNews,
+  listarSitemaps,
+  obterBaseUrl
+} = require('../services/sitemap');
 
 const includePadrao = ['categoria', 'autor'];
 
@@ -209,57 +215,45 @@ router.get('/busca', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-// Sitemap dinâmico para o Google
 router.get('/sitemap.xml', async (req, res, next) => {
   try {
-    const base = `${req.protocol}://${req.get('host')}`;
-    const [posts, paginas, categorias] = await Promise.all([
-      Post.findAll({ where: { status: 'publicado' }, order: [['publicadoEm', 'DESC']] }),
-      Page.findAll({ where: { status: 'publicado' } }),
-      Category.findAll()
-    ]);
-
-    const urls = [{ loc: `${base}/`, prioridade: '1.0' }];
-    posts.forEach((p) => urls.push({
-      loc: `${base}/post/${p.slug}`,
-      lastmod: new Date(p.updatedAt).toISOString().slice(0, 10),
-      prioridade: '0.8'
-    }));
-    categorias.forEach((c) => urls.push({ loc: `${base}/categoria/${c.slug}`, prioridade: '0.6' }));
-    paginas.forEach((p) => urls.push({
-      loc: `${base}/pagina/${p.slug}`,
-      lastmod: new Date(p.updatedAt).toISOString().slice(0, 10),
-      prioridade: '0.5'
-    }));
-
-    const xml = '<?xml version="1.0" encoding="UTF-8"?>\n' +
-      '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
-      urls.map((u) =>
-        '  <url>\n' +
-        `    <loc>${u.loc}</loc>\n` +
-        (u.lastmod ? `    <lastmod>${u.lastmod}</lastmod>\n` : '') +
-        `    <priority>${u.prioridade}</priority>\n` +
-        '  </url>'
-      ).join('\n') +
-      '\n</urlset>';
-
-    res.type('application/xml').send(xml);
+    const config = res.locals.config || {};
+    if ((config.seo_indexar || 'sim') === 'nao') {
+      return res.status(404).type('text/plain').send('Sitemap indisponível');
+    }
+    const xml = await gerarSitemapPrincipal(config, req);
+    res.type('application/xml; charset=utf-8').send(xml);
   } catch (e) { next(e); }
 });
 
-// Robots.txt — respeita o toggle "indexar no Google" das configurações
+router.get('/sitemap-news.xml', async (req, res, next) => {
+  try {
+    const config = res.locals.config || {};
+    if ((config.seo_indexar || 'sim') === 'nao' || (config.sitemap_news_ativo || 'nao') !== 'sim') {
+      return res.status(404).type('text/plain').send('Sitemap News indisponível');
+    }
+    const xml = await gerarSitemapNews(config, req);
+    res.type('application/xml; charset=utf-8').send(xml);
+  } catch (e) { next(e); }
+});
+
 router.get('/robots.txt', (req, res) => {
-  const base = `${req.protocol}://${req.get('host')}`;
-  const indexar = (res.locals.config.seo_indexar || 'sim') !== 'nao';
+  const config = res.locals.config || {};
+  const base = obterBaseUrl(config, req);
+  const indexar = (config.seo_indexar || 'sim') !== 'nao';
   if (!indexar) {
     return res.type('text/plain').send('User-agent: *\nDisallow: /\n');
   }
+  const linhasSitemap = listarSitemaps(config, base)
+    .map((item) => `Sitemap: ${item.loc}`)
+    .join('\n');
   res.type('text/plain').send(
     'User-agent: *\n' +
     'Allow: /\n' +
     'Disallow: /admin\n' +
-    'Disallow: /login\n\n' +
-    `Sitemap: ${base}/sitemap.xml\n`
+    'Disallow: /login\n' +
+    'Disallow: /busca\n\n' +
+    `${linhasSitemap}\n`
   );
 });
 
