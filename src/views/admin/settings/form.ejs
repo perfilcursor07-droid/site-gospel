@@ -138,6 +138,9 @@
       <% if (!sitemap.indexar) { %>
         <p class="sitemap-alerta">A indexação está desligada na aba SEO. O sitemap fica indisponível até você ativar “Permitir indexação no Google”.</p>
       <% } %>
+      <% if (sitemap.erro) { %>
+        <p class="sitemap-alerta">Não foi possível carregar o resumo do sitemap: <%= sitemap.erro %>. Verifique o banco de dados e rode <code>npm run db:migrate</code>.</p>
+      <% } %>
     </div>
 
     <label>URL canônica do site (produção)

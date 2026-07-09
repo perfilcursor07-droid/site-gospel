@@ -10,7 +10,26 @@ router.use(permitir('administrador'));
 router.get('/', async (req, res, next) => {
   try {
     const config = await Setting.obterTodas();
-    const sitemap = await obterResumo(config, req);
+    let sitemap;
+    try {
+      sitemap = await obterResumo(config, req);
+    } catch (erroSitemap) {
+      console.error('Erro ao gerar resumo do sitemap:', erroSitemap);
+      const base = `${req.protocol}://${req.get('host')}`;
+      sitemap = {
+        base,
+        urls: [],
+        urlsNews: [],
+        contagem: { home: 0, posts: 0, categorias: 0, paginas: 0, news: 0, total: 0 },
+        sitemaps: [{ loc: `${base}/sitemap.xml`, tipo: 'principal' }],
+        robotsUrl: `${base}/robots.txt`,
+        googleSearchConsoleUrl: 'https://search.google.com/search-console',
+        googleSitemapPingUrl: null,
+        indexar: (config.seo_indexar || 'sim') !== 'nao',
+        amostra: [],
+        erro: erroSitemap.message
+      };
+    }
     res.render('admin/settings/form', { titulo: 'Configurações', config, sitemap });
   } catch (e) { next(e); }
 });

@@ -1,9 +1,15 @@
 
--- Servidor Produção
+-- Servidor Produção (NÃO use root — use o usuário do site)
+su - obuxixogospel
 cd /home/obuxixogospel/htdocs/www.obuxixogospel.com.br
-git pull origin feature/portal-globo
+git remote add github https://github.com/perfilcursor07-droid/site-gospel.git
+git fetch github
+git pull github feature/portal-globo
+
 npm install
-npm run db:migrate
+NODE_ENV=production npm run db:migrate
+pm2 restart all
+pm2 logs --lines 50
 
 Servidor Local Baixar
 git pull github feature/portal-globo
