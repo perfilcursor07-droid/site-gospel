@@ -49,7 +49,7 @@
           <label class="ia-fonte-card">
             <input type="radio" name="ia-fonte-busca" value="todas" checked>
             <span class="ia-fonte-card-titulo">Notícias + portais + redes</span>
-            <span class="ia-fonte-card-desc">Google News, portais gospel, web e redes sociais</span>
+            <span class="ia-fonte-card-desc">Google News, portais gospel, web, Google Trends e redes sociais</span>
           </label>
           <label class="ia-fonte-card ia-fonte-card--destaque">
             <input type="radio" name="ia-fonte-busca" value="somente_redes">
@@ -83,6 +83,9 @@
         </label>
         <label class="checkbox ia-check-compacto" id="label-ia-redes-sociais">
           <input type="checkbox" id="ia-redes-sociais" checked> Incluir redes (modo misto)
+        </label>
+        <label class="checkbox ia-check-compacto" id="label-ia-google-trends">
+          <input type="checkbox" id="ia-google-trends" checked> Google Trends
         </label>
         <label class="checkbox ia-check-compacto ia-check-internacional" id="label-ia-internacional">
           <input type="checkbox" id="ia-conteudo-internacional"> Conteúdo internacional
@@ -180,7 +183,22 @@
                   <option value="120">2 h</option>
                 </select>
               </div>
+              <div class="ia-campo ia-campo-compacto">
+                <label for="ia-inicio-modo">Início</label>
+                <select id="ia-inicio-modo">
+                  <option value="agora">Agora</option>
+                  <option value="apos_fila">Após a fila atual</option>
+                  <option value="custom">Data e hora</option>
+                </select>
+              </div>
             </div>
+            <div class="ia-opcoes-linha ia-opcoes-linha-intervalo ia-inicio-custom-linha" id="ia-inicio-custom-linha" hidden>
+              <div class="ia-campo">
+                <label for="ia-inicio-custom">Data e hora de início</label>
+                <input type="datetime-local" id="ia-inicio-custom" class="ia-input-datetime">
+              </div>
+            </div>
+            <p class="dica ia-inicio-dica" id="ia-inicio-dica" hidden></p>
           </div>
           <p class="dica ia-plano-publicacao" id="ia-plano-publicacao"></p>
         </div>
@@ -759,25 +777,74 @@
 
   function opcoesBuscaIa() {
     var somenteRedes = document.querySelector('input[name="ia-fonte-busca"]:checked')?.value === 'somente_redes';
+    var chkTrends = document.getElementById('ia-google-trends');
     return {
       incluirRedesSociais: somenteRedes || document.getElementById('ia-redes-sociais').checked,
       somenteRedesSociais: somenteRedes,
       somenteRecentes: document.getElementById('ia-somente-recentes').checked,
       diasRecentes: document.getElementById('ia-dias').value,
-      conteudoInternacional: document.getElementById('ia-conteudo-internacional').checked
+      conteudoInternacional: document.getElementById('ia-conteudo-internacional').checked,
+      incluirGoogleTrends: !somenteRedes && chkTrends && chkTrends.checked
     };
+  }
+
+  var slotFilaCache = null;
+
+  async function carregarProximoSlotFila() {
+    try {
+      var min = document.getElementById('ia-min-intervalo')?.value || 5;
+      var res = await fetch('/admin/posts/ia/fila-proximo-slot?minutos=' + encodeURIComponent(min), { headers: { Accept: 'application/json' } });
+      var data = await res.json();
+      if (data.ok) slotFilaCache = data;
+      return data;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function formatarDataHoraLocal(iso) {
+    if (!iso) return '';
+    return new Date(iso).toLocaleString('pt-BR', {
+      day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+    });
+  }
+
+  function atualizarInicioIntervalo() {
+    var modo = document.getElementById('ia-inicio-modo')?.value || 'agora';
+    var linhaCustom = document.getElementById('ia-inicio-custom-linha');
+    var inputCustom = document.getElementById('ia-inicio-custom');
+    var dica = document.getElementById('ia-inicio-dica');
+    if (linhaCustom) linhaCustom.hidden = modo !== 'custom';
+    if (dica) {
+      dica.hidden = modo === 'agora';
+      if (modo === 'apos_fila' && slotFilaCache) {
+        dica.textContent = slotFilaCache.temFilaAtiva
+          ? 'Próximo slot sugerido: ' + formatarDataHoraLocal(slotFilaCache.sugeridoAposFila) + ' (após a última da fila ou agendada).'
+          : 'Nenhuma fila ativa — começará em seguida, com o intervalo da primeira matéria.';
+      } else if (modo === 'custom') {
+        dica.textContent = 'A primeira matéria só será gerada a partir desta data/hora.';
+      }
+    }
+    if (modo === 'custom' && inputCustom && !inputCustom.value) {
+      var d = new Date(Date.now() + 60 * 60 * 1000);
+      d.setMinutes(Math.ceil(d.getMinutes() / 5) * 5, 0, 0);
+      inputCustom.value = d.toISOString().slice(0, 16);
+    }
+    atualizarPlanoPublicacao();
   }
 
   function atualizarOpcoesFonteBusca() {
     var somenteRedes = document.querySelector('input[name="ia-fonte-busca"]:checked')?.value === 'somente_redes';
     var labelRedes = document.getElementById('label-ia-redes-sociais');
     var chkRedes = document.getElementById('ia-redes-sociais');
+    var labelTrends = document.getElementById('label-ia-google-trends');
     var dicaInt = document.getElementById('dica-ia-internacional');
     var chkInt = document.getElementById('ia-conteudo-internacional');
     if (labelRedes && chkRedes) {
       labelRedes.hidden = somenteRedes;
       if (somenteRedes) chkRedes.checked = true;
     }
+    if (labelTrends) labelTrends.hidden = somenteRedes;
     if (dicaInt && chkInt) {
       dicaInt.hidden = !chkInt.checked;
     }
@@ -948,18 +1015,35 @@
     var minutos = parseInt(document.getElementById('ia-min-intervalo').value, 10) || 15;
     var lotes = Math.ceil(total / porLote);
     var pausas = Math.max(lotes - 1, 0);
+    var modoInicio = document.getElementById('ia-inicio-modo')?.value || 'agora';
+    var inicioTxt = modoInicio === 'apos_fila' && slotFilaCache?.sugeridoAposFila
+      ? ' a partir de ' + formatarDataHoraLocal(slotFilaCache.sugeridoAposFila)
+      : (modoInicio === 'custom' && document.getElementById('ia-inicio-custom')?.value
+        ? ' a partir de ' + formatarDataHoraLocal(document.getElementById('ia-inicio-custom').value)
+        : '');
     planoPublicacao.textContent = total + ' matéria(s) em ' + lotes + ' lote(s) de até ' + porLote +
-      ', intervalo de ' + formatarTempo(minutos) + ' no servidor (' + pausas + ' pausa(s)). Pode fechar a página.';
+      ', intervalo de ' + formatarTempo(minutos) + ' no servidor (' + pausas + ' pausa(s))' + inicioTxt + '. Pode fechar a página.';
   }
 
   modoPubRadios.forEach(function (radio) {
     radio.addEventListener('change', function () {
-      if (intervaloConfig) intervaloConfig.hidden = radio.value !== 'intervalos' || !radio.checked;
+      var intervalo = radio.value === 'intervalos' && radio.checked;
+      if (intervaloConfig) intervaloConfig.hidden = !intervalo;
+      if (intervalo) {
+        carregarProximoSlotFila().then(function () { atualizarInicioIntervalo(); });
+      }
       atualizarPlanoPublicacao();
     });
   });
   document.getElementById('ia-qtd-intervalo').addEventListener('change', atualizarPlanoPublicacao);
-  document.getElementById('ia-min-intervalo').addEventListener('change', atualizarPlanoPublicacao);
+  document.getElementById('ia-min-intervalo').addEventListener('change', function () {
+    carregarProximoSlotFila().then(function () { atualizarInicioIntervalo(); });
+    atualizarPlanoPublicacao();
+  });
+  var inicioModo = document.getElementById('ia-inicio-modo');
+  var inicioCustom = document.getElementById('ia-inicio-custom');
+  if (inicioModo) inicioModo.addEventListener('change', atualizarInicioIntervalo);
+  if (inicioCustom) inicioCustom.addEventListener('change', atualizarPlanoPublicacao);
 
   function atualizarProgresso(atual, total, texto) {
     if (!progressoEl) return;
@@ -981,13 +1065,21 @@
     var opts = opcoesPublicacao();
     var porLote = parseInt(document.getElementById('ia-qtd-intervalo').value, 10) || 1;
     var minutos = parseInt(document.getElementById('ia-min-intervalo').value, 10) || 5;
-    return chamarApi('/admin/posts/ia/agendar-fila', Object.assign({
+    var modoInicio = document.getElementById('ia-inicio-modo')?.value || 'agora';
+    var payload = {
       topicos: topicos,
       categoriaId: opts.categoriaId,
       status: opts.status,
       porLote: porLote,
-      minutosIntervalo: minutos
-    }, opcoesBuscaIa()));
+      minutosIntervalo: minutos,
+      modoInicio: modoInicio
+    };
+    if (modoInicio === 'custom') {
+      var val = document.getElementById('ia-inicio-custom')?.value;
+      if (!val) throw new Error('Informe a data e hora de início.');
+      payload.inicioEm = new Date(val).toISOString();
+    }
+    return chamarApi('/admin/posts/ia/agendar-fila', Object.assign(payload, opcoesBuscaIa()));
   }
 
   async function agendarTopicosNaFila(sel) {

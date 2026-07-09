@@ -5,7 +5,7 @@ const { gerarArtigo } = require('../../services/deepseek');
 const { pesquisarNichos, apurarTopico } = require('../../services/newsResearch');
 const { obterImagemParaArtigo, avisoFalhaImagem } = require('../../services/imageFetcher');
 const { marcarTopicosPublicados, deduplicarTopicos, encontrarSimilar } = require('../../utils/topicMatch');
-const { agendarTopicos, prepararTopicosParaFila, obterResumoFila, cancelarFilaPendente } = require('../../services/iaFilaPublicacao');
+const { agendarTopicos, prepararTopicosParaFila, obterResumoFila, cancelarFilaPendente, obterProximoSlotFila } = require('../../services/iaFilaPublicacao');
 
 function avisoQualidadeArtigo(artigo) {
   if (artigo._avisoQualidade) return artigo._avisoQualidade;
@@ -87,9 +87,10 @@ async function gerarArtigoCompleto(topico, nomeSite, opcoes = {}) {
 
 router.post('/pesquisar', async (req, res) => {
   try {
-    const { palavrasChave, quantidadePorNicho, incluirRedesSociais, somenteRedesSociais, somenteRecentes, diasRecentes, conteudoInternacional } = req.body;
+    const { palavrasChave, quantidadePorNicho, incluirRedesSociais, somenteRedesSociais, somenteRecentes, diasRecentes, conteudoInternacional, incluirGoogleTrends } = req.body;
     const somenteRedes = somenteRedesSociais === true || somenteRedesSociais === 'true';
     const internacional = conteudoInternacional === true || conteudoInternacional === 'true';
+    const trends = incluirGoogleTrends !== false && incluirGoogleTrends !== 'false';
     const posts = await carregarPostsExistentes();
     const topicos = await pesquisarNichos(
       palavrasChave || 'gospel',
@@ -99,7 +100,8 @@ router.post('/pesquisar', async (req, res) => {
         somenteRedesSociais: somenteRedes,
         somenteRecentes: somenteRecentes !== false,
         diasRecentes: diasRecentes || '24h',
-        conteudoInternacional: internacional
+        conteudoInternacional: internacional,
+        incluirGoogleTrends: somenteRedes ? false : trends
       }
     );
     const topicosUnicos = deduplicarTopicos(topicos);
@@ -267,7 +269,9 @@ router.post('/agendar-fila', async (req, res) => {
       status,
       minutosIntervalo,
       porLote,
-      conteudoInternacional
+      conteudoInternacional,
+      modoInicio,
+      inicioEm
     } = req.body;
 
     if (!Array.isArray(topicos) || !topicos.length) {
@@ -295,7 +299,9 @@ router.post('/agendar-fila', async (req, res) => {
       statusDesejado: status === 'rascunho' ? 'rascunho' : 'publicado',
       minutosIntervalo: intervalo,
       porLote: lote,
-      conteudoInternacional: conteudoInternacional === true || conteudoInternacional === 'true'
+      conteudoInternacional: conteudoInternacional === true || conteudoInternacional === 'true',
+      modoInicio: ['agora', 'apos_fila', 'custom'].includes(modoInicio) ? modoInicio : 'agora',
+      inicioEm: inicioEm || null
     });
 
     responderJson(res, 200, {
@@ -308,6 +314,17 @@ router.post('/agendar-fila', async (req, res) => {
     });
   } catch (e) {
     console.error('agendar-fila:', e);
+    responderJson(res, 500, { ok: false, erro: e.message });
+  }
+});
+
+router.get('/fila-proximo-slot', async (req, res) => {
+  try {
+    const autorId = req.session.user.papel === 'usuario' ? req.session.user.id : null;
+    const minutos = Math.min(Math.max(parseInt(req.query.minutos, 10) || 5, 1), 120);
+    const slot = await obterProximoSlotFila(autorId, minutos);
+    responderJson(res, 200, { ok: true, ...slot });
+  } catch (e) {
     responderJson(res, 500, { ok: false, erro: e.message });
   }
 });
@@ -340,7 +357,8 @@ router.post('/preencher-formulario', async (req, res) => {
       somenteRedesSociais: somenteRedes,
       somenteRecentes: req.body.somenteRecentes !== false,
       diasRecentes: req.body.diasRecentes || '24h',
-      conteudoInternacional: internacional
+      conteudoInternacional: internacional,
+      incluirGoogleTrends: !somenteRedes && req.body.incluirGoogleTrends !== false
     });
     const posts = await carregarPostsExistentes();
     const topicosUnicos = deduplicarTopicos(topicos);

@@ -73,16 +73,23 @@ async function agendarTopicos({
   statusDesejado = 'publicado',
   minutosIntervalo = 5,
   porLote = 1,
-  conteudoInternacional = false
+  conteudoInternacional = false,
+  modoInicio = 'agora',
+  inicioEm = null
 }) {
-  const agora = Date.now();
   const msIntervalo = Math.max(minutosIntervalo, 1) * 60 * 1000;
   const lote = Math.max(porLote, 1);
+  const baseMs = await calcularInicioAgendamento({ autorId, modoInicio, inicioEm, msIntervalo });
+
+  const maxOrdem = await IaFilaJob.max('ordem', {
+    where: { status: ['pendente', 'processando'] }
+  }) || 0;
+
   const jobs = [];
 
   for (let i = 0; i < topicos.length; i++) {
     const indiceLote = Math.floor(i / lote);
-    const executarApos = new Date(agora + indiceLote * msIntervalo);
+    const executarApos = new Date(baseMs + indiceLote * msIntervalo);
     const publicarEm = new Date(executarApos);
 
     jobs.push({
@@ -91,7 +98,7 @@ async function agendarTopicos({
       topico: JSON.stringify(topicos[i]),
       statusDesejado: statusDesejado === 'publicado' ? 'publicado' : 'rascunho',
       conteudoInternacional: !!conteudoInternacional,
-      ordem: i,
+      ordem: maxOrdem + i + 1,
       executarApos,
       publicarEm,
       status: 'pendente'
@@ -100,6 +107,73 @@ async function agendarTopicos({
 
   await IaFilaJob.bulkCreate(jobs);
   return { total: jobs.length, primeiroEm: jobs[0]?.executarApos, ultimoEm: jobs[jobs.length - 1]?.publicarEm };
+}
+
+async function calcularInicioAgendamento({ autorId, modoInicio, inicioEm, msIntervalo }) {
+  const agora = Date.now();
+
+  if (modoInicio === 'custom' && inicioEm) {
+    const custom = new Date(inicioEm).getTime();
+    if (!Number.isNaN(custom)) return Math.max(agora, custom);
+  }
+
+  if (modoInicio === 'apos_fila') {
+    const where = autorId ? { autorId } : {};
+    const [ultimoJob, ultimoPost] = await Promise.all([
+      IaFilaJob.findOne({
+        where: { ...where, status: ['pendente', 'processando'] },
+        order: [['publicarEm', 'DESC']]
+      }),
+      Post.findOne({
+        where: { ...where, status: 'agendado' },
+        order: [['publicadoEm', 'DESC']]
+      })
+    ]);
+
+    let fim = agora;
+    if (ultimoJob?.publicarEm) fim = Math.max(fim, new Date(ultimoJob.publicarEm).getTime());
+    if (ultimoPost?.publicadoEm) fim = Math.max(fim, new Date(ultimoPost.publicadoEm).getTime());
+    return fim + msIntervalo;
+  }
+
+  return agora;
+}
+
+async function obterProximoSlotFila(autorId = null, minutosIntervalo = 5) {
+  const where = autorId ? { autorId } : {};
+  const msIntervalo = Math.max(minutosIntervalo, 1) * 60 * 1000;
+
+  const [ultimoJob, ultimoPost] = await Promise.all([
+    IaFilaJob.findOne({
+      where: { ...where, status: ['pendente', 'processando'] },
+      order: [['publicarEm', 'DESC']]
+    }),
+    Post.findOne({
+      where: { ...where, status: 'agendado' },
+      order: [['publicadoEm', 'DESC']]
+    })
+  ]);
+
+  const agora = Date.now();
+  let fim = agora;
+  if (ultimoJob?.publicarEm) fim = Math.max(fim, new Date(ultimoJob.publicarEm).getTime());
+  if (ultimoPost?.publicadoEm) fim = Math.max(fim, new Date(ultimoPost.publicadoEm).getTime());
+
+  return {
+    ultimoFila: ultimoJob?.publicarEm || null,
+    ultimoAgendado: ultimoPost?.publicadoEm || null,
+    sugeridoAposFila: new Date(fim + msIntervalo),
+    temFilaAtiva: !!(ultimoJob || ultimoPost)
+  };
+}
+
+async function recuperarJobsTravados() {
+  const [qtd] = await IaFilaJob.update(
+    { status: 'pendente' },
+    { where: { status: 'processando' } }
+  );
+  if (qtd) console.log(`iaFila: ${qtd} job(s) em processamento recuperado(s) após reinício.`);
+  return qtd;
 }
 
 async function publicarPostsAgendados() {
@@ -212,6 +286,9 @@ module.exports = {
   obterResumoFila,
   cancelarFilaPendente,
   tickFila,
+  calcularInicioAgendamento,
+  obterProximoSlotFila,
+  recuperarJobsTravados,
   prepararTopicosParaFila: async (topicos) => {
     const posts = await Post.findAll({
       attributes: ['id', 'titulo', 'slug', 'resumo', 'status'],

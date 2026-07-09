@@ -2,6 +2,7 @@ const { apurarTopico, decodificarHtml } = require('./articleSource');
 const { fatosSimilares, deduplicarTopicos } = require('../utils/topicMatch');
 const { marcarRespostaBrave, marcarRespostaBraveOk, braveDisponivel } = require('./braveApi');
 const { buscarNoticias } = require('./braveSearch');
+const { buscarGoogleTrends } = require('./googleTrends');
 
 const USER_AGENT = 'SiteGospelBot/1.0 (+https://gitlab.com/perfilcursor07-group/obuxixo)';
 const DIAS_RECENTES_PADRAO = 1;
@@ -168,6 +169,8 @@ function pontuarTopico(item) {
   if (item.fonte === 'Brave News') score += MS_POR_DIA * 2;
   if (item.fonte === 'Google News' || item.fonte === 'Google News — em alta') score += MS_POR_DIA;
   if (item.fonte === 'Google News — 24h') score += MS_POR_DIA * 1.5;
+  if (item.fonte === 'Google Trends') score += MS_POR_DIA * 2.5;
+  if (item.tipoFonte === 'trends') score += MS_POR_DIA * 1.5;
   if (item.tipoFonte === 'portal_gospel') score += MS_POR_DIA * 0.5;
   if (item.tipoFonte === 'rede_social') score += MS_POR_DIA * 0.25;
   if (item.fonteInternacional || item.tipoFonte === 'internacional') score += MS_POR_DIA * 0.75;
@@ -630,7 +633,8 @@ async function pesquisarNichos(palavrasChave, quantidadePorNicho = 5, opcoes = {
     somenteRedesSociais = false,
     somenteRecentes = true,
     diasRecentes = '24h',
-    conteudoInternacional = false
+    conteudoInternacional = false,
+    incluirGoogleTrends = true
   } = opcoes;
   const periodo = normalizarPeriodo(diasRecentes);
   const diasBusca = periodo.diasGoogle || periodo.diasBrave || 1;
@@ -695,6 +699,10 @@ async function pesquisarNichos(palavrasChave, quantidadePorNicho = 5, opcoes = {
 
         if (conteudoInternacional) {
           promessas.push(buscarConteudoInternacional(termo, Math.max(quantidadePorNicho * 2, 10), diasBusca));
+        }
+
+        if (incluirGoogleTrends) {
+          promessas.push(buscarGoogleTrends(termo, Math.max(3, Math.ceil(quantidadePorNicho / 2))));
         }
       }
 

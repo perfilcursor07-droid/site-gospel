@@ -7,7 +7,7 @@ const expressLayouts = require('express-ejs-layouts');
 
 const { sequelize, Category, Page, Setting } = require('./models');
 const { obterUrlBase } = require('./utils/requestUrl');
-const { tickFila } = require('./services/iaFilaPublicacao');
+const { tickFila, recuperarJobsTravados } = require('./services/iaFilaPublicacao');
 
 const app = express();
 app.set('trust proxy', 1);
@@ -75,6 +75,8 @@ async function iniciarWorkerFila() {
     const config = await Setting.obterTodas();
     nomeSite = config.site_nome || nomeSite;
   } catch { /* ignore */ }
+
+  await recuperarJobsTravados();
 
   setInterval(() => {
     tickFila(nomeSite).catch((e) => console.warn('iaFila:', e.message));
