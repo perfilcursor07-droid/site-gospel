@@ -170,6 +170,7 @@ function pontuarTopico(item) {
   if (item.fonte === 'Google News — 24h') score += MS_POR_DIA * 1.5;
   if (item.tipoFonte === 'portal_gospel') score += MS_POR_DIA * 0.5;
   if (item.tipoFonte === 'rede_social') score += MS_POR_DIA * 0.25;
+  if (item.fonteInternacional || item.tipoFonte === 'internacional') score += MS_POR_DIA * 0.75;
   if (!item.resumo || item.resumo.length < 20) score -= MS_POR_DIA * 0.5;
   return score;
 }
@@ -385,18 +386,25 @@ async function buscarBraveNews(palavraChave, limite = 6, dias = 5) {
   })).filter((item) => itemQualidadeValida(item));
 }
 
-async function buscarBraveWeb(query, palavraChave, limite = 5, { freshness = 'pw', fonteLabel = null, somenteRede = false } = {}) {
+async function buscarBraveWeb(query, palavraChave, limite = 5, {
+  freshness = 'pw',
+  fonteLabel = null,
+  somenteRede = false,
+  searchLang = 'pt-br'
+} = {}) {
   if (!braveDisponivel()) return [];
 
   try {
     const params = new URLSearchParams({
       q: query,
       count: String(Math.min(Math.max(limite + 5, 10), 20)),
-      country: 'BR',
-      search_lang: 'pt-br',
-      ui_lang: 'pt-BR',
+      country: searchLang === 'en' ? 'US' : 'BR',
       freshness
     });
+    if (searchLang) {
+      params.set('search_lang', searchLang);
+      params.set('ui_lang', searchLang === 'en' ? 'en-US' : 'pt-BR');
+    }
     const res = await fetch(`https://api.search.brave.com/res/v1/web/search?${params}`, {
       headers: {
         Accept: 'application/json',
@@ -474,24 +482,121 @@ async function buscarWebGospel(palavraChave, limite = 5, dias = 5) {
     consultas.map((q) => buscarBraveWeb(q, palavraChave, Math.ceil(limite / 2), { freshness: fresh, fonteLabel: 'Google/Web' }))
   );
 
-  return lotes.flat().slice(0, limite);
+  return lotes.flat()    .slice(0, limite);
 }
 
-async function buscarRedesSociais(palavraChave, limite = 6, dias = 5, { modoAmpliado = false } = {}) {
+async function buscarGoogleNewsInternacional(palavraChave, limite = 6, dias = 1) {
+  const consultas = [
+    `${palavraChave} christian gospel news when:${dias}d`,
+    `${palavraChave} evangelical church worship when:${dias}d`,
+    `${palavraChave} gospel singer pastor when:${dias}d`
+  ];
+  const resultados = [];
+
+  for (const base of consultas) {
+    const query = encodeURIComponent(base);
+    const url = `https://news.google.com/rss/search?q=${query}&hl=en-US&gl=US&ceid=US:en`;
+    try {
+      const res = await fetch(url, { headers: { 'User-Agent': USER_AGENT }, signal: AbortSignal.timeout(12000) });
+      if (!res.ok) continue;
+      const xml = await res.text();
+      extrairItensRss(xml)
+        .filter((item) => itemEhRecente(item, dias === 1 ? '24h' : dias))
+        .forEach((item) => {
+          if (!itemQualidadeValida(item)) return;
+          resultados.push({
+            ...item,
+            nicho: palavraChave,
+            fonte: 'Google News — Internacional',
+            fonteInternacional: true,
+            tipoFonte: 'internacional',
+            recente: true
+          });
+        });
+    } catch {
+      /* ignore */
+    }
+  }
+
+  return resultados.slice(0, limite);
+}
+
+async function buscarConteudoInternacional(palavraChave, limite = 10, dias = 1) {
+  const fresh = freshnessBrave(dias);
+  const termo = palavraChave.trim();
+  const consultas = [
+    { q: `${termo} christian gospel news`, limite: 6 },
+    { q: `${termo} evangelical church worship news`, limite: 6 },
+    { q: `site:christianpost.com ${termo}`, limite: 4 },
+    { q: `site:christianitytoday.com ${termo}`, limite: 4 },
+    { q: `site:religionnews.com ${termo}`, limite: 4 },
+    { q: `${termo} gospel news international`, limite: 5 },
+    { q: `${termo} noticias evangelicas iglesia`, limite: 5 },
+    { q: `${termo} música gospel internacional`, limite: 4, lang: 'pt-br' }
+  ];
+
+  const vistos = new Set();
+  const candidatos = [];
+
+  const lotes = await Promise.all(
+    consultas.map((c) =>
+      buscarBraveWeb(c.q, palavraChave, c.limite, {
+        freshness: fresh,
+        fonteLabel: 'Internacional',
+        searchLang: c.lang || 'en'
+      })
+    )
+  );
+
+  for (const item of lotes.flat()) {
+    if (!item?.link || vistos.has(item.link)) continue;
+    vistos.add(item.link);
+    candidatos.push({
+      ...item,
+      fonteInternacional: true,
+      tipoFonte: 'internacional',
+      fonte: item.fonte || 'Internacional'
+    });
+  }
+
+  const googleInt = await buscarGoogleNewsInternacional(palavraChave, Math.ceil(limite / 2), dias);
+  for (const item of googleInt) {
+    if (!item?.link || vistos.has(item.link)) continue;
+    vistos.add(item.link);
+    candidatos.push(item);
+  }
+
+  return candidatos.slice(0, limite);
+}
+
+async function buscarRedesSociais(palavraChave, limite = 6, dias = 5, { modoAmpliado = false, conteudoInternacional = false } = {}) {
   const fresh = freshnessBrave(dias);
   const consultas = montarConsultasRedesSociais(palavraChave);
   const vistos = new Set();
   const candidatos = [];
 
-  const lotesBrave = await Promise.all(
-    consultas.map((c) =>
+  const consultasExtras = conteudoInternacional ? [
+    { q: `site:instagram.com/p "${palavraChave}" worship christian`, rede: 'Instagram', limite: 6, fresh: freshnessBrave(dias), lang: 'en' },
+    { q: `(site:twitter.com OR site:x.com) ${palavraChave} christian gospel worship`, rede: 'X (Twitter)', limite: 5, fresh: freshnessBrave(dias), lang: 'en' }
+  ] : [];
+
+  const lotesBrave = await Promise.all([
+    ...consultas.map((c) =>
       buscarBraveWeb(c.q, palavraChave, c.limite, {
         freshness: c.fresh || fresh,
         fonteLabel: c.rede,
         somenteRede: true
       })
+    ),
+    ...consultasExtras.map((c) =>
+      buscarBraveWeb(c.q, palavraChave, c.limite, {
+        freshness: c.fresh,
+        fonteLabel: c.rede,
+        somenteRede: true,
+        searchLang: c.lang || 'en'
+      }).then((itens) => itens.map((i) => ({ ...i, fonteInternacional: true })))
     )
-  );
+  ]);
 
   for (const item of lotesBrave.flat()) {
     if (!item?.link || vistos.has(item.link)) continue;
@@ -524,7 +629,8 @@ async function pesquisarNichos(palavrasChave, quantidadePorNicho = 5, opcoes = {
     incluirRedesSociais = true,
     somenteRedesSociais = false,
     somenteRecentes = true,
-    diasRecentes = '24h'
+    diasRecentes = '24h',
+    conteudoInternacional = false
   } = opcoes;
   const periodo = normalizarPeriodo(diasRecentes);
   const diasBusca = periodo.diasGoogle || periodo.diasBrave || 1;
@@ -568,7 +674,10 @@ async function pesquisarNichos(palavrasChave, quantidadePorNicho = 5, opcoes = {
 
       if (somenteRedesSociais) {
         promessas = [
-          buscarRedesSociais(termo, Math.max(quantidadePorNicho * 5, 25), diasBusca, { modoAmpliado: true })
+          buscarRedesSociais(termo, Math.max(quantidadePorNicho * 5, 25), diasBusca, {
+            modoAmpliado: true,
+            conteudoInternacional
+          })
         ];
       } else {
         promessas = [
@@ -582,6 +691,10 @@ async function pesquisarNichos(palavrasChave, quantidadePorNicho = 5, opcoes = {
 
         if (incluirRedesSociais) {
           promessas.push(buscarRedesSociais(termo, maxRedesPorTermo, diasBusca));
+        }
+
+        if (conteudoInternacional) {
+          promessas.push(buscarConteudoInternacional(termo, Math.max(quantidadePorNicho * 2, 10), diasBusca));
         }
       }
 

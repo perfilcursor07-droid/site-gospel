@@ -266,7 +266,8 @@ async function gerarArtigo({
   fontesApuracao,
   dataReferencia,
   emAlta,
-  redeSocial
+  redeSocial,
+  conteudoInternacional
 }) {
   const hoje = new Date().toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
   const listaFontes = (fontesApuracao || [])
@@ -306,6 +307,13 @@ REGRAS DE ESCRITA:
 - Valor único: o que sua redação acrescenta além de copiar a fonte.
 - Sem citações inventadas entre aspas.
 ${redeSocial ? '- Pauta de rede social: reporte repercussão, NÃO transcreva posts.' : ''}
+${conteudoInternacional ? `
+IDIOMA DA FONTE (IMPORTANTE):
+- A pauta pode estar em inglês, espanhol ou outro idioma.
+- Traduza os FATOS para português do Brasil com reescrita jornalística — NUNCA tradução literal nem cópia de parágrafos.
+- Escreva para o leitor brasileiro: matéria original, com furo de reportagem, tom G1/Globo.
+- Pode citar genericamente que o fato repercute no exterior ou em veículos internacionais, sem inventar declarações.
+- Nomes próprios podem manter grafia original quando usual (ex.: Hillsong, Bethel).` : ''}
 
 Retorne APENAS JSON válido:
 {
@@ -319,7 +327,9 @@ Retorne APENAS JSON válido:
   "termos_imagem": "3 buscas separadas por vírgula"
 }`;
 
-  const systemMsg = 'Redator investigativo gospel brasileiro. Conteúdo people-first, E-E-A-T, original, com furo de reportagem. Reportagem a partir de fontes externas: sim. Plágio: nunca. Matérias ENXUTAS e densas, não longas. Retorne somente JSON válido.';
+  const systemMsg = conteudoInternacional
+    ? 'Redator investigativo gospel brasileiro. Fontes podem estar em outro idioma: traduza fatos e reescreva em português do Brasil com furo de reportagem. E-E-A-T, original, sem plágio. Retorne somente JSON válido.'
+    : 'Redator investigativo gospel brasileiro. Conteúdo people-first, E-E-A-T, original, com furo de reportagem. Reportagem a partir de fontes externas: sim. Plágio: nunca. Matérias ENXUTAS e densas, não longas. Retorne somente JSON válido.';
 
   const resposta = await chatCompletion(
     [

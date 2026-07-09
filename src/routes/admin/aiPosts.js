@@ -42,8 +42,11 @@ async function prepararTopico(topico) {
   return apurarTopico(topico);
 }
 
-async function gerarArtigoCompleto(topico, nomeSite) {
+async function gerarArtigoCompleto(topico, nomeSite, opcoes = {}) {
   const apurado = await prepararTopico(topico);
+  const conteudoInternacional = opcoes.conteudoInternacional === true
+    || topico.fonteInternacional === true
+    || topico.tipoFonte === 'internacional';
 
   const artigo = await gerarArtigo({
     tituloReferencia: apurado.titulo,
@@ -55,7 +58,8 @@ async function gerarArtigoCompleto(topico, nomeSite) {
     fontesApuracao: apurado.fontesApuracao,
     dataReferencia: apurado.dataReferencia || apurado.data,
     emAlta: apurado.emAlta,
-    redeSocial: apurado.redeSocial || apurado.tipoFonte === 'rede_social'
+    redeSocial: apurado.redeSocial || apurado.tipoFonte === 'rede_social',
+    conteudoInternacional
   });
 
   const capa = await obterImagemParaArtigo({
@@ -83,8 +87,9 @@ async function gerarArtigoCompleto(topico, nomeSite) {
 
 router.post('/pesquisar', async (req, res) => {
   try {
-    const { palavrasChave, quantidadePorNicho, incluirRedesSociais, somenteRedesSociais, somenteRecentes, diasRecentes } = req.body;
+    const { palavrasChave, quantidadePorNicho, incluirRedesSociais, somenteRedesSociais, somenteRecentes, diasRecentes, conteudoInternacional } = req.body;
     const somenteRedes = somenteRedesSociais === true || somenteRedesSociais === 'true';
+    const internacional = conteudoInternacional === true || conteudoInternacional === 'true';
     const posts = await carregarPostsExistentes();
     const topicos = await pesquisarNichos(
       palavrasChave || 'gospel',
@@ -93,7 +98,8 @@ router.post('/pesquisar', async (req, res) => {
         incluirRedesSociais: somenteRedes ? true : incluirRedesSociais !== false,
         somenteRedesSociais: somenteRedes,
         somenteRecentes: somenteRecentes !== false,
-        diasRecentes: diasRecentes || '24h'
+        diasRecentes: diasRecentes || '24h',
+        conteudoInternacional: internacional
       }
     );
     const topicosUnicos = deduplicarTopicos(topicos);
@@ -121,7 +127,9 @@ router.post('/gerar-preview', async (req, res) => {
     }
 
     const nomeSite = res.locals.config?.site_nome || 'Site Gospel';
-    const { artigo, imagem, imagemAlt, topico: apurado } = await gerarArtigoCompleto(topico, nomeSite);
+    const { artigo, imagem, imagemAlt, topico: apurado } = await gerarArtigoCompleto(topico, nomeSite, {
+      conteudoInternacional: req.body.conteudoInternacional === true || req.body.conteudoInternacional === 'true' || topico.fonteInternacional
+    });
 
     const duplicadoGerado = encontrarSimilar(artigo.titulo, posts, artigo.resumo);
     if (duplicadoGerado) {
@@ -184,7 +192,9 @@ router.post('/gerar-lote', async (req, res) => {
           continue;
         }
 
-        const { artigo, imagem, imagemAlt } = await gerarArtigoCompleto(topico, nomeSite);
+        const { artigo, imagem, imagemAlt } = await gerarArtigoCompleto(topico, nomeSite, {
+          conteudoInternacional: topico.fonteInternacional || req.body.conteudoInternacional === true || req.body.conteudoInternacional === 'true'
+        });
 
         const duplicadoGerado = encontrarSimilar(artigo.titulo, cacheTitulos, artigo.resumo);
         if (duplicadoGerado) {
@@ -253,11 +263,13 @@ router.post('/preencher-formulario', async (req, res) => {
   try {
     const { palavrasChave, incluirRedesSociais } = req.body;
     const somenteRedes = req.body.somenteRedesSociais === true || req.body.somenteRedesSociais === 'true';
+    const internacional = req.body.conteudoInternacional === true || req.body.conteudoInternacional === 'true';
     const topicos = await pesquisarNichos(palavrasChave || 'gospel', 1, {
       incluirRedesSociais: somenteRedes ? true : req.body.incluirRedesSociais !== false,
       somenteRedesSociais: somenteRedes,
       somenteRecentes: req.body.somenteRecentes !== false,
-      diasRecentes: req.body.diasRecentes || '24h'
+      diasRecentes: req.body.diasRecentes || '24h',
+      conteudoInternacional: internacional
     });
     const posts = await carregarPostsExistentes();
     const topicosUnicos = deduplicarTopicos(topicos);
@@ -271,7 +283,9 @@ router.post('/preencher-formulario', async (req, res) => {
     }
     const nomeSite = res.locals.config?.site_nome || 'Site Gospel';
 
-    const { artigo, imagem, imagemAlt, topico: apurado } = await gerarArtigoCompleto(topico, nomeSite);
+    const { artigo, imagem, imagemAlt, topico: apurado } = await gerarArtigoCompleto(topico, nomeSite, {
+      conteudoInternacional: req.body.conteudoInternacional === true || req.body.conteudoInternacional === 'true' || topico.fonteInternacional
+    });
 
     const duplicadoGerado = encontrarSimilar(artigo.titulo, posts, artigo.resumo);
     if (duplicadoGerado) {

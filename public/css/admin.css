@@ -868,7 +868,10 @@ body.modal-capa-aberto { overflow: hidden; }
 .ia-fonte-card--destaque:has(input:checked) { border-color: #ea580c; background: #fff7ed; }
 .ia-fonte-card-titulo { font-size: .9rem; font-weight: 700; color: #111827; }
 .ia-fonte-card-desc { font-size: .78rem; color: #6b7280; line-height: 1.4; }
-.ia-check-compacto[hidden] { display: none; }
+.ia-check-internacional { flex-basis: 100%; margin-top: 2px; }
+.ia-dica-internacional { flex-basis: 100%; margin: 0 0 4px; font-size: .78rem; color: #6b7280; line-height: 1.45; }
+.ia-dica-internacional[hidden] { display: none; }
+.ia-badge-internacional { display: inline-block; padding: 1px 6px; border-radius: 4px; background: #dbeafe; color: #1d4ed8; font-size: .7rem; font-weight: 700; }
 .ia-campo-compacto { min-width: 100px; flex: 0 0 auto; }
 .ia-campo-compacto label { font-size: .72rem; margin-bottom: 4px; }
 .ia-campo-compacto select { padding: 7px 8px; font-size: .82rem; }

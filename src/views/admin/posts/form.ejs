@@ -84,6 +84,12 @@
         <label class="checkbox ia-check-compacto" id="label-ia-redes-sociais">
           <input type="checkbox" id="ia-redes-sociais" checked> Incluir redes (modo misto)
         </label>
+        <label class="checkbox ia-check-compacto ia-check-internacional" id="label-ia-internacional">
+          <input type="checkbox" id="ia-conteudo-internacional"> Conteúdo internacional
+        </label>
+        <p class="dica ia-dica-internacional" id="dica-ia-internacional" hidden>
+          Busca em inglês/espanhol (Christian Post, Google News US, etc.). O DeepSeek traduz e reescreve em português com furo de reportagem — sem plágio.
+        </p>
       </div>
 
       <div class="ia-passo-acoes ia-passo-acoes-inicio">
@@ -757,7 +763,8 @@
       incluirRedesSociais: somenteRedes || document.getElementById('ia-redes-sociais').checked,
       somenteRedesSociais: somenteRedes,
       somenteRecentes: document.getElementById('ia-somente-recentes').checked,
-      diasRecentes: document.getElementById('ia-dias').value
+      diasRecentes: document.getElementById('ia-dias').value,
+      conteudoInternacional: document.getElementById('ia-conteudo-internacional').checked
     };
   }
 
@@ -765,10 +772,20 @@
     var somenteRedes = document.querySelector('input[name="ia-fonte-busca"]:checked')?.value === 'somente_redes';
     var labelRedes = document.getElementById('label-ia-redes-sociais');
     var chkRedes = document.getElementById('ia-redes-sociais');
+    var dicaInt = document.getElementById('dica-ia-internacional');
+    var chkInt = document.getElementById('ia-conteudo-internacional');
     if (labelRedes && chkRedes) {
       labelRedes.hidden = somenteRedes;
       if (somenteRedes) chkRedes.checked = true;
     }
+    if (dicaInt && chkInt) {
+      dicaInt.hidden = !chkInt.checked;
+    }
+  }
+
+  var chkInternacional = document.getElementById('ia-conteudo-internacional');
+  if (chkInternacional) {
+    chkInternacional.addEventListener('change', atualizarOpcoesFonteBusca);
   }
 
   document.querySelectorAll('input[name="ia-fonte-busca"]').forEach(function (radio) {
@@ -801,6 +818,7 @@
         '<span class="ia-topico-meta">' + escapar(t.nicho || '') +
         (t.emAlta ? ' · <em class="ia-em-alta">em alta</em>' : '') +
         (t.recente !== false ? ' · <span class="ia-badge-recente">recente</span>' : '') +
+        (t.fonteInternacional ? ' · <span class="ia-badge-internacional">internacional</span>' : '') +
         (t.redeSocial ? ' · <span class="ia-badge-rede">' + escapar(t.redeSocial) + '</span>' : (t.fonte ? ' · ' + escapar(t.fonte) : '')) +
         (t.veiculo ? ' · ' + escapar(t.veiculo) : '') +
         (jaPub ? ' · <span class="ia-badge-publicado">Já publicado</span>' : '') +

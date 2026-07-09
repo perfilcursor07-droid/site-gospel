@@ -168,7 +168,10 @@ async function apurarTopico(topico) {
         .filter(Boolean)
         .join(' ')
         .slice(0, 200);
-      const contextoBrave = await buscarContextoLlm(`${consultaContexto} gospel brasil`);
+      const consultaBrave = topico.fonteInternacional
+        ? `${consultaContexto} christian gospel news`
+        : `${consultaContexto} gospel brasil`;
+      const contextoBrave = await buscarContextoLlm(consultaBrave);
       if (contextoBrave && contextoBrave.length > 80) {
         fontesApuracao.push({
           veiculo: 'Apuração web (Brave)',
