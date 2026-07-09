@@ -1,0 +1,74 @@
+<!doctype html>
+<html ⚡ lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <script async src="https://cdn.ampproject.org/v0.js"></script>
+  <% if (adsenseClient) { %>
+  <script async custom-element="amp-auto-ads" src="https://cdn.ampproject.org/v0/amp-auto-ads-0.1.js"></script>
+  <% } %>
+  <title><%= escapeHtml(tituloSeo) %></title>
+  <link rel="canonical" href="<%= urlCanonica %>">
+  <meta name="viewport" content="width=device-width,minimum-scale=1,initial-scale=1">
+  <meta name="description" content="<%= escapeHtml(metaDescricao || '') %>">
+  <style amp-boilerplate>body{-webkit-animation:-amp-start 8s steps(1,end) 0s 1 normal both;-moz-animation:-amp-start 8s steps(1,end) 0s 1 normal both;-ms-animation:-amp-start 8s steps(1,end) 0s 1 normal both;animation:-amp-start 8s steps(1,end) 0s 1 normal both}@-webkit-keyframes -amp-start{from{visibility:hidden}to{visibility:visible}}@-moz-keyframes -amp-start{from{visibility:hidden}to{visibility:visible}}@-ms-keyframes -amp-start{from{visibility:hidden}to{visibility:visible}}@-o-keyframes -amp-start{from{visibility:hidden}to{visibility:visible}}@keyframes -amp-start{from{visibility:hidden}to{visibility:visible}}</style>
+  <noscript><style amp-boilerplate>body{-webkit-animation:none;-moz-animation:none;-ms-animation:none;animation:none}</style></noscript>
+  <style amp-custom>
+    body { font-family: Georgia, 'Times New Roman', serif; margin: 0; color: #1f2937; background: #fff; line-height: 1.7; }
+    .amp-header { border-bottom: 1px solid #e5e7eb; padding: 14px 16px; text-align: center; }
+    .amp-header a { color: <%= corPrimaria %>; font-weight: 800; font-size: 1.15rem; text-decoration: none; }
+    .amp-wrap { max-width: 720px; margin: 0 auto; padding: 20px 16px 40px; }
+    .amp-cat { color: <%= corPrimaria %>; font-size: .72rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; text-decoration: none; }
+    h1 { font-size: 1.75rem; line-height: 1.25; margin: 10px 0 12px; color: #111827; }
+    .amp-resumo { font-size: 1.05rem; color: #6b7280; margin-bottom: 14px; }
+    .amp-meta { font-size: .85rem; color: #9ca3af; margin-bottom: 18px; }
+    .amp-conteudo { font-size: 1.02rem; }
+    .amp-conteudo p { margin: 0 0 1rem; }
+    .amp-conteudo h2 { font-size: 1.35rem; margin: 1.5rem 0 .75rem; color: #111827; }
+    .amp-conteudo h3 { font-size: 1.15rem; margin: 1.25rem 0 .5rem; }
+    .amp-conteudo a { color: <%= corPrimaria %>; }
+    .amp-conteudo ul, .amp-conteudo ol { padding-left: 1.25rem; margin: 0 0 1rem; }
+    .amp-footer { border-top: 1px solid #e5e7eb; padding: 20px 16px; text-align: center; font-size: .85rem; color: #6b7280; }
+    .amp-footer a { color: <%= corPrimaria %>; font-weight: 700; text-decoration: none; }
+    .amp-capa { margin: 18px 0; }
+  </style>
+  <script type="application/ld+json">
+  <%- jsonLd %>
+  </script>
+</head>
+<body>
+  <% if (adsenseClient) { %>
+  <amp-auto-ads type="adsense" data-ad-client="<%= adsenseClient %>"></amp-auto-ads>
+  <% } %>
+
+  <header class="amp-header">
+    <a href="<%= urlBase %>/"><%= escapeHtml(nomeSite) %></a>
+  </header>
+
+  <main class="amp-wrap">
+    <% if (post.categoria) { %>
+      <a class="amp-cat" href="<%= urlBase %>/categoria/<%= post.categoria.slug %>"><%= escapeHtml(post.categoria.nome) %></a>
+    <% } %>
+    <h1><%= escapeHtml(post.titulo) %></h1>
+    <% if (post.resumo) { %><p class="amp-resumo"><%= escapeHtml(post.resumo) %></p><% } %>
+    <p class="amp-meta">
+      <% if (post.autor) { %>Por <%= escapeHtml(post.autor.nome) %> · <% } %>
+      <% if (post.publicadoEm) { %><time datetime="<%= new Date(post.publicadoEm).toISOString() %>"><%= new Date(post.publicadoEm).toLocaleDateString('pt-BR') %></time><% } %>
+    </p>
+
+    <% if (post.imagem) { %>
+      <figure class="amp-capa">
+        <amp-img src="<%= escapeHtml(imagemAbsoluta) %>" width="1200" height="675" layout="responsive" alt="<%= escapeHtml(post.imagemAlt || post.titulo) %>"></amp-img>
+      </figure>
+    <% } %>
+
+    <article class="amp-conteudo">
+      <%- conteudoAmp %>
+    </article>
+  </main>
+
+  <footer class="amp-footer">
+    <p><a href="<%= urlCanonica %>">Ver versão completa do artigo</a></p>
+    <p>© <%= new Date().getFullYear() %> <%= escapeHtml(nomeSite) %></p>
+  </footer>
+</body>
+</html>

@@ -25,6 +25,7 @@
   <button type="button" class="aba-btn" data-aba="seo">SEO</button>
   <button type="button" class="aba-btn" data-aba="redes">Redes sociais</button>
   <button type="button" class="aba-btn" data-aba="google">Integrações Google</button>
+  <button type="button" class="aba-btn" data-aba="amp">AMP</button>
   <button type="button" class="aba-btn" data-aba="sitemap">Sitemap</button>
   <button type="button" class="aba-btn" data-aba="rodape">Rodapé</button>
 </div>
@@ -126,10 +127,54 @@
     <label>Google Analytics
       <input type="text" name="google_analytics" value="<%= config.google_analytics || '' %>" placeholder="G-XXXXXXXXXX">
     </label>
+
+    <fieldset class="integracao-box">
+      <legend>Google AdSense</legend>
+      <label>Código do AdSense (cole o script completo)
+        <textarea name="google_adsense" rows="6" placeholder="&lt;script async src=&quot;https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXX&quot; crossorigin=&quot;anonymous&quot;&gt;&lt;/script&gt;"><%= config.google_adsense || '' %></textarea>
+      </label>
+      <label>ID do cliente AdSense (ca-pub-…)
+        <input type="text" name="google_adsense_client" value="<%= config.google_adsense_client || '' %>" placeholder="ca-pub-XXXXXXXXXXXXXXXX">
+      </label>
+      <p class="dica">O script é inserido no <code>&lt;head&gt;</code> de todas as páginas do site. O ID <code>ca-pub</code> é detectado automaticamente do script e usado nas páginas AMP.</p>
+    </fieldset>
+
     <label>Código customizado no &lt;head&gt;
       <textarea name="head_custom" rows="5" placeholder="Scripts ou tags extras inseridos no <head> do site"><%= config.head_custom || '' %></textarea>
     </label>
     <p class="dica">Atenção: o conteúdo é inserido sem filtro no site público.</p>
+  </div>
+
+  <div class="aba-conteudo" data-aba="amp" hidden>
+    <p class="dica">AMP gera versões aceleradas para mobile dos posts, com link <code>rel="amphtml"</code> na página normal e URL canônica na versão AMP — conforme exigências do Google.</p>
+
+    <label class="checkbox">
+      <input type="checkbox" name="amp_habilitado" <%= config.amp_habilitado === 'sim' ? 'checked' : '' %>> Habilitar páginas AMP para posts publicados
+    </label>
+
+    <label class="checkbox">
+      <input type="checkbox" name="amp_adsense" <%= (config.amp_adsense || 'sim') !== 'nao' ? 'checked' : '' %>> Exibir Google AdSense nas páginas AMP (requer ID ca-pub na aba Integrações Google)
+    </label>
+
+    <div class="integracao-box integracao-box--info">
+      <h3>Como funciona</h3>
+      <ul class="integracao-lista">
+        <li>Página normal: <code>/post/slug-da-materia</code></li>
+        <li>Versão AMP: <code>/post/slug-da-materia/amp</code></li>
+        <li>A página normal inclui <code>&lt;link rel="amphtml"&gt;</code> apontando para a AMP</li>
+        <li>A página AMP inclui <code>&lt;link rel="canonical"&gt;</code> para a versão completa</li>
+        <li>Imagens convertidas para <code>amp-img</code>, sem JavaScript customizado</li>
+      </ul>
+    </div>
+
+    <div class="integracao-box">
+      <h3>Validar no Google</h3>
+      <p class="dica">Após publicar um post, teste a URL AMP em:</p>
+      <a href="https://search.google.com/test/amp" target="_blank" rel="noopener" class="btn btn-primario">Teste de AMP (Google)</a>
+      <% if (config.amp_habilitado === 'sim') { %>
+        <p class="dica" style="margin-top:10px">Exemplo: <code><%= urlBase %>/post/SEU-SLUG/amp</code></p>
+      <% } %>
+    </div>
   </div>
 
   <div class="aba-conteudo" data-aba="sitemap" hidden>
@@ -292,6 +337,10 @@
   if (window.location.hash === '#sitemap') {
     var abaSitemap = document.querySelector('.aba-btn[data-aba="sitemap"]');
     if (abaSitemap) abaSitemap.click();
+  }
+  if (window.location.hash === '#amp') {
+    var abaAmp = document.querySelector('.aba-btn[data-aba="amp"]');
+    if (abaAmp) abaAmp.click();
   }
 
   var iaDescricao = document.getElementById('ia-config-descricao');

@@ -4,6 +4,7 @@ const { permitir } = require('../../middlewares/auth');
 const upload = require('../../config/upload');
 const { obterResumo } = require('../../services/sitemap');
 const { sugerirConfiguracaoSite } = require('../../services/siteConfigAi');
+const { extrairClientAdSense } = require('../../utils/amp');
 
 router.use(permitir('administrador'));
 
@@ -54,6 +55,8 @@ router.post('/', upload.fields([
       'social_whatsapp',
       'google_site_verification',
       'google_analytics',
+      'google_adsense',
+      'google_adsense_client',
       'head_custom',
       'footer_copyright',
       'footer_links'
@@ -80,6 +83,13 @@ router.post('/', upload.fields([
     await Setting.definir('sitemap_incluir_categorias', req.body.sitemap_incluir_categorias === 'on' ? 'sim' : 'nao');
     await Setting.definir('sitemap_incluir_paginas', req.body.sitemap_incluir_paginas === 'on' ? 'sim' : 'nao');
     await Setting.definir('sitemap_news_ativo', req.body.sitemap_news_ativo === 'on' ? 'sim' : 'nao');
+
+    await Setting.definir('amp_habilitado', req.body.amp_habilitado === 'on' ? 'sim' : 'nao');
+    await Setting.definir('amp_adsense', req.body.amp_adsense === 'on' ? 'sim' : 'nao');
+
+    const adsenseClient = (req.body.google_adsense_client || '').trim()
+      || extrairClientAdSense(req.body.google_adsense || '');
+    if (adsenseClient) await Setting.definir('google_adsense_client', adsenseClient);
 
     if (req.files && req.files.logo) {
       await Setting.definir('logo', `/uploads/${req.files.logo[0].filename}`);

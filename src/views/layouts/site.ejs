@@ -30,6 +30,9 @@
   <% if (config.seo_palavras_chave) { %><meta name="keywords" content="<%= config.seo_palavras_chave %>"><% } %>
   <meta name="robots" content="<%= indexar ? 'index, follow' : 'noindex, nofollow' %>">
   <link rel="canonical" href="<%= urlAtual %>">
+  <% if (ehArtigo && (config.amp_habilitado || 'nao') === 'sim') { %>
+  <link rel="amphtml" href="<%= urlBase %>/post/<%= artigo.slug %>/amp">
+  <% } %>
   <% if (config.favicon) { %><link rel="icon" href="<%= config.favicon %>"><% } %>
   <% if (config.google_site_verification) { %><meta name="google-site-verification" content="<%= config.google_site_verification %>"><% } %>
 
@@ -87,6 +90,10 @@
     gtag('js', new Date());
     gtag('config', '<%= config.google_analytics %>');
   </script>
+  <% } %>
+
+  <% if (config.google_adsense) { %>
+  <%- config.google_adsense %>
   <% } %>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">

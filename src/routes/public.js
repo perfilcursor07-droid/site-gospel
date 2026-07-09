@@ -11,6 +11,14 @@ const {
   listarSitemaps,
   obterBaseUrl
 } = require('../services/sitemap');
+const {
+  ampAtivo,
+  escapeHtml,
+  urlAbsoluta,
+  sanitizarConteudoAmp,
+  urlAmpPost
+} = require('../utils/amp');
+const { obterUrlBase } = require('../utils/requestUrl');
 
 const includePadrao = ['categoria', 'autor'];
 
@@ -112,6 +120,62 @@ router.get('/post/:slug', async (req, res, next) => {
       conteudoPartes,
       comentarios,
       captchaPergunta: captcha.pergunta
+    });
+  } catch (e) { next(e); }
+});
+
+router.get('/post/:slug/amp', async (req, res, next) => {
+  try {
+    const config = res.locals.config || {};
+    if (!ampAtivo(config)) return next();
+
+    const post = await Post.findOne({
+      where: { slug: req.params.slug, status: 'publicado' },
+      include: includePadrao
+    });
+    if (!post) return next();
+
+    const base = obterUrlBase(req, config);
+    const urlCanonica = `${base}/post/${post.slug}`;
+    const nomeSite = config.site_nome || 'Site Gospel';
+    const corPrimaria = config.cor_primaria || '#ea580c';
+    const tituloSeo = post.metaTitle || post.titulo;
+    const metaDescricao = post.metaDescription || post.resumo || config.seo_descricao || '';
+    const adsenseClient = (config.google_adsense_client || '').trim()
+      || (config.google_adsense || '').match(/ca-pub-\d+/i)?.[0]
+      || '';
+
+    const jsonLd = JSON.stringify({
+      '@context': 'https://schema.org',
+      '@type': 'NewsArticle',
+      headline: post.titulo,
+      description: metaDescricao,
+      image: post.imagem ? [urlAbsoluta(base, post.imagem)] : undefined,
+      datePublished: post.publicadoEm ? new Date(post.publicadoEm).toISOString() : undefined,
+      dateModified: new Date(post.updatedAt).toISOString(),
+      author: { '@type': 'Person', name: post.autor ? post.autor.nome : nomeSite },
+      publisher: {
+        '@type': 'Organization',
+        name: nomeSite,
+        logo: config.logo ? { '@type': 'ImageObject', url: urlAbsoluta(base, config.logo) } : undefined
+      },
+      mainEntityOfPage: urlCanonica
+    });
+
+    res.render('site/post-amp', {
+      layout: false,
+      post,
+      nomeSite,
+      corPrimaria,
+      tituloSeo,
+      metaDescricao,
+      urlBase: base,
+      urlCanonica,
+      imagemAbsoluta: post.imagem ? urlAbsoluta(base, post.imagem) : '',
+      conteudoAmp: sanitizarConteudoAmp(post.conteudo, base),
+      adsenseClient: (config.amp_adsense || 'sim') !== 'nao' ? adsenseClient : '',
+      escapeHtml,
+      jsonLd
     });
   } catch (e) { next(e); }
 });

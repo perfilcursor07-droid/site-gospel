@@ -505,6 +505,12 @@ body.sidebar-overlay::before {
 .aba-ia-acao { display: flex; justify-content: flex-end; margin-bottom: -4px; }
 .btn-ia-aba { font-size: .82rem; }
 
+.integracao-box { border: 1px solid #e5e7eb; border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
+.integracao-box legend, .integracao-box h3 { font-weight: 700; margin: 0; font-size: .95rem; color: #111827; }
+.integracao-box--info { background: #f9fafb; }
+.integracao-lista { margin: 0; padding-left: 18px; color: #4b5563; font-size: .88rem; line-height: 1.55; }
+.integracao-lista code { font-size: .8rem; }
+
 /* Badges de status */
 .badge { display: inline-block; background: #ffedd5; color: #c2410c; font-size: .72rem; font-weight: 700; padding: 3px 10px; border-radius: 12px; text-transform: uppercase; letter-spacing: .5px; }
 .badge-publicado { background: #dcfce7; color: #15803d; }
