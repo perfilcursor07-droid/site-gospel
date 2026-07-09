@@ -115,6 +115,18 @@ function urlRedeSocialRelevante(url) {
     return /\/status\/\d+/.test(lower);
   }
 
+  if (lower.includes('threads.net')) {
+    return /\/post\//.test(lower) || /threads\.net\/@/.test(lower);
+  }
+
+  if (lower.includes('tiktok.com')) {
+    return /\/video\//.test(lower) || /\/@/.test(lower);
+  }
+
+  if (lower.includes('youtube.com')) {
+    return /\/(shorts|watch)/.test(lower);
+  }
+
   return true;
 }
 
@@ -162,11 +174,111 @@ function pontuarTopico(item) {
   return score;
 }
 
+function extrairTermosChaveBusca(palavraChave) {
+  const stop = new Set(['gospel', 'evangelico', 'evangélico', 'evangelica', 'evangélica', 'brasil', 'noticia', 'notícia', 'louvor', 'adoracao', 'adoração']);
+  return (palavraChave || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .split(/[\s,;+/]+/)
+    .map((t) => t.trim())
+    .filter((t) => t.length > 2 && !stop.has(t));
+}
+
+function textoItemBusca(item) {
+  return `${item.titulo || ''} ${item.resumo || ''} ${item.link || ''} ${item.nicho || ''}`
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+}
+
+function itemCombinaPalavraChave(item, palavraChave, { rigoroso = false } = {}) {
+  const termos = extrairTermosChaveBusca(palavraChave);
+  const texto = textoItemBusca(item);
+  const contextoGospel = /gospel|evangel|igreja|louvor|pastor|pastora|cantor|cantora|adora|louvou|culto|cristao|cristão|biblia|bíblia|worship|louca|louvores|hino|louvorzao|louvorzão/.test(texto);
+
+  if (!termos.length) {
+    return rigoroso ? contextoGospel : true;
+  }
+
+  const acertos = termos.filter((t) => texto.includes(t));
+  if (rigoroso) {
+    if (acertos.length >= Math.min(2, termos.length)) return true;
+    if (acertos.length >= 1 && contextoGospel) return true;
+    return acertos.length >= 1 && termos.length === 1;
+  }
+
+  return acertos.length >= 1 || contextoGospel;
+}
+
+const RUIDO_REDES_SOCIAIS = [
+  'messi', 'mbappe', 'ronaldo', 'real madrid', 'barcelona', 'fútbol', 'futebol',
+  'premier league', 'champions league', 'nba', 'ufc', 'netflix', 'disney',
+  'derbez', 'hollywood', 'anime', 'naruto', 'crunchyroll', 'btc', 'bitcoin',
+  'criptomoeda', 'horóscopo', 'horoscopo', 'receita de bolo', 'loteria'
+];
+
+function itemRelevanteRedeSocial(item, palavraChave) {
+  if (!itemCombinaPalavraChave(item, palavraChave, { rigoroso: true })) return false;
+
+  const texto = textoItemBusca(item);
+  const temRuido = RUIDO_REDES_SOCIAIS.some((r) => texto.includes(r));
+  const contextoGospel = /gospel|evangel|igreja|louvor|pastor|pastora|cantor|cantora|adora|louvou|culto|cristao|cristão|biblia|bíblia|worship|louvor/.test(texto);
+
+  if (temRuido && !contextoGospel) return false;
+
+  const termos = extrairTermosChaveBusca(palavraChave);
+  if (termos.length && !termos.some((t) => texto.includes(t))) return false;
+
+  return true;
+}
+
+function pontuarRelevanciaRede(item, palavraChave) {
+  const texto = textoItemBusca(item);
+  const termos = extrairTermosChaveBusca(palavraChave);
+  let score = pontuarTopico(item);
+
+  for (const t of termos) {
+    if (texto.includes(t)) score += MS_POR_DIA;
+  }
+  if (/gospel|evangel|louvor|igreja/.test(texto)) score += MS_POR_DIA * 0.5;
+  if (item.redeSocial === 'Instagram') score += MS_POR_HORA * 6;
+  if (item.link?.includes('instagram.com/reel')) score += MS_POR_HORA * 4;
+  if (RUIDO_REDES_SOCIAIS.some((r) => texto.includes(r))) score -= MS_POR_DIA * 3;
+
+  return score;
+}
+
+function montarConsultasRedesSociais(palavraChave) {
+  const termo = palavraChave.trim();
+  const termoAspas = termo.includes(' ') ? `"${termo}"` : termo;
+  const fresh = 'pd';
+
+  return [
+    { q: `site:instagram.com/p ${termoAspas}`, rede: 'Instagram', limite: 10, fresh },
+    { q: `site:instagram.com/reel ${termoAspas}`, rede: 'Instagram', limite: 10, fresh },
+    { q: `site:instagram.com ${termo} gospel louvor adoração`, rede: 'Instagram', limite: 8, fresh },
+    { q: `site:instagram.com ${termo} (cantora OR cantor OR louvor OR igreja)`, rede: 'Instagram', limite: 8, fresh },
+    { q: `site:facebook.com ${termoAspas} gospel`, rede: 'Facebook', limite: 8, fresh },
+    { q: `site:facebook.com/posts ${termo} louvor igreja`, rede: 'Facebook', limite: 8, fresh },
+    { q: `site:facebook.com/watch ${termo} gospel`, rede: 'Facebook', limite: 6, fresh },
+    { q: `site:threads.net ${termo} gospel`, rede: 'Threads', limite: 6, fresh },
+    { q: `site:tiktok.com ${termo} gospel louvor`, rede: 'TikTok', limite: 8, fresh },
+    { q: `(site:twitter.com OR site:x.com) ${termoAspas} (gospel OR louvor OR igreja OR evangélico)`, rede: 'X (Twitter)', limite: 6, fresh },
+    { q: `(site:twitter.com OR site:x.com) ${termo} gospel brasil`, rede: 'X (Twitter)', limite: 6, fresh },
+    { q: `site:youtube.com/shorts ${termo} gospel`, rede: 'YouTube', limite: 5, fresh },
+    { q: `site:instagram.com/p OR site:instagram.com/reel ${termo} polêmica gospel`, rede: 'Instagram', limite: 6, fresh }
+  ];
+}
+
 function detectarRedeSocial(url, fonte) {
   const lower = `${url || ''} ${fonte || ''}`.toLowerCase();
   if (lower.includes('instagram.com')) return 'Instagram';
   if (lower.includes('facebook.com') || lower.includes('fb.com')) return 'Facebook';
   if (lower.includes('twitter.com') || lower.includes('x.com')) return 'X (Twitter)';
+  if (lower.includes('threads.net')) return 'Threads';
+  if (lower.includes('tiktok.com')) return 'TikTok';
+  if (lower.includes('youtube.com')) return 'YouTube';
   return null;
 }
 
@@ -273,15 +385,16 @@ async function buscarBraveNews(palavraChave, limite = 6, dias = 5) {
   })).filter((item) => itemQualidadeValida(item));
 }
 
-async function buscarBraveWeb(query, palavraChave, limite = 5, { freshness = 'pw', fonteLabel = null } = {}) {
+async function buscarBraveWeb(query, palavraChave, limite = 5, { freshness = 'pw', fonteLabel = null, somenteRede = false } = {}) {
   if (!braveDisponivel()) return [];
 
   try {
     const params = new URLSearchParams({
       q: query,
-      count: String(Math.min(limite + 3, 20)),
+      count: String(Math.min(Math.max(limite + 5, 10), 20)),
       country: 'BR',
       search_lang: 'pt-br',
+      ui_lang: 'pt-BR',
       freshness
     });
     const res = await fetch(`https://api.search.brave.com/res/v1/web/search?${params}`, {
@@ -316,7 +429,11 @@ async function buscarBraveWeb(query, palavraChave, limite = 5, { freshness = 'pw
         tipoFonte: rede ? 'rede_social' : 'web',
         recente: true
       };
-    }).filter((item) => item.titulo && item.link && itemQualidadeValida(item))
+    }).filter((item) => {
+      if (!item.titulo || !item.link || !itemQualidadeValida(item)) return false;
+      if (somenteRede && !item.redeSocial) return false;
+      return true;
+    })
       .slice(0, limite);
   } catch (e) {
     console.warn('buscarBraveWeb:', e.message);
@@ -360,36 +477,45 @@ async function buscarWebGospel(palavraChave, limite = 5, dias = 5) {
   return lotes.flat().slice(0, limite);
 }
 
-async function buscarRedesSociais(palavraChave, limite = 6, dias = 5) {
+async function buscarRedesSociais(palavraChave, limite = 6, dias = 5, { modoAmpliado = false } = {}) {
   const fresh = freshnessBrave(dias);
-  const porFonte = Math.max(2, Math.ceil(limite / 3));
+  const consultas = montarConsultasRedesSociais(palavraChave);
+  const vistos = new Set();
+  const candidatos = [];
 
-  const [igBrave, fbBrave, xBrave, igGoogle, fbGoogle, xGoogle] = await Promise.all([
-    buscarBraveWeb(
-      `site:instagram.com/reel OR site:instagram.com/p ${palavraChave} gospel (pastor OR igreja OR polêmica OR culto)`,
-      palavraChave,
-      porFonte,
-      { freshness: fresh, fonteLabel: 'Instagram' }
-    ),
-    buscarBraveWeb(
-      `site:facebook.com/posts OR site:facebook.com/watch OR site:facebook.com/photo ${palavraChave} gospel pastor igreja`,
-      palavraChave,
-      porFonte,
-      { freshness: fresh, fonteLabel: 'Facebook' }
-    ),
-    buscarBraveWeb(
-      `(site:twitter.com OR site:x.com) ${palavraChave} gospel (pastor OR igreja OR polêmica)`,
-      palavraChave,
-      porFonte,
-      { freshness: fresh, fonteLabel: 'X (Twitter)' }
-    ),
-    buscarGoogleNewsSite('instagram.com', palavraChave, porFonte, dias),
-    buscarGoogleNewsSite('facebook.com', palavraChave, porFonte, dias),
-    buscarGoogleNewsSite('twitter.com', palavraChave, Math.max(1, porFonte - 1), dias)
+  const lotesBrave = await Promise.all(
+    consultas.map((c) =>
+      buscarBraveWeb(c.q, palavraChave, c.limite, {
+        freshness: c.fresh || fresh,
+        fonteLabel: c.rede,
+        somenteRede: true
+      })
+    )
+  );
+
+  for (const item of lotesBrave.flat()) {
+    if (!item?.link || vistos.has(item.link)) continue;
+    if (!itemRelevanteRedeSocial(item, palavraChave)) continue;
+    vistos.add(item.link);
+    candidatos.push(item);
+  }
+
+  const porFonteGoogle = modoAmpliado ? 6 : 4;
+  const [igGoogle, fbGoogle, xGoogle] = await Promise.all([
+    buscarGoogleNewsSite('instagram.com', palavraChave, porFonteGoogle, dias),
+    buscarGoogleNewsSite('facebook.com', palavraChave, porFonteGoogle, dias),
+    buscarGoogleNewsSite('twitter.com', palavraChave, Math.max(3, porFonteGoogle - 1), dias)
   ]);
 
-  return [...igBrave, ...fbBrave, ...xBrave, ...igGoogle, ...fbGoogle, ...xGoogle]
-    .filter((item) => itemQualidadeValida(item))
+  for (const item of [...igGoogle, ...fbGoogle, ...xGoogle]) {
+    if (!item?.link || vistos.has(item.link)) continue;
+    if (!itemRelevanteRedeSocial(item, palavraChave)) continue;
+    vistos.add(item.link);
+    candidatos.push(item);
+  }
+
+  return candidatos
+    .sort((a, b) => pontuarRelevanciaRede(b, palavraChave) - pontuarRelevanciaRede(a, palavraChave))
     .slice(0, limite);
 }
 
@@ -412,8 +538,9 @@ async function pesquisarNichos(palavrasChave, quantidadePorNicho = 5, opcoes = {
   const resultados = [];
   const maxRedesPorTermo = Math.max(4, Math.ceil(quantidadePorNicho * 0.5));
 
-  const adicionar = (item) => {
+  const adicionar = (item, termoOrigem) => {
     if (!item?.titulo) return;
+    if (somenteRedesSociais && !itemRelevanteRedeSocial(item, termoOrigem || item.nicho)) return;
     if (!itemQualidadeValida(item)) return;
     if (somenteRecentes && !itemEhRecente(item, periodo)) return;
 
@@ -441,7 +568,7 @@ async function pesquisarNichos(palavrasChave, quantidadePorNicho = 5, opcoes = {
 
       if (somenteRedesSociais) {
         promessas = [
-          buscarRedesSociais(termo, Math.max(quantidadePorNicho * 2, 8), diasBusca)
+          buscarRedesSociais(termo, Math.max(quantidadePorNicho * 5, 25), diasBusca, { modoAmpliado: true })
         ];
       } else {
         promessas = [
@@ -459,15 +586,21 @@ async function pesquisarNichos(palavrasChave, quantidadePorNicho = 5, opcoes = {
       }
 
       const lotes = await Promise.all(promessas);
-      lotes.flat().forEach(adicionar);
+      lotes.flat().forEach((item) => adicionar(item, termo));
     } catch (e) {
       console.error(`Erro ao pesquisar "${termo}":`, e.message);
     }
   }
 
-  resultados.sort((a, b) => pontuarTopico(b) - pontuarTopico(a));
+  resultados.sort((a, b) => {
+    if (somenteRedesSociais) {
+      return pontuarRelevanciaRede(b, b.nicho) - pontuarRelevanciaRede(a, a.nicho);
+    }
+    return pontuarTopico(b) - pontuarTopico(a);
+  });
 
-  const limiteFinal = Math.min(resultados.length, termos.length * quantidadePorNicho * 2);
+  const multiplicador = somenteRedesSociais ? 4 : 2;
+  const limiteFinal = Math.min(resultados.length, termos.length * quantidadePorNicho * multiplicador);
   const selecionados = resultados.slice(0, limiteFinal);
 
   if (!selecionados.length) {
@@ -492,9 +625,10 @@ async function pesquisarNichos(palavrasChave, quantidadePorNicho = 5, opcoes = {
 
   const finais = deduplicarTopicos([...apurados, ...selecionados.slice(limiteApuracao)])
     .filter((item) => itemQualidadeValida(item))
+    .filter((item) => !somenteRedesSociais || itemRelevanteRedeSocial(item, item.nicho))
     .filter((item) => !somenteRecentes || itemEhRecente(item, periodo) || item.fonte === 'Pauta editorial');
 
-  return finais.slice(0, termos.length * quantidadePorNicho * 2);
+  return finais.slice(0, termos.length * quantidadePorNicho * (somenteRedesSociais ? 4 : 2));
 }
 
 module.exports = {
