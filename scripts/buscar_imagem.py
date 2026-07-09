@@ -470,6 +470,42 @@ def listar(payload: dict) -> dict:
     return {"ok": True, "candidatos": saida}
 
 
+def baixar_url(payload: dict) -> dict:
+    payload = sanitizar_payload(payload)
+    url = payload.get("url") or ""
+    preview = payload.get("preview") or ""
+    source = payload.get("source") or ""
+    titulo = payload.get("titulo") or ""
+    assunto = payload.get("assunto_imagem") or ""
+    pessoa = payload.get("pessoa_principal")
+
+    for u in dict.fromkeys([url, preview]):
+        if not u or url_proibida(u):
+            continue
+        salva = baixar_webp(u, source or "")
+        if salva:
+            return {
+                "ok": True,
+                "imagem": salva,
+                "alt": montar_alt(titulo, assunto, pessoa),
+            }
+
+    if source:
+        for c in imagens_da_fonte(source):
+            u = c.get("url")
+            if not u or url_proibida(u):
+                continue
+            salva = baixar_webp(u, c.get("source") or source)
+            if salva:
+                return {
+                    "ok": True,
+                    "imagem": salva,
+                    "alt": montar_alt(titulo, assunto, pessoa),
+                }
+
+    return {"ok": False, "erro": "Não foi possível baixar a imagem."}
+
+
 def buscar(payload: dict) -> dict:
     payload = sanitizar_payload(payload)
     titulo = payload.get("titulo") or ""
@@ -522,6 +558,8 @@ def main():
         payload = sanitizar_payload(payload)
         if payload.get("modo") == "listar":
             result = listar(payload)
+        elif payload.get("modo") == "baixar":
+            result = baixar_url(payload)
         else:
             result = buscar(payload)
         emitir_json(result)

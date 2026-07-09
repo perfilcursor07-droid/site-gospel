@@ -1006,6 +1006,25 @@
   gap: 12px;
 }
 
+.home-scroll-sentinel {
+  height: 1px;
+  margin-top: 8px;
+}
+
+.home-carregando,
+.home-fim-lista {
+  text-align: center;
+  font-size: 0.875rem;
+  color: #6b7280;
+  padding: 16px 0 8px;
+  margin: 0;
+}
+
+.home-carregando[hidden],
+.home-fim-lista[hidden] {
+  display: none;
+}
+
 .pub-item {
   background: #fff;
   border: 1px solid #e5e7eb;

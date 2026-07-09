@@ -1,0 +1,28 @@
+<% posts.forEach(function (post) { %>
+  <article class="pub-item group">
+    <a href="/post/<%= post.slug %>" class="pub-item-link">
+      <div class="pub-item-thumb">
+        <% if (post.imagem) { %>
+          <img src="<%= post.imagem %>" alt="<%= post.imagemAlt || post.titulo %>" loading="lazy" decoding="async">
+        <% } else { %>
+          <span class="pub-item-thumb-vazio" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          </span>
+        <% } %>
+      </div>
+      <div class="pub-item-corpo">
+        <% if (post.categoria) { %>
+          <span class="pub-item-categoria" style="color: <%= post.categoria.corHex || '#ea580c' %>"><%= post.categoria.nome %></span>
+        <% } %>
+        <h3 class="pub-item-titulo"><%= post.titulo %></h3>
+        <% if (post.resumo) { %>
+          <p class="pub-item-resumo"><%= post.resumo %></p>
+        <% } %>
+        <p class="pub-item-meta">
+          <% if (post.autor) { %><span>Por <%= post.autor.nome %></span><% } %>
+          <% if (post.publicadoEm) { %><span><%= new Date(post.publicadoEm).toLocaleDateString('pt-BR') %></span><% } %>
+        </p>
+      </div>
+    </a>
+  </article>
+<% }) %>

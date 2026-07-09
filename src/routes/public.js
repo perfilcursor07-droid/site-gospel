@@ -22,6 +22,8 @@ const {
 const { obterUrlBase } = require('../utils/requestUrl');
 
 const includePadrao = ['categoria', 'autor'];
+const HOME_DESTAQUE_TOTAL = 10;
+const HOME_PAGINA_TAMANHO = 8;
 
 function emailValido(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -29,18 +31,62 @@ function emailValido(email) {
 
 router.get('/', async (req, res, next) => {
   try {
-    const recentes = await Post.findAll({
+    const [recentes, totalPublicados] = await Promise.all([
+      Post.findAll({
+        where: { status: 'publicado' },
+        include: includePadrao,
+        order: [['publicadoEm', 'DESC']],
+        limit: HOME_DESTAQUE_TOTAL
+      }),
+      Post.count({ where: { status: 'publicado' } })
+    ]);
+
+    const principal = recentes[0] || null;
+    const laterais = recentes.slice(1, 4);
+    const ultimasPublicacoes = recentes.slice(4);
+
+    res.render('site/home', {
+      titulo: 'Início',
+      principal,
+      laterais,
+      publicacoes: recentes,
+      ultimasPublicacoes,
+      homeOffset: HOME_DESTAQUE_TOTAL,
+      homeHasMore: totalPublicados > HOME_DESTAQUE_TOTAL
+    });
+  } catch (e) { next(e); }
+});
+
+router.get('/api/posts-recentes', async (req, res, next) => {
+  try {
+    const offset = Math.max(parseInt(req.query.offset, 10) || 0, 0);
+    const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || HOME_PAGINA_TAMANHO, 1), 16);
+
+    const { rows: posts, count } = await Post.findAndCountAll({
       where: { status: 'publicado' },
       include: includePadrao,
       order: [['publicadoEm', 'DESC']],
-      limit: 10
+      offset,
+      limit
     });
 
-    const principal = recentes[0] || null;
-    const laterais = recentes.slice(1, 4); // 2ª a 4ª matéria
-    const ultimasPublicacoes = recentes.slice(4); // 5ª em diante
+    if (!posts.length) {
+      return res.json({ ok: true, html: '', hasMore: false });
+    }
 
-    res.render('site/home', { titulo: 'Início', principal, laterais, publicacoes: recentes, ultimasPublicacoes });
+    res.render('site/partials/pub-items', {
+      posts,
+      config: res.locals.config || {},
+      layout: false
+    }, (err, html) => {
+      if (err) return next(err);
+      res.json({
+        ok: true,
+        html,
+        hasMore: offset + posts.length < count,
+        nextOffset: offset + posts.length
+      });
+    });
   } catch (e) { next(e); }
 });
 

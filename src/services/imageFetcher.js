@@ -3,11 +3,12 @@ const path = require('path');
 const { extrairMetadadosArtigo, urlImagemInvalida } = require('./articleSource');
 const { identificarCapaArtigo, selecionarMelhorImagem, gerarAltImagem, validarImagemParaArtigo } = require('./deepseek');
 const { salvarComoWebp } = require('../utils/imageProcessor');
-const { buscarImagemPython, listarImagensPython } = require('./pythonImageSearch');
+const { buscarImagemPython, listarImagensPython, baixarImagemUrlPython } = require('./pythonImageSearch');
 const { marcarRespostaBrave, marcarRespostaBraveOk, braveDisponivel, braveQuotaExcedida } = require('./braveApi');
 
 const UPLOADS_DIR = path.join(__dirname, '..', '..', 'uploads');
 const USER_AGENT = 'Mozilla/5.0 (compatible; SiteGospelBot/1.0)';
+const USER_AGENT_BROWSER = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
 
 const TERMOS_IMAGEM_REJEITADOS = [
   'flag', 'usa', 'american', 'united-states', 'us-flag', 'stars-and-stripes',
@@ -952,6 +953,99 @@ async function baixarImagem(urlOrigem, referer) {
   }
 }
 
+function origemUrl(url) {
+  try {
+    return new URL(url).origin + '/';
+  } catch {
+    return '';
+  }
+}
+
+function pareceBufferImagem(buffer) {
+  if (!buffer || buffer.length < 200) return false;
+  if (buffer[0] === 0xFF && buffer[1] === 0xD8) return true;
+  if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47) return true;
+  if (buffer.toString('ascii', 0, 3) === 'GIF') return true;
+  if (buffer.length >= 12 && buffer.toString('ascii', 0, 4) === 'RIFF' && buffer.toString('ascii', 8, 12) === 'WEBP') return true;
+  return false;
+}
+
+function urlImagemBloqueadaManual(url) {
+  if (!url || typeof url !== 'string' || urlImagemInvalida(url)) return true;
+  const lower = url.toLowerCase();
+  const lixo = ['1x1', 'pixel', 'placeholder', 'favicon', 'avatar', 'logo.svg', 'sprite', 'emoji'];
+  return lixo.some((t) => lower.includes(t));
+}
+
+async function tentarBaixarBytes(urlOrigem, referer, userAgent) {
+  const res = await fetch(urlOrigem, {
+    headers: {
+      'User-Agent': userAgent,
+      Accept: 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+      Referer: referer || '',
+      'Accept-Language': 'pt-BR,pt;q=0.9,en;q=0.8'
+    },
+    signal: AbortSignal.timeout(25000),
+    redirect: 'follow'
+  });
+  if (!res.ok) return null;
+
+  const contentType = (res.headers.get('content-type') || '').toLowerCase();
+  const buffer = Buffer.from(await res.arrayBuffer());
+  if (buffer.length < 800 || buffer.length > 8 * 1024 * 1024) return null;
+  if (!contentType.startsWith('image/') && !pareceBufferImagem(buffer)) return null;
+  return buffer;
+}
+
+/**
+ * Download tolerante para escolha manual no admin (várias URLs e referers).
+ */
+async function baixarImagemManual(urlOrigem, referer, previewUrl) {
+  const urls = [...new Set([urlOrigem, previewUrl].filter(Boolean))];
+  const referers = [...new Set([referer, origemUrl(urlOrigem), origemUrl(referer), ''].filter((r) => r !== undefined))];
+  const tentativas = [];
+
+  for (const url of urls) {
+    if (urlImagemBloqueadaManual(url)) continue;
+    tentativas.push([url, referer, USER_AGENT_BROWSER]);
+    tentativas.push([url, origemUrl(url), USER_AGENT_BROWSER]);
+    tentativas.push([url, '', USER_AGENT_BROWSER]);
+    tentativas.push([url, referer, USER_AGENT]);
+  }
+
+  for (const [url, ref, ua] of tentativas) {
+    try {
+      const buffer = await tentarBaixarBytes(url, ref, ua);
+      if (!buffer) continue;
+      try {
+        const salva = await salvarComoWebp(buffer, 'ai');
+        if (salva) return salva;
+      } catch (e) {
+        console.warn('salvarComoWebp manual:', e.message);
+      }
+    } catch (e) {
+      console.warn('baixarImagemManual:', url?.slice(0, 80), e.message);
+    }
+  }
+
+  return null;
+}
+
+async function baixarViaPaginaOrigem(sourceUrl) {
+  if (!sourceUrl || !/^https?:\/\//i.test(sourceUrl)) return null;
+  try {
+    const meta = await extrairMetadadosArtigo(sourceUrl);
+    const urls = [...new Set([meta.imagem, ...(meta.imagens || [])].filter(Boolean))];
+    for (const imgUrl of urls.slice(0, 6)) {
+      const salva = await baixarImagemManual(imgUrl, sourceUrl, imgUrl);
+      if (salva) return salva;
+    }
+  } catch (e) {
+    console.warn('baixarViaPaginaOrigem:', sourceUrl?.slice(0, 80), e.message);
+  }
+  return null;
+}
+
 async function tentarBaixarLista(urls, referer, ctx, { rigoroso = true } = {}) {
   for (const url of urls) {
     if (!url || urlImagemIrrelevante(url, ctx, { rigoroso })) continue;
@@ -1277,9 +1371,30 @@ async function buscarCandidatosCapaManual({
   return candidatos.slice(0, 30);
 }
 
-async function salvarCandidatoComoCapa({ url, contextLink, titulo, resumo, assuntoImagem, alt }) {
-  if (!url) return null;
-  const salva = await baixarImagem(url, contextLink || '');
+async function salvarCandidatoComoCapa({ url, preview, contextLink, titulo, resumo, assuntoImagem, alt }) {
+  if (!url && !preview) return null;
+
+  let salva = await baixarImagemManual(url, contextLink || '', preview || '');
+
+  if (!salva && contextLink) {
+    salva = await baixarViaPaginaOrigem(contextLink);
+  }
+
+  if (!salva) {
+    try {
+      const python = await baixarImagemUrlPython({
+        url: url || preview,
+        preview: preview || url,
+        source: contextLink || '',
+        titulo: titulo || '',
+        resumo: resumo || ''
+      });
+      if (python?.imagem) salva = python.imagem;
+    } catch (e) {
+      console.warn('baixarImagemUrlPython:', e.message);
+    }
+  }
+
   if (!salva) return null;
 
   let altFinal = (alt || '').trim();

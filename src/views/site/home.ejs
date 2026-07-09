@@ -61,40 +61,69 @@
   <% } %>
 </section>
 
-<% if (typeof ultimasPublicacoes !== 'undefined' && ultimasPublicacoes.length) { %>
+<% if (typeof ultimasPublicacoes !== 'undefined' && (ultimasPublicacoes.length || homeHasMore)) { %>
 <section class="home-publicacoes mt-10 sm:mt-14" style="--cor-primaria: <%= config.cor_primaria || '#ea580c' %>">
   <h2 class="home-publicacoes-titulo">
     <span class="home-publicacoes-barra"></span> Últimas publicações
   </h2>
-  <div class="home-publicacoes-lista">
-    <% ultimasPublicacoes.forEach(function (post) { %>
-      <article class="pub-item group">
-        <a href="/post/<%= post.slug %>" class="pub-item-link">
-          <div class="pub-item-thumb">
-            <% if (post.imagem) { %>
-              <img src="<%= post.imagem %>" alt="<%= post.imagemAlt || post.titulo %>" loading="lazy">
-            <% } else { %>
-              <span class="pub-item-thumb-vazio" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-              </span>
-            <% } %>
-          </div>
-          <div class="pub-item-corpo">
-            <% if (post.categoria) { %>
-              <span class="pub-item-categoria" style="color: <%= post.categoria.corHex || '#ea580c' %>"><%= post.categoria.nome %></span>
-            <% } %>
-            <h3 class="pub-item-titulo"><%= post.titulo %></h3>
-            <% if (post.resumo) { %>
-              <p class="pub-item-resumo"><%= post.resumo %></p>
-            <% } %>
-            <p class="pub-item-meta">
-              <% if (post.autor) { %><span>Por <%= post.autor.nome %></span><% } %>
-              <% if (post.publicadoEm) { %><span><%= new Date(post.publicadoEm).toLocaleDateString('pt-BR') %></span><% } %>
-            </p>
-          </div>
-        </a>
-      </article>
-    <% }) %>
+  <div class="home-publicacoes-lista" id="home-publicacoes-lista">
+    <%- include('partials/pub-items', { posts: ultimasPublicacoes }) %>
   </div>
+  <div class="home-scroll-sentinel" id="home-scroll-sentinel" <%= homeHasMore ? '' : 'hidden' %> aria-hidden="true"></div>
+  <p class="home-carregando" id="home-carregando" hidden>Carregando mais notícias…</p>
+  <p class="home-fim-lista" id="home-fim-lista" <%= homeHasMore ? 'hidden' : '' %>>Você viu todas as publicações.</p>
 </section>
+<script>
+(function () {
+  var lista = document.getElementById('home-publicacoes-lista');
+  var sentinel = document.getElementById('home-scroll-sentinel');
+  var carregando = document.getElementById('home-carregando');
+  var fimLista = document.getElementById('home-fim-lista');
+  if (!lista || !sentinel) return;
+
+  var offset = <%= typeof homeOffset !== 'undefined' ? homeOffset : 10 %>;
+  var hasMore = <%= homeHasMore ? 'true' : 'false' %>;
+  var buscando = false;
+
+  async function carregarMais() {
+    if (!hasMore || buscando) return;
+    buscando = true;
+    if (carregando) carregando.hidden = false;
+
+    try {
+      var res = await fetch('/api/posts-recentes?offset=' + offset + '&limit=8', {
+        headers: { Accept: 'application/json' }
+      });
+      var data = await res.json();
+      if (!data.ok) throw new Error('Falha ao carregar');
+
+      if (data.html) {
+        lista.insertAdjacentHTML('beforeend', data.html);
+        offset = data.nextOffset || (offset + 8);
+      }
+      hasMore = !!data.hasMore;
+      if (!hasMore) {
+        sentinel.hidden = true;
+        if (fimLista) fimLista.hidden = false;
+      }
+    } catch (e) {
+      console.warn('home scroll:', e);
+    } finally {
+      buscando = false;
+      if (carregando) carregando.hidden = true;
+    }
+  }
+
+  if ('IntersectionObserver' in window && hasMore) {
+    var obs = new IntersectionObserver(function (entries) {
+      if (entries.some(function (e) { return e.isIntersecting; })) carregarMais();
+    }, { rootMargin: '280px 0px' });
+    obs.observe(sentinel);
+  } else if (hasMore) {
+    window.addEventListener('scroll', function () {
+      if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 400) carregarMais();
+    }, { passive: true });
+  }
+})();
+</script>
 <% } %>

@@ -48,6 +48,17 @@ async function listarImagensPython(payload) {
   return [];
 }
 
+/**
+ * Baixa uma URL específica via Python (requests costuma contornar bloqueios).
+ */
+async function baixarImagemUrlPython(payload) {
+  const data = await executarScriptPython({ ...payload, modo: 'baixar' });
+  if (data?.ok && data.imagem) {
+    return { imagem: data.imagem, alt: data.alt || null };
+  }
+  return null;
+}
+
 function executarScriptPython(payload) {
   return new Promise((resolve) => {
     const py = comandoPython();
@@ -89,4 +100,4 @@ function executarScriptPython(payload) {
   });
 }
 
-module.exports = { buscarImagemPython, listarImagensPython, comandoPython };
+module.exports = { buscarImagemPython, listarImagensPython, baixarImagemUrlPython, comandoPython };

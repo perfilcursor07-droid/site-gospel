@@ -51,12 +51,13 @@ router.post('/buscar-imagens', async (req, res) => {
 
 router.post('/vincular-imagem', async (req, res) => {
   try {
-    const { url, source, titulo, resumo, assuntoImagem, alt } = req.body;
-    if (!url || typeof url !== 'string') {
+    const { url, preview, source, titulo, resumo, assuntoImagem, alt } = req.body;
+    if ((!url && !preview) || (url && typeof url !== 'string') || (preview && typeof preview !== 'string')) {
       return res.status(400).json({ ok: false, erro: 'URL da imagem obrigatória.' });
     }
     const resultado = await salvarCandidatoComoCapa({
-      url,
+      url: url || preview,
+      preview: preview || url,
       contextLink: source || '',
       titulo: titulo || '',
       resumo: resumo || '',

@@ -593,6 +593,7 @@
           headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
           body: JSON.stringify({
             url: candidato.url,
+            preview: candidato.preview || candidato.url,
             source: candidato.source || '',
             titulo: titulo ? titulo.value.trim() : '',
             resumo: resumo ? resumo.value.trim() : '',
