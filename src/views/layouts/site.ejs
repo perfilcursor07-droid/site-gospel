@@ -32,6 +32,7 @@
   <% if (config.seo_palavras_chave) { %><meta name="keywords" content="<%= config.seo_palavras_chave %>"><% } %>
   <meta name="robots" content="<%= indexar ? 'index, follow' : 'noindex, nofollow' %>">
   <link rel="canonical" href="<%= urlAtual %>">
+  <link rel="alternate" type="application/rss+xml" title="<%= nomeSite %> — RSS" href="<%= urlBase %>/feed.xml">
   <% if (ehArtigo && (config.amp_habilitado || 'nao') === 'sim') { %>
   <link rel="amphtml" href="<%= urlBase %>/post/<%= artigo.slug %>/amp">
   <% } %>

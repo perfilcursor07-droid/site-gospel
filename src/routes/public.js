@@ -11,6 +11,7 @@ const {
   listarSitemaps,
   obterBaseUrl
 } = require('../services/sitemap');
+const { gerarFeedRss } = require('../services/feedRss');
 const {
   ampAtivo,
   escapeHtml,
@@ -329,6 +330,17 @@ router.get('/busca', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
+router.get('/feed.xml', async (req, res, next) => {
+  try {
+    const config = res.locals.config || {};
+    if ((config.seo_indexar || 'sim') === 'nao') {
+      return res.status(404).type('text/plain').send('Feed indisponível');
+    }
+    const xml = await gerarFeedRss(config, req);
+    res.type('application/rss+xml; charset=utf-8').send(xml);
+  } catch (e) { next(e); }
+});
+
 router.get('/sitemap.xml', async (req, res, next) => {
   try {
     const config = res.locals.config || {};
@@ -360,6 +372,7 @@ router.get('/robots.txt', (req, res) => {
   }
   const linhasSitemap = listarSitemaps(config, base)
     .map((item) => `Sitemap: ${item.loc}`)
+    .concat([`Sitemap: ${base}/feed.xml`])
     .join('\n');
   res.type('text/plain').send(
     'User-agent: *\n' +
