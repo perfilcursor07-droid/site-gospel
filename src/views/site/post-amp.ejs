@@ -14,8 +14,9 @@
   <noscript><style amp-boilerplate>body{-webkit-animation:none;-moz-animation:none;-ms-animation:none;animation:none}</style></noscript>
   <style amp-custom>
     body { font-family: Georgia, 'Times New Roman', serif; margin: 0; color: #1f2937; background: #fff; line-height: 1.7; }
-    .amp-header { border-bottom: 1px solid #e5e7eb; padding: 14px 16px; text-align: center; }
-    .amp-header a { color: <%= corPrimaria %>; font-weight: 800; font-size: 1.15rem; text-decoration: none; }
+    .amp-header { border-bottom: 1px solid #e5e7eb; padding: 14px 16px; display: flex; justify-content: center; align-items: center; }
+    .amp-logo-link { display: inline-flex; justify-content: center; align-items: center; text-decoration: none; }
+    .amp-logo-text { color: <%= corPrimaria %>; font-weight: 800; font-size: 1.15rem; text-decoration: none; }
     .amp-wrap { max-width: 720px; margin: 0 auto; padding: 20px 16px 40px; }
     .amp-cat { color: <%= corPrimaria %>; font-size: .72rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; text-decoration: none; }
     h1 { font-size: 1.75rem; line-height: 1.25; margin: 10px 0 12px; color: #111827; }
@@ -41,7 +42,13 @@
   <% } %>
 
   <header class="amp-header">
-    <a href="<%= urlBase %>/"><%= escapeHtml(nomeSite) %></a>
+    <a href="<%= urlBase %>/" class="amp-logo-link">
+      <% if (logoAbsoluta) { %>
+        <amp-img src="<%= escapeHtml(logoAbsoluta) %>" width="240" height="72" layout="intrinsic" alt="<%= escapeHtml(nomeSite) %>" class="amp-logo"></amp-img>
+      <% } else { %>
+        <span class="amp-logo-text"><%= escapeHtml(nomeSite) %></span>
+      <% } %>
+    </a>
   </header>
 
   <main class="amp-wrap">

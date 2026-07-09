@@ -172,6 +172,7 @@ router.get('/post/:slug/amp', async (req, res, next) => {
       urlBase: base,
       urlCanonica,
       imagemAbsoluta: post.imagem ? urlAbsoluta(base, post.imagem) : '',
+      logoAbsoluta: config.logo ? urlAbsoluta(base, config.logo) : '',
       conteudoAmp: sanitizarConteudoAmp(post.conteudo, base),
       adsenseClient: (config.amp_adsense || 'sim') !== 'nao' ? adsenseClient : '',
       escapeHtml,
