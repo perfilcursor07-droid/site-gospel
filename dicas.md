@@ -25,4 +25,4 @@ npm run dev
 SUBIR GIT
 git add .
 git commit -m "feat: sua mensagem aqui"
-git push github feature/portal-globo
+git push origin feature/portal-globo
