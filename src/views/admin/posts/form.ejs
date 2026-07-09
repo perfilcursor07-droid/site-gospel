@@ -26,21 +26,22 @@
       <span class="badge-ia">DeepSeek</span>
     </div>
 
+    <div class="ia-modo-busca" role="tablist" aria-label="Modo de busca">
+      <label class="ia-modo-busca-opcao">
+        <input type="radio" name="ia-modo-busca" value="manual" checked>
+        <span><strong>Buscar e escolher</strong><small>Você pesquisa, marca os assuntos e gera manualmente.</small></span>
+      </label>
+      <label class="ia-modo-busca-opcao ia-modo-busca-opcao--destaque">
+        <input type="radio" name="ia-modo-busca" value="auto">
+        <span><strong>Automação contínua</strong><small>Só digite o assunto — o servidor busca e publica sozinho.</small></span>
+      </label>
+    </div>
+
+    <div id="ia-fluxo-manual">
     <div class="ia-passos" role="tablist" aria-label="Etapas">
       <div class="ia-passo ativo" data-passo="1"><span>1</span> Buscar</div>
       <div class="ia-passo" data-passo="2"><span>2</span> Escolher</div>
       <div class="ia-passo" data-passo="3"><span>3</span> Gerar</div>
-    </div>
-
-    <div class="ia-modo-busca" role="tablist" aria-label="Modo de busca">
-      <label class="ia-modo-busca-opcao">
-        <input type="radio" name="ia-modo-busca" value="manual" checked>
-        <span><strong>Buscar agora</strong><small>Encontre assuntos e escolha quais gerar.</small></span>
-      </label>
-      <label class="ia-modo-busca-opcao ia-modo-busca-opcao--destaque">
-        <input type="radio" name="ia-modo-busca" value="auto">
-        <span><strong>Automação contínua</strong><small>Busca e publica assuntos recentes em intervalos — sem intervenção.</small></span>
-      </label>
     </div>
 
     <div class="ia-passo-conteudo" id="ia-passo-1">
@@ -60,12 +61,12 @@
           <label class="ia-fonte-card">
             <input type="radio" name="ia-fonte-busca" value="todas" checked>
             <span class="ia-fonte-card-titulo">Notícias + portais + redes</span>
-            <span class="ia-fonte-card-desc">Google News, portais gospel, web, Google Trends e redes sociais</span>
+            <span class="ia-fonte-card-desc">Google News, 18+ portais gospel, Brave, Trends, Instagram, Facebook, X, TikTok, YouTube e mais</span>
           </label>
           <label class="ia-fonte-card ia-fonte-card--destaque">
             <input type="radio" name="ia-fonte-busca" value="somente_redes">
             <span class="ia-fonte-card-titulo">Somente redes sociais</span>
-            <span class="ia-fonte-card-desc">Instagram, Facebook e X — polêmicas e assuntos em alta para publicar</span>
+            <span class="ia-fonte-card-desc">Instagram, Facebook, X, Threads, TikTok, YouTube, LinkedIn e mais</span>
           </label>
         </div>
       </div>
@@ -106,83 +107,8 @@
         </p>
       </div>
 
-      <div class="ia-passo-acoes ia-passo-acoes-inicio" id="ia-acoes-manual">
+      <div class="ia-passo-acoes ia-passo-acoes-inicio">
         <button type="button" class="btn btn-primario btn-ia-principal" id="btn-ia-pesquisar">Buscar assuntos</button>
-      </div>
-
-      <div class="ia-auto-painel" id="ia-auto-painel" hidden>
-        <div class="ia-auto-intro">
-          <h3>Publicação automática por palavra-chave</h3>
-          <p class="dica">O servidor busca assuntos <strong>recentes</strong> nos intervalos definidos, gera matérias com furo de reportagem e publica automaticamente. Você pode fechar esta página.</p>
-        </div>
-
-        <div class="ia-pub-grid ia-auto-grid">
-          <div class="ia-pub-card">
-            <h4 class="ia-pub-card-titulo">Publicação</h4>
-            <div class="ia-campo">
-              <label for="ia-auto-categoria">Categoria</label>
-              <select id="ia-auto-categoria">
-                <option value="">Sem categoria</option>
-                <% categorias.forEach(function (c) { %>
-                  <option value="<%= c.id %>"><%= c.nome %></option>
-                <% }) %>
-              </select>
-            </div>
-            <div class="ia-campo">
-              <label for="ia-auto-status">Salvar como</label>
-              <select id="ia-auto-status">
-                <option value="rascunho">Rascunho</option>
-                <option value="publicado" selected>Publicado</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="ia-pub-card">
-            <h4 class="ia-pub-card-titulo">Intervalos</h4>
-            <div class="ia-opcoes-linha ia-opcoes-linha-intervalo">
-              <div class="ia-campo ia-campo-compacto">
-                <label for="ia-auto-qtd">Por ciclo</label>
-                <select id="ia-auto-qtd">
-                  <option value="1" selected>1 matéria</option>
-                  <option value="2">2 matérias</option>
-                  <option value="3">3 matérias</option>
-                  <option value="5">5 matérias</option>
-                </select>
-              </div>
-              <div class="ia-campo ia-campo-compacto">
-                <label for="ia-auto-intervalo">A cada</label>
-                <select id="ia-auto-intervalo">
-                  <option value="15">15 min</option>
-                  <option value="30" selected>30 min</option>
-                  <option value="60">1 h</option>
-                  <option value="120">2 h</option>
-                  <option value="240">4 h</option>
-                  <option value="360">6 h</option>
-                </select>
-              </div>
-            </div>
-            <div class="ia-opcoes-linha ia-opcoes-linha-intervalo">
-              <div class="ia-campo">
-                <label for="ia-auto-inicio">Início</label>
-                <input type="datetime-local" id="ia-auto-inicio" class="ia-input-datetime">
-              </div>
-              <div class="ia-campo">
-                <label for="ia-auto-fim">Fim (opcional)</label>
-                <input type="datetime-local" id="ia-auto-fim" class="ia-input-datetime">
-              </div>
-            </div>
-            <p class="dica ia-plano-publicacao" id="ia-auto-plano"></p>
-          </div>
-        </div>
-
-        <div class="ia-passo-acoes ia-passo-acoes-inicio">
-          <button type="button" class="btn btn-primario btn-ia-principal" id="btn-ia-auto-iniciar">Iniciar automação</button>
-        </div>
-
-        <div class="ia-auto-lista-wrap" id="ia-auto-lista-wrap" hidden>
-          <h4 class="ia-pub-card-titulo">Automações salvas</h4>
-          <div id="ia-auto-lista" class="ia-auto-lista"></div>
-        </div>
       </div>
     </div>
 
@@ -299,6 +225,129 @@
         <button type="button" class="btn btn-sec" id="btn-ia-voltar-2">← Voltar</button>
         <button type="button" class="btn btn-primario btn-ia-principal" id="btn-ia-lote">Gerar matérias</button>
         <button type="button" class="btn btn-perigo btn-link" id="btn-ia-cancelar" hidden>Cancelar</button>
+      </div>
+    </div>
+    </div><!-- /ia-fluxo-manual -->
+
+    <div id="ia-fluxo-auto" hidden>
+      <div class="ia-auto-banner">
+        <div class="ia-auto-banner-icone" aria-hidden="true">⚡</div>
+        <div>
+          <strong>Não precisa buscar agora.</strong>
+          <p>Digite o assunto abaixo, configure os intervalos e clique <em>Iniciar automação</em>. O servidor busca fontes recentes, gera matérias com furo de reportagem e publica sozinho — pode fechar esta página.</p>
+        </div>
+      </div>
+
+      <div class="ia-bloco">
+        <label for="ia-auto-palavras" class="ia-bloco-titulo">O que monitorar?</label>
+        <input type="text" id="ia-auto-palavras" class="ia-input-grande" placeholder="Ex: polêmica gospel, pastor, louvor, congresso gospel">
+        <p class="dica">Uma ou mais palavras separadas por vírgula. Só assuntos <strong>recentes</strong> e ainda não publicados no site.</p>
+        <div class="tags-rapidas tags-rapidas-auto">
+          <% ['polêmica gospel', 'pastor', 'louvor', 'adoração', 'congresso', 'testemunho'].forEach(function (tag) { %>
+            <button type="button" class="tag-rapida tag-rapida-auto" data-tag="<%= tag %>"><%= tag %></button>
+          <% }) %>
+        </div>
+      </div>
+
+      <div class="ia-bloco ia-bloco-fontes">
+        <span class="ia-bloco-titulo">Onde buscar (busca ampliada automática)</span>
+        <div class="ia-fontes-grid">
+          <label class="ia-fonte-card">
+            <input type="radio" name="ia-fonte-busca-auto" value="todas" checked>
+            <span class="ia-fonte-card-titulo">Tudo: notícias + portais + redes</span>
+            <span class="ia-fonte-card-desc">18+ portais gospel, Google News, Brave, Trends, Instagram, Facebook, X, Threads, TikTok, YouTube, LinkedIn e web</span>
+          </label>
+          <label class="ia-fonte-card ia-fonte-card--destaque">
+            <input type="radio" name="ia-fonte-busca-auto" value="somente_redes">
+            <span class="ia-fonte-card-titulo">Foco em redes sociais</span>
+            <span class="ia-fonte-card-desc">Polêmicas e assuntos em alta nas redes — ideal para furo rápido</span>
+          </label>
+        </div>
+        <div class="ia-opcoes-linha ia-opcoes-busca">
+          <div class="ia-campo ia-campo-compacto">
+            <label for="ia-auto-dias">Período</label>
+            <select id="ia-auto-dias">
+              <option value="24h" selected>Últimas 24 horas</option>
+              <option value="3">3 dias</option>
+              <option value="5">5 dias</option>
+            </select>
+          </div>
+          <label class="checkbox ia-check-compacto">
+            <input type="checkbox" id="ia-auto-google-trends" checked> Google Trends
+          </label>
+          <label class="checkbox ia-check-compacto">
+            <input type="checkbox" id="ia-auto-internacional"> Conteúdo internacional
+          </label>
+        </div>
+      </div>
+
+      <div class="ia-pub-grid ia-auto-grid">
+        <div class="ia-pub-card">
+          <h4 class="ia-pub-card-titulo">Publicação</h4>
+          <div class="ia-campo">
+            <label for="ia-auto-categoria">Categoria</label>
+            <select id="ia-auto-categoria">
+              <option value="">Sem categoria</option>
+              <% categorias.forEach(function (c) { %>
+                <option value="<%= c.id %>"><%= c.nome %></option>
+              <% }) %>
+            </select>
+          </div>
+          <div class="ia-campo">
+            <label for="ia-auto-status">Salvar como</label>
+            <select id="ia-auto-status">
+              <option value="rascunho">Rascunho</option>
+              <option value="publicado" selected>Publicado</option>
+            </select>
+            <p class="dica ia-dica-status">Sem capa → vira rascunho automaticamente.</p>
+          </div>
+        </div>
+
+        <div class="ia-pub-card">
+          <h4 class="ia-pub-card-titulo">Intervalos</h4>
+          <div class="ia-opcoes-linha ia-opcoes-linha-intervalo">
+            <div class="ia-campo ia-campo-compacto">
+              <label for="ia-auto-qtd">Por ciclo</label>
+              <select id="ia-auto-qtd">
+                <option value="1" selected>1 matéria</option>
+                <option value="2">2 matérias</option>
+                <option value="3">3 matérias</option>
+                <option value="5">5 matérias</option>
+              </select>
+            </div>
+            <div class="ia-campo ia-campo-compacto">
+              <label for="ia-auto-intervalo">A cada</label>
+              <select id="ia-auto-intervalo">
+                <option value="15">15 min</option>
+                <option value="30" selected>30 min</option>
+                <option value="60">1 h</option>
+                <option value="120">2 h</option>
+                <option value="240">4 h</option>
+                <option value="360">6 h</option>
+              </select>
+            </div>
+          </div>
+          <div class="ia-opcoes-linha ia-opcoes-linha-intervalo">
+            <div class="ia-campo">
+              <label for="ia-auto-inicio">Início</label>
+              <input type="datetime-local" id="ia-auto-inicio" class="ia-input-datetime">
+            </div>
+            <div class="ia-campo">
+              <label for="ia-auto-fim">Fim (opcional)</label>
+              <input type="datetime-local" id="ia-auto-fim" class="ia-input-datetime">
+            </div>
+          </div>
+          <p class="dica ia-plano-publicacao" id="ia-auto-plano"></p>
+        </div>
+      </div>
+
+      <div class="ia-passo-acoes ia-passo-acoes-inicio">
+        <button type="button" class="btn btn-primario btn-ia-principal btn-ia-auto-grande" id="btn-ia-auto-iniciar">Iniciar automação</button>
+      </div>
+
+      <div class="ia-auto-lista-wrap" id="ia-auto-lista-wrap" hidden>
+        <h4 class="ia-pub-card-titulo">Automações ativas</h4>
+        <div id="ia-auto-lista" class="ia-auto-lista"></div>
       </div>
     </div>
 
@@ -870,7 +919,22 @@
       somenteRecentes: document.getElementById('ia-somente-recentes').checked,
       diasRecentes: document.getElementById('ia-dias').value,
       conteudoInternacional: document.getElementById('ia-conteudo-internacional').checked,
-      incluirGoogleTrends: !somenteRedes && chkTrends && chkTrends.checked
+      incluirGoogleTrends: !somenteRedes && chkTrends && chkTrends.checked,
+      buscaAmpliada: false
+    };
+  }
+
+  function opcoesBuscaAuto() {
+    var somenteRedes = document.querySelector('input[name="ia-fonte-busca-auto"]:checked')?.value === 'somente_redes';
+    var chkTrends = document.getElementById('ia-auto-google-trends');
+    return {
+      incluirRedesSociais: !somenteRedes,
+      somenteRedesSociais: somenteRedes,
+      somenteRecentes: true,
+      diasRecentes: document.getElementById('ia-auto-dias')?.value || '24h',
+      conteudoInternacional: document.getElementById('ia-auto-internacional')?.checked || false,
+      incluirGoogleTrends: !somenteRedes && chkTrends && chkTrends.checked,
+      buscaAmpliada: true
     };
   }
 
@@ -946,18 +1010,16 @@
   });
   atualizarOpcoesFonteBusca();
 
-  atualizarOpcoesFonteBusca();
-
   var modoBuscaRadios = document.querySelectorAll('input[name="ia-modo-busca"]');
-  var painelAuto = document.getElementById('ia-auto-painel');
-  var acoesManual = document.getElementById('ia-acoes-manual');
-  var passosEl = document.querySelector('.ia-passos');
+  var fluxoManual = document.getElementById('ia-fluxo-manual');
+  var fluxoAuto = document.getElementById('ia-fluxo-auto');
   var autoInicio = document.getElementById('ia-auto-inicio');
   var autoFim = document.getElementById('ia-auto-fim');
   var autoPlano = document.getElementById('ia-auto-plano');
   var btnAutoIniciar = document.getElementById('btn-ia-auto-iniciar');
   var autoListaWrap = document.getElementById('ia-auto-lista-wrap');
   var autoLista = document.getElementById('ia-auto-lista');
+  var autoPalavras = document.getElementById('ia-auto-palavras');
 
   function definirDatetimePadrao(input, offsetHoras) {
     if (!input || input.value) return;
@@ -972,13 +1034,14 @@
 
   function atualizarModoBusca() {
     var auto = modoBuscaAtual() === 'auto';
-    if (painelAuto) painelAuto.hidden = !auto;
-    if (acoesManual) acoesManual.hidden = auto;
-    if (passosEl) passosEl.hidden = auto;
+    if (fluxoManual) fluxoManual.hidden = auto;
+    if (fluxoAuto) fluxoAuto.hidden = !auto;
+    if (statusMsg) statusMsg.hidden = true;
     if (auto) {
       definirDatetimePadrao(autoInicio, 0);
       atualizarPlanoAuto();
       carregarMonitores();
+    } else {
       irPasso(1);
     }
   }
@@ -987,11 +1050,11 @@
     if (!autoPlano) return;
     var qtd = parseInt(document.getElementById('ia-auto-qtd')?.value, 10) || 1;
     var min = parseInt(document.getElementById('ia-auto-intervalo')?.value, 10) || 30;
-    var palavras = document.getElementById('ia-palavras')?.value || 'gospel';
+    var palavras = autoPalavras?.value?.trim() || 'gospel';
+    var termo = palavras.split(',')[0].trim();
     var inicio = autoInicio?.value ? formatarDataHoraLocal(autoInicio.value) : 'agora';
     var fim = autoFim?.value ? formatarDataHoraLocal(autoFim.value) : 'sem limite';
-    autoPlano.textContent = 'Monitorar "' + palavras.split(',')[0].trim() + '": até ' + qtd + ' matéria(s) recente(s) a cada ' +
-      formatarTempo(min) + ', de ' + inicio + ' até ' + fim + '.';
+    autoPlano.textContent = 'A cada ' + formatarTempo(min) + ', buscar até ' + qtd + ' assunto(s) recente(s) sobre "' + termo + '" e publicar automaticamente (' + inicio + ' → ' + fim + ').';
   }
 
   async function carregarMonitores() {
@@ -1051,10 +1114,12 @@
       r.addEventListener('change', atualizarModoBusca);
     });
   }
-  ['ia-auto-qtd', 'ia-auto-intervalo', 'ia-palavras'].forEach(function (id) {
+  ['ia-auto-qtd', 'ia-auto-intervalo', 'ia-auto-palavras', 'ia-auto-dias'].forEach(function (id) {
     var el = document.getElementById(id);
-    if (el) el.addEventListener('change', atualizarPlanoAuto);
-    if (el) el.addEventListener('input', atualizarPlanoAuto);
+    if (el) {
+      el.addEventListener('change', atualizarPlanoAuto);
+      el.addEventListener('input', atualizarPlanoAuto);
+    }
   });
   if (autoInicio) autoInicio.addEventListener('change', atualizarPlanoAuto);
   if (autoFim) autoFim.addEventListener('change', atualizarPlanoAuto);
@@ -1077,9 +1142,10 @@
 
   if (btnAutoIniciar) {
     btnAutoIniciar.addEventListener('click', async function () {
-      var palavras = document.getElementById('ia-palavras')?.value?.trim();
+      var palavras = autoPalavras?.value?.trim();
       if (!palavras) {
-        mostrarStatus('Informe ao menos uma palavra-chave.', 'erro');
+        mostrarStatus('Informe o assunto que deseja monitorar.', 'erro');
+        autoPalavras?.focus();
         return;
       }
       if (!autoInicio?.value) {
@@ -1090,7 +1156,8 @@
         mostrarStatus('A data de fim deve ser posterior ao início.', 'erro');
         return;
       }
-      var msg = 'Iniciar automação para buscar "' + palavras.split(',')[0].trim() + '" e publicar assuntos recentes nos intervalos definidos?';
+      var termo = palavras.split(',')[0].trim();
+      var msg = 'Ativar automação para "' + termo + '"?\n\nO servidor vai buscar assuntos recentes e publicar automaticamente nos intervalos definidos. Você pode fechar esta página.';
       if (!confirm(msg)) return;
       setCarregando(btnAutoIniciar, true);
       try {
@@ -1102,7 +1169,7 @@
           minutosIntervalo: document.getElementById('ia-auto-intervalo')?.value || 30,
           inicioEm: new Date(autoInicio.value).toISOString(),
           fimEm: autoFim?.value ? new Date(autoFim.value).toISOString() : null
-        }, opcoesBuscaIa());
+        }, opcoesBuscaAuto());
         var data = await chamarApi('/admin/posts/ia/monitor-criar', payload);
         mostrarStatus(data.mensagem, 'sucesso');
         carregarMonitores();
@@ -1116,6 +1183,16 @@
       }
     });
   }
+
+  document.querySelectorAll('.tag-rapida-auto').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      if (!autoPalavras) return;
+      var tags = autoPalavras.value.split(/[,;]/).map(function (t) { return t.trim(); }).filter(Boolean);
+      if (tags.indexOf(btn.dataset.tag) === -1) tags.push(btn.dataset.tag);
+      autoPalavras.value = tags.join(', ');
+      atualizarPlanoAuto();
+    });
+  });
 
   function escapar(s) { var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
 

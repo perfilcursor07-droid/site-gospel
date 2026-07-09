@@ -363,7 +363,8 @@ function opcoesBuscaDoBody(body) {
     somenteRecentes: true,
     diasRecentes: body.diasRecentes || '24h',
     conteudoInternacional: body.conteudoInternacional === true || body.conteudoInternacional === 'true',
-    incluirGoogleTrends: somenteRedes ? false : body.incluirGoogleTrends !== false
+    incluirGoogleTrends: somenteRedes ? false : body.incluirGoogleTrends !== false,
+    buscaAmpliada: true
   };
 }
 

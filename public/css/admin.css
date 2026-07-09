@@ -1082,6 +1082,43 @@ body.modal-capa-aberto { overflow: hidden; }
   border-top: 1px dashed #e5e7eb;
 }
 
+.ia-auto-banner {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 14px 16px;
+  margin-bottom: 18px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #f5f3ff 0%, #fff7ed 100%);
+  border: 1px solid #e9d5ff;
+}
+
+.ia-auto-banner-icone {
+  font-size: 1.5rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.ia-auto-banner strong {
+  display: block;
+  font-size: .9rem;
+  color: #5b21b6;
+  margin-bottom: 4px;
+}
+
+.ia-auto-banner p {
+  margin: 0;
+  font-size: .8rem;
+  color: #4b5563;
+  line-height: 1.5;
+}
+
+.btn-ia-auto-grande {
+  min-width: 220px;
+  font-size: .95rem;
+  padding: 12px 24px;
+}
+
 .ia-auto-intro h3 { font-size: .95rem; font-weight: 700; margin-bottom: 6px; }
 .ia-auto-grid { margin-top: 14px; }
 

@@ -21,7 +21,8 @@ function normalizarOpcoesBusca(opcoes = {}) {
     somenteRecentes: true,
     diasRecentes: opcoes.diasRecentes || '24h',
     conteudoInternacional: opcoes.conteudoInternacional === true,
-    incluirGoogleTrends: opcoes.incluirGoogleTrends !== false && !opcoes.somenteRedesSociais
+    incluirGoogleTrends: opcoes.incluirGoogleTrends !== false && !opcoes.somenteRedesSociais,
+    buscaAmpliada: true
   };
 }
 
@@ -81,7 +82,7 @@ async function processarMonitor(monitor) {
 
   const opcoes = normalizarOpcoesBusca(parseOpcoesBusca(monitor.opcoesBusca));
   const qtd = monitor.quantidadePorCiclo;
-  const buscaQtd = Math.min(Math.max(qtd + 3, 5), 10);
+  const buscaQtd = Math.min(Math.max(qtd + (opcoes.buscaAmpliada ? 8 : 3), 8), 15);
 
   const topicos = await pesquisarNichos(monitor.palavrasChave, buscaQtd, {
     ...opcoes,
