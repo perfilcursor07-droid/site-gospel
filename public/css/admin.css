@@ -510,6 +510,10 @@ body.sidebar-overlay::before {
 .integracao-box--info { background: #f9fafb; }
 .integracao-lista { margin: 0; padding-left: 18px; color: #4b5563; font-size: .88rem; line-height: 1.55; }
 .integracao-lista code { font-size: .8rem; }
+.amp-logo-config-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.amp-logo-preview { display: flex; align-items: center; gap: 12px; padding-top: 8px; border-top: 1px dashed #e5e7eb; }
+.amp-logo-preview span { font-size: .78rem; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: .04em; }
+.amp-logo-preview img { object-fit: contain; }
 
 /* Badges de status */
 .badge { display: inline-block; background: #ffedd5; color: #c2410c; font-size: .72rem; font-weight: 700; padding: 3px 10px; border-radius: 12px; text-transform: uppercase; letter-spacing: .5px; }

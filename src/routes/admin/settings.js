@@ -87,6 +87,11 @@ router.post('/', upload.fields([
     await Setting.definir('amp_habilitado', req.body.amp_habilitado === 'on' ? 'sim' : 'nao');
     await Setting.definir('amp_adsense', req.body.amp_adsense === 'on' ? 'sim' : 'nao');
 
+    const camposAmp = ['amp_logo_largura', 'amp_logo_altura', 'amp_logo_texto_tamanho'];
+    for (const campo of camposAmp) {
+      if (campo in req.body) await Setting.definir(campo, (req.body[campo] || '').trim());
+    }
+
     const adsenseClient = (req.body.google_adsense_client || '').trim()
       || extrairClientAdSense(req.body.google_adsense || '');
     if (adsenseClient) await Setting.definir('google_adsense_client', adsenseClient);

@@ -54,11 +54,19 @@ function urlAmpPost(base, slug) {
   return `${(base || '').replace(/\/+$/, '')}/post/${slug}/amp`;
 }
 
+function obterTamanhoLogoAmp(config = {}) {
+  const largura = Math.min(Math.max(parseInt(config.amp_logo_largura, 10) || 140, 60), 320);
+  const altura = Math.min(Math.max(parseInt(config.amp_logo_altura, 10) || 42, 20), 120);
+  const textoRem = Math.min(Math.max(parseFloat(config.amp_logo_texto_tamanho, 10) || 1.1, 0.85), 2).toFixed(2);
+  return { largura, altura, textoRem };
+}
+
 module.exports = {
   ampAtivo,
   escapeHtml,
   urlAbsoluta,
   extrairClientAdSense,
   sanitizarConteudoAmp,
-  urlAmpPost
+  urlAmpPost,
+  obterTamanhoLogoAmp
 };

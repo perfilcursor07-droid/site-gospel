@@ -156,6 +156,28 @@
       <input type="checkbox" name="amp_adsense" <%= (config.amp_adsense || 'sim') !== 'nao' ? 'checked' : '' %>> Exibir Google AdSense nas páginas AMP (requer ID ca-pub na aba Integrações Google)
     </label>
 
+    <fieldset class="integracao-box">
+      <legend>Logomarca no header AMP</legend>
+      <div class="amp-logo-config-grid">
+        <label>Largura da logo (px)
+          <input type="number" name="amp_logo_largura" min="60" max="320" value="<%= config.amp_logo_largura || '140' %>">
+        </label>
+        <label>Altura da logo (px)
+          <input type="number" name="amp_logo_altura" min="20" max="120" value="<%= config.amp_logo_altura || '42' %>">
+        </label>
+        <label>Tamanho do texto (sem logo)
+          <input type="number" name="amp_logo_texto_tamanho" min="0.85" max="2" step="0.05" value="<%= config.amp_logo_texto_tamanho || '1.1' %>">
+        </label>
+      </div>
+      <p class="dica">Padrão recomendado: 140×42 px. Valores em rem para o nome do site quando não houver logomarca.</p>
+      <% if (config.logo) { %>
+        <div class="amp-logo-preview">
+          <span>Prévia:</span>
+          <img src="<%= config.logo %>" alt="Prévia logo AMP" style="max-width: <%= config.amp_logo_largura || 140 %>px; max-height: <%= config.amp_logo_altura || 42 %>px; width: auto; height: auto;">
+        </div>
+      <% } %>
+    </fieldset>
+
     <div class="integracao-box integracao-box--info">
       <h3>Como funciona</h3>
       <ul class="integracao-lista">

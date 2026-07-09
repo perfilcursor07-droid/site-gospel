@@ -16,7 +16,8 @@ const {
   escapeHtml,
   urlAbsoluta,
   sanitizarConteudoAmp,
-  urlAmpPost
+  urlAmpPost,
+  obterTamanhoLogoAmp
 } = require('../utils/amp');
 const { obterUrlBase } = require('../utils/requestUrl');
 
@@ -144,6 +145,7 @@ router.get('/post/:slug/amp', async (req, res, next) => {
     const adsenseClient = (config.google_adsense_client || '').trim()
       || (config.google_adsense || '').match(/ca-pub-\d+/i)?.[0]
       || '';
+    const logoAmp = obterTamanhoLogoAmp(config);
 
     const jsonLd = JSON.stringify({
       '@context': 'https://schema.org',
@@ -173,6 +175,7 @@ router.get('/post/:slug/amp', async (req, res, next) => {
       urlCanonica,
       imagemAbsoluta: post.imagem ? urlAbsoluta(base, post.imagem) : '',
       logoAbsoluta: config.logo ? urlAbsoluta(base, config.logo) : '',
+      logoAmp,
       conteudoAmp: sanitizarConteudoAmp(post.conteudo, base),
       adsenseClient: (config.amp_adsense || 'sim') !== 'nao' ? adsenseClient : '',
       escapeHtml,
