@@ -18,6 +18,8 @@
       const partes = l.split('|');
       return { texto: (partes[0] || '').trim(), url: (partes[1] || '').trim() };
     }).filter(function (l) { return l.texto && l.url; });
+    const urlsPaginas = new Set((paginasNav || []).map(function (p) { return '/pagina/' + p.slug; }));
+    const linksFooterExtras = linksFooter.filter(function (l) { return !urlsPaginas.has(l.url); });
     const redes = [
       { chave: 'social_facebook', nome: 'Facebook' },
       { chave: 'social_instagram', nome: 'Instagram' },
@@ -135,7 +137,6 @@
             <a href="/categoria/<%= c.slug %>" style="--cat: <%= c.corHex || corPrimaria %>"
               class="px-3 py-2.5 lg:py-2 text-sm font-bold text-gray-600 whitespace-nowrap hover:text-[color:var(--cat)] transition"><%= c.nome.toLowerCase() %></a>
           <% }) %>
-          <a href="/pagina/sobre" class="px-3 py-2.5 lg:py-2 text-sm font-bold text-gray-600 whitespace-nowrap hover:text-primary transition">sobre</a>
         </div>
       </nav>
       <div class="site-header-search-wrap" id="wrap-busca">
@@ -192,12 +193,13 @@
       <div>
         <h3 class="site-footer-titulo">Links úteis</h3>
         <ul class="site-footer-links">
-          <% if (linksFooter.length) { %>
-            <% linksFooter.forEach(function (l) { %>
-              <li><a href="<%= l.url %>"><%= l.texto %></a></li>
-            <% }) %>
-          <% } else { %>
-            <li><a href="/pagina/sobre">Sobre</a></li>
+          <% paginasNav.forEach(function (p) { %>
+            <li><a href="/pagina/<%= p.slug %>"><%= p.titulo %></a></li>
+          <% }) %>
+          <% linksFooterExtras.forEach(function (l) { %>
+            <li><a href="<%= l.url %>"><%= l.texto %></a></li>
+          <% }) %>
+          <% if (!paginasNav.length && !linksFooterExtras.length) { %>
             <li><a href="/busca">Busca</a></li>
           <% } %>
         </ul>

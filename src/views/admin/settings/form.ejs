@@ -310,9 +310,10 @@
     <label>Texto do copyright
       <input type="text" name="footer_copyright" value="<%= config.footer_copyright || '' %>" placeholder="© 2026 Site Gospel. Todos os direitos reservados.">
     </label>
-    <label>Links do rodapé (um por linha, formato: Texto|URL)
-      <textarea name="footer_links" rows="5" placeholder="Sobre|/pagina/sobre&#10;Contato|/pagina/contato"><%= config.footer_links || '' %></textarea>
+    <label>Links extras do rodapé (um por linha, formato: Texto|URL)
+      <textarea name="footer_links" rows="5" placeholder="Busca|/busca&#10;Contato|https://wa.me/5511999999999"><%= config.footer_links || '' %></textarea>
     </label>
+    <p class="dica">As páginas publicadas em <strong>Admin → Páginas</strong> aparecem automaticamente em Links úteis. Use este campo só para links extras (busca, redes, URLs externas).</p>
   </div>
 
   <div class="form-acoes">

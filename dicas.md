@@ -19,7 +19,6 @@ npm run seed
 npm run dev
 
 SUBIR GIT
-git status
 git add .
 git commit -m "feat: sua mensagem aqui"
 git push github feature/portal-globo

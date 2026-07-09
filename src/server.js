@@ -5,7 +5,7 @@ const session = require('express-session');
 const flash = require('connect-flash');
 const expressLayouts = require('express-ejs-layouts');
 
-const { sequelize, Category, Setting } = require('./models');
+const { sequelize, Category, Page, Setting } = require('./models');
 const { obterUrlBase } = require('./utils/requestUrl');
 
 const app = express();
@@ -33,16 +33,19 @@ app.use(async (req, res, next) => {
   res.locals.usuarioLogado = req.session.user || null;
   res.locals.mensagens = { sucesso: req.flash('sucesso'), erro: req.flash('erro') };
   try {
-    const [categorias, config] = await Promise.all([
+    const [categorias, paginas, config] = await Promise.all([
       Category.findAll({ order: [['ordem', 'ASC'], ['nome', 'ASC']] }),
+      Page.findAll({ where: { status: 'publicado' }, order: [['titulo', 'ASC']] }),
       Setting.obterTodas()
     ]);
     res.locals.categoriasNav = categorias;
+    res.locals.paginasNav = paginas;
     res.locals.config = config;
     res.locals.urlBase = obterUrlBase(req, config);
     res.locals.urlAtual = res.locals.urlBase + req.originalUrl.split('?')[0];
   } catch (e) {
     res.locals.categoriasNav = [];
+    res.locals.paginasNav = [];
     res.locals.config = {};
     res.locals.urlBase = obterUrlBase(req, {});
     res.locals.urlAtual = res.locals.urlBase + req.originalUrl.split('?')[0];
