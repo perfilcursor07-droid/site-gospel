@@ -32,6 +32,17 @@
       <div class="ia-passo" data-passo="3"><span>3</span> Gerar</div>
     </div>
 
+    <div class="ia-modo-busca" role="tablist" aria-label="Modo de busca">
+      <label class="ia-modo-busca-opcao">
+        <input type="radio" name="ia-modo-busca" value="manual" checked>
+        <span><strong>Buscar agora</strong><small>Encontre assuntos e escolha quais gerar.</small></span>
+      </label>
+      <label class="ia-modo-busca-opcao ia-modo-busca-opcao--destaque">
+        <input type="radio" name="ia-modo-busca" value="auto">
+        <span><strong>Automação contínua</strong><small>Busca e publica assuntos recentes em intervalos — sem intervenção.</small></span>
+      </label>
+    </div>
+
     <div class="ia-passo-conteudo" id="ia-passo-1">
       <div class="ia-bloco">
         <label for="ia-palavras" class="ia-bloco-titulo">O que buscar?</label>
@@ -95,8 +106,83 @@
         </p>
       </div>
 
-      <div class="ia-passo-acoes ia-passo-acoes-inicio">
+      <div class="ia-passo-acoes ia-passo-acoes-inicio" id="ia-acoes-manual">
         <button type="button" class="btn btn-primario btn-ia-principal" id="btn-ia-pesquisar">Buscar assuntos</button>
+      </div>
+
+      <div class="ia-auto-painel" id="ia-auto-painel" hidden>
+        <div class="ia-auto-intro">
+          <h3>Publicação automática por palavra-chave</h3>
+          <p class="dica">O servidor busca assuntos <strong>recentes</strong> nos intervalos definidos, gera matérias com furo de reportagem e publica automaticamente. Você pode fechar esta página.</p>
+        </div>
+
+        <div class="ia-pub-grid ia-auto-grid">
+          <div class="ia-pub-card">
+            <h4 class="ia-pub-card-titulo">Publicação</h4>
+            <div class="ia-campo">
+              <label for="ia-auto-categoria">Categoria</label>
+              <select id="ia-auto-categoria">
+                <option value="">Sem categoria</option>
+                <% categorias.forEach(function (c) { %>
+                  <option value="<%= c.id %>"><%= c.nome %></option>
+                <% }) %>
+              </select>
+            </div>
+            <div class="ia-campo">
+              <label for="ia-auto-status">Salvar como</label>
+              <select id="ia-auto-status">
+                <option value="rascunho">Rascunho</option>
+                <option value="publicado" selected>Publicado</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="ia-pub-card">
+            <h4 class="ia-pub-card-titulo">Intervalos</h4>
+            <div class="ia-opcoes-linha ia-opcoes-linha-intervalo">
+              <div class="ia-campo ia-campo-compacto">
+                <label for="ia-auto-qtd">Por ciclo</label>
+                <select id="ia-auto-qtd">
+                  <option value="1" selected>1 matéria</option>
+                  <option value="2">2 matérias</option>
+                  <option value="3">3 matérias</option>
+                  <option value="5">5 matérias</option>
+                </select>
+              </div>
+              <div class="ia-campo ia-campo-compacto">
+                <label for="ia-auto-intervalo">A cada</label>
+                <select id="ia-auto-intervalo">
+                  <option value="15">15 min</option>
+                  <option value="30" selected>30 min</option>
+                  <option value="60">1 h</option>
+                  <option value="120">2 h</option>
+                  <option value="240">4 h</option>
+                  <option value="360">6 h</option>
+                </select>
+              </div>
+            </div>
+            <div class="ia-opcoes-linha ia-opcoes-linha-intervalo">
+              <div class="ia-campo">
+                <label for="ia-auto-inicio">Início</label>
+                <input type="datetime-local" id="ia-auto-inicio" class="ia-input-datetime">
+              </div>
+              <div class="ia-campo">
+                <label for="ia-auto-fim">Fim (opcional)</label>
+                <input type="datetime-local" id="ia-auto-fim" class="ia-input-datetime">
+              </div>
+            </div>
+            <p class="dica ia-plano-publicacao" id="ia-auto-plano"></p>
+          </div>
+        </div>
+
+        <div class="ia-passo-acoes ia-passo-acoes-inicio">
+          <button type="button" class="btn btn-primario btn-ia-principal" id="btn-ia-auto-iniciar">Iniciar automação</button>
+        </div>
+
+        <div class="ia-auto-lista-wrap" id="ia-auto-lista-wrap" hidden>
+          <h4 class="ia-pub-card-titulo">Automações salvas</h4>
+          <div id="ia-auto-lista" class="ia-auto-lista"></div>
+        </div>
       </div>
     </div>
 
@@ -860,6 +946,177 @@
   });
   atualizarOpcoesFonteBusca();
 
+  atualizarOpcoesFonteBusca();
+
+  var modoBuscaRadios = document.querySelectorAll('input[name="ia-modo-busca"]');
+  var painelAuto = document.getElementById('ia-auto-painel');
+  var acoesManual = document.getElementById('ia-acoes-manual');
+  var passosEl = document.querySelector('.ia-passos');
+  var autoInicio = document.getElementById('ia-auto-inicio');
+  var autoFim = document.getElementById('ia-auto-fim');
+  var autoPlano = document.getElementById('ia-auto-plano');
+  var btnAutoIniciar = document.getElementById('btn-ia-auto-iniciar');
+  var autoListaWrap = document.getElementById('ia-auto-lista-wrap');
+  var autoLista = document.getElementById('ia-auto-lista');
+
+  function definirDatetimePadrao(input, offsetHoras) {
+    if (!input || input.value) return;
+    var d = new Date(Date.now() + (offsetHoras || 0) * 60 * 60 * 1000);
+    d.setMinutes(Math.ceil(d.getMinutes() / 5) * 5, 0, 0);
+    input.value = d.toISOString().slice(0, 16);
+  }
+
+  function modoBuscaAtual() {
+    return document.querySelector('input[name="ia-modo-busca"]:checked')?.value || 'manual';
+  }
+
+  function atualizarModoBusca() {
+    var auto = modoBuscaAtual() === 'auto';
+    if (painelAuto) painelAuto.hidden = !auto;
+    if (acoesManual) acoesManual.hidden = auto;
+    if (passosEl) passosEl.hidden = auto;
+    if (auto) {
+      definirDatetimePadrao(autoInicio, 0);
+      atualizarPlanoAuto();
+      carregarMonitores();
+      irPasso(1);
+    }
+  }
+
+  function atualizarPlanoAuto() {
+    if (!autoPlano) return;
+    var qtd = parseInt(document.getElementById('ia-auto-qtd')?.value, 10) || 1;
+    var min = parseInt(document.getElementById('ia-auto-intervalo')?.value, 10) || 30;
+    var palavras = document.getElementById('ia-palavras')?.value || 'gospel';
+    var inicio = autoInicio?.value ? formatarDataHoraLocal(autoInicio.value) : 'agora';
+    var fim = autoFim?.value ? formatarDataHoraLocal(autoFim.value) : 'sem limite';
+    autoPlano.textContent = 'Monitorar "' + palavras.split(',')[0].trim() + '": até ' + qtd + ' matéria(s) recente(s) a cada ' +
+      formatarTempo(min) + ', de ' + inicio + ' até ' + fim + '.';
+  }
+
+  async function carregarMonitores() {
+    if (!autoLista) return;
+    try {
+      var res = await fetch('/admin/posts/ia/monitor-lista', { headers: { Accept: 'application/json' } });
+      var data = await res.json();
+      if (!data.ok) return;
+      var monitores = data.monitores || [];
+      if (!monitores.length) {
+        if (autoListaWrap) autoListaWrap.hidden = true;
+        return;
+      }
+      if (autoListaWrap) autoListaWrap.hidden = false;
+      autoLista.innerHTML = '';
+      monitores.forEach(function (m) {
+        var item = document.createElement('div');
+        item.className = 'ia-auto-item ia-auto-item--' + m.status;
+        var statusLabel = { ativo: 'Ativa', pausado: 'Pausada', concluido: 'Concluída', cancelado: 'Cancelada' }[m.status] || m.status;
+        item.innerHTML =
+          '<div class="ia-auto-item-corpo">' +
+          '<strong>' + escapar(m.palavrasChave) + '</strong>' +
+          '<span class="ia-auto-item-meta">' + statusLabel +
+          ' · ' + m.quantidadePorCiclo + '/ciclo · a cada ' + formatarTempo(m.minutosIntervalo) +
+          ' · ' + (m.totalPublicados || 0) + ' publicada(s)' +
+          (m.proximaExecucao && m.status === 'ativo' ? ' · próxima: ' + formatarDataHoraLocal(m.proximaExecucao) : '') +
+          (m.ultimoErro && m.status === 'ativo' ? ' · <em>' + escapar(m.ultimoErro) + '</em>' : '') +
+          '</span></div>' +
+          '<div class="ia-auto-item-acoes">' +
+          (m.status === 'ativo'
+            ? '<button type="button" class="btn btn-sec btn-sm" data-acao="pausar" data-id="' + m.id + '">Pausar</button>'
+            : (m.status === 'pausado'
+              ? '<button type="button" class="btn btn-sec btn-sm" data-acao="retomar" data-id="' + m.id + '">Retomar</button>'
+              : '')) +
+          (m.status === 'ativo' || m.status === 'pausado'
+            ? '<button type="button" class="btn btn-perigo btn-sm" data-acao="cancelar" data-id="' + m.id + '">Cancelar</button>'
+            : '') +
+          '</div>';
+        autoLista.appendChild(item);
+      });
+    } catch (e) { /* ignore */ }
+  }
+
+  async function acaoMonitor(acao, id) {
+    var urls = {
+      cancelar: '/admin/posts/ia/monitor-cancelar',
+      pausar: '/admin/posts/ia/monitor-pausar',
+      retomar: '/admin/posts/ia/monitor-retomar'
+    };
+    var data = await chamarApi(urls[acao], { id: id });
+    mostrarStatus(data.mensagem || 'Atualizado.', 'sucesso');
+    carregarMonitores();
+  }
+
+  if (modoBuscaRadios.length) {
+    modoBuscaRadios.forEach(function (r) {
+      r.addEventListener('change', atualizarModoBusca);
+    });
+  }
+  ['ia-auto-qtd', 'ia-auto-intervalo', 'ia-palavras'].forEach(function (id) {
+    var el = document.getElementById(id);
+    if (el) el.addEventListener('change', atualizarPlanoAuto);
+    if (el) el.addEventListener('input', atualizarPlanoAuto);
+  });
+  if (autoInicio) autoInicio.addEventListener('change', atualizarPlanoAuto);
+  if (autoFim) autoFim.addEventListener('change', atualizarPlanoAuto);
+
+  if (autoLista) {
+    autoLista.addEventListener('click', async function (e) {
+      var btn = e.target.closest('[data-acao]');
+      if (!btn) return;
+      var acao = btn.dataset.acao;
+      var id = parseInt(btn.dataset.id, 10);
+      if (!id) return;
+      if (acao === 'cancelar' && !confirm('Cancelar esta automação?')) return;
+      try {
+        await acaoMonitor(acao, id);
+      } catch (err) {
+        mostrarStatus(err.message, 'erro');
+      }
+    });
+  }
+
+  if (btnAutoIniciar) {
+    btnAutoIniciar.addEventListener('click', async function () {
+      var palavras = document.getElementById('ia-palavras')?.value?.trim();
+      if (!palavras) {
+        mostrarStatus('Informe ao menos uma palavra-chave.', 'erro');
+        return;
+      }
+      if (!autoInicio?.value) {
+        mostrarStatus('Informe a data de início.', 'erro');
+        return;
+      }
+      if (autoFim?.value && new Date(autoFim.value) <= new Date(autoInicio.value)) {
+        mostrarStatus('A data de fim deve ser posterior ao início.', 'erro');
+        return;
+      }
+      var msg = 'Iniciar automação para buscar "' + palavras.split(',')[0].trim() + '" e publicar assuntos recentes nos intervalos definidos?';
+      if (!confirm(msg)) return;
+      setCarregando(btnAutoIniciar, true);
+      try {
+        var payload = Object.assign({
+          palavrasChave: palavras,
+          categoriaId: document.getElementById('ia-auto-categoria')?.value || null,
+          status: document.getElementById('ia-auto-status')?.value || 'publicado',
+          quantidadePorCiclo: document.getElementById('ia-auto-qtd')?.value || 1,
+          minutosIntervalo: document.getElementById('ia-auto-intervalo')?.value || 30,
+          inicioEm: new Date(autoInicio.value).toISOString(),
+          fimEm: autoFim?.value ? new Date(autoFim.value).toISOString() : null
+        }, opcoesBuscaIa());
+        var data = await chamarApi('/admin/posts/ia/monitor-criar', payload);
+        mostrarStatus(data.mensagem, 'sucesso');
+        carregarMonitores();
+        setTimeout(function () {
+          window.location.href = '/admin/posts?monitor=1';
+        }, 1500);
+      } catch (e) {
+        mostrarStatus(e.message, 'erro');
+      } finally {
+        setCarregando(btnAutoIniciar, false, 'Iniciar automação');
+      }
+    });
+  }
+
   function escapar(s) { var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
 
   function atualizarSelecionarTodos() {
@@ -1226,6 +1483,16 @@
   listaTopicos.addEventListener('change', function (e) {
     if (e.target.classList.contains('ia-topico-check')) atualizarSelecionarTodos();
   });
+
+  var paramsAuto = new URLSearchParams(window.location.search);
+  if (paramsAuto.get('auto') === '1' || paramsAuto.get('monitor') === '1') {
+    if (modoTabs[1]) modoTabs[1].click();
+    var radioAuto = document.querySelector('input[name="ia-modo-busca"][value="auto"]');
+    if (radioAuto) {
+      radioAuto.checked = true;
+      atualizarModoBusca();
+    }
+  }
   <% } %>
 })();
 </script>

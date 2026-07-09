@@ -6,6 +6,14 @@ const { pesquisarNichos, apurarTopico } = require('../../services/newsResearch')
 const { obterImagemParaArtigo, avisoFalhaImagem } = require('../../services/imageFetcher');
 const { marcarTopicosPublicados, deduplicarTopicos, encontrarSimilar } = require('../../utils/topicMatch');
 const { agendarTopicos, prepararTopicosParaFila, obterResumoFila, cancelarFilaPendente, obterProximoSlotFila } = require('../../services/iaFilaPublicacao');
+const {
+  criarMonitor,
+  listarMonitores,
+  obterResumoMonitores,
+  cancelarMonitor,
+  pausarMonitor,
+  retomarMonitor
+} = require('../../services/iaMonitorAutomatico');
 
 function avisoQualidadeArtigo(artigo) {
   if (artigo._avisoQualidade) return artigo._avisoQualidade;
@@ -344,6 +352,129 @@ router.post('/fila-cancelar', async (req, res) => {
     responderJson(res, 200, { ok: true, cancelados: qtd });
   } catch (e) {
     responderJson(res, 500, { ok: false, erro: e.message });
+  }
+});
+
+function opcoesBuscaDoBody(body) {
+  const somenteRedes = body.somenteRedesSociais === true || body.somenteRedesSociais === 'true';
+  return {
+    incluirRedesSociais: somenteRedes ? true : body.incluirRedesSociais !== false,
+    somenteRedesSociais: somenteRedes,
+    somenteRecentes: true,
+    diasRecentes: body.diasRecentes || '24h',
+    conteudoInternacional: body.conteudoInternacional === true || body.conteudoInternacional === 'true',
+    incluirGoogleTrends: somenteRedes ? false : body.incluirGoogleTrends !== false
+  };
+}
+
+function serializarMonitor(m) {
+  return {
+    id: m.id,
+    palavrasChave: m.palavrasChave,
+    categoriaId: m.categoriaId,
+    statusDesejado: m.statusDesejado,
+    quantidadePorCiclo: m.quantidadePorCiclo,
+    minutosIntervalo: m.minutosIntervalo,
+    inicioEm: m.inicioEm,
+    fimEm: m.fimEm,
+    proximaExecucao: m.proximaExecucao,
+    ultimaBuscaEm: m.ultimaBuscaEm,
+    totalPublicados: m.totalPublicados,
+    status: m.status,
+    ultimoErro: m.ultimoErro,
+    conteudoInternacional: m.conteudoInternacional
+  };
+}
+
+router.post('/monitor-criar', async (req, res) => {
+  try {
+    const {
+      palavrasChave,
+      categoriaId,
+      status,
+      quantidadePorCiclo,
+      minutosIntervalo,
+      inicioEm,
+      fimEm,
+      conteudoInternacional
+    } = req.body;
+
+    const monitor = await criarMonitor({
+      autorId: req.session.user.id,
+      categoriaId: categoriaId || null,
+      palavrasChave,
+      statusDesejado: status === 'rascunho' ? 'rascunho' : 'publicado',
+      conteudoInternacional: conteudoInternacional === true || conteudoInternacional === 'true',
+      opcoesBusca: opcoesBuscaDoBody(req.body),
+      quantidadePorCiclo,
+      minutosIntervalo,
+      inicioEm: inicioEm || null,
+      fimEm: fimEm || null
+    });
+
+    responderJson(res, 200, {
+      ok: true,
+      monitor: serializarMonitor(monitor),
+      mensagem: 'Automação ativa! O servidor busca assuntos recentes e publica nos intervalos definidos — pode fechar esta página.'
+    });
+  } catch (e) {
+    responderJson(res, 400, { ok: false, erro: e.message });
+  }
+});
+
+router.get('/monitor-lista', async (req, res) => {
+  try {
+    const autorId = req.session.user.papel === 'usuario' ? req.session.user.id : req.session.user.id;
+    const monitores = await listarMonitores(autorId);
+    responderJson(res, 200, {
+      ok: true,
+      monitores: monitores.map(serializarMonitor)
+    });
+  } catch (e) {
+    responderJson(res, 500, { ok: false, erro: e.message });
+  }
+});
+
+router.get('/monitor-status', async (req, res) => {
+  try {
+    const autorId = req.session.user.papel === 'usuario' ? req.session.user.id : req.session.user.id;
+    const resumo = await obterResumoMonitores(autorId);
+    responderJson(res, 200, { ok: true, ...resumo });
+  } catch (e) {
+    responderJson(res, 500, { ok: false, erro: e.message });
+  }
+});
+
+router.post('/monitor-cancelar', async (req, res) => {
+  try {
+    const { id } = req.body;
+    if (!id) return responderJson(res, 400, { ok: false, erro: 'ID do monitor inválido.' });
+    await cancelarMonitor(parseInt(id, 10), req.session.user.id);
+    responderJson(res, 200, { ok: true, mensagem: 'Automação cancelada.' });
+  } catch (e) {
+    responderJson(res, 400, { ok: false, erro: e.message });
+  }
+});
+
+router.post('/monitor-pausar', async (req, res) => {
+  try {
+    const { id } = req.body;
+    if (!id) return responderJson(res, 400, { ok: false, erro: 'ID do monitor inválido.' });
+    await pausarMonitor(parseInt(id, 10), req.session.user.id);
+    responderJson(res, 200, { ok: true, mensagem: 'Automação pausada.' });
+  } catch (e) {
+    responderJson(res, 400, { ok: false, erro: e.message });
+  }
+});
+
+router.post('/monitor-retomar', async (req, res) => {
+  try {
+    const { id } = req.body;
+    if (!id) return responderJson(res, 400, { ok: false, erro: 'ID do monitor inválido.' });
+    await retomarMonitor(parseInt(id, 10), req.session.user.id);
+    responderJson(res, 200, { ok: true, mensagem: 'Automação retomada.' });
+  } catch (e) {
+    responderJson(res, 400, { ok: false, erro: e.message });
   }
 });
 

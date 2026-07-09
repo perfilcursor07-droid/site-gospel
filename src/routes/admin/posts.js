@@ -3,6 +3,7 @@ const { Post, Category } = require('../../models');
 const uploadCapaPost = require('../../middlewares/uploadCapaPost');
 const { buscarCandidatosCapaManual, salvarCandidatoComoCapa } = require('../../services/imageFetcher');
 const { obterResumoFila } = require('../../services/iaFilaPublicacao');
+const { obterResumoMonitores } = require('../../services/iaMonitorAutomatico');
 
 router.use('/ia', require('./aiPosts'));
 
@@ -13,11 +14,12 @@ function podeEditar(user, post) {
 router.get('/', async (req, res, next) => {
   try {
     const where = req.session.user.papel === 'usuario' ? { autorId: req.session.user.id } : {};
-    const [posts, filaIa] = await Promise.all([
+    const [posts, filaIa, monitorIa] = await Promise.all([
       Post.findAll({ where, include: ['categoria', 'autor'], order: [['createdAt', 'DESC']] }),
-      obterResumoFila(req.session.user.papel === 'usuario' ? req.session.user.id : null)
+      obterResumoFila(req.session.user.papel === 'usuario' ? req.session.user.id : null),
+      obterResumoMonitores(req.session.user.id)
     ]);
-    res.render('admin/posts/index', { titulo: 'Posts', posts, filaIa });
+    res.render('admin/posts/index', { titulo: 'Posts', posts, filaIa, monitorIa });
   } catch (e) { next(e); }
 });
 

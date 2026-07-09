@@ -275,6 +275,12 @@ async function cancelarFilaPendente(autorId) {
 
 async function tickFila(nomeSite) {
   await publicarPostsAgendados();
+  try {
+    const { tickMonitores } = require('./iaMonitorAutomatico');
+    await tickMonitores();
+  } catch (e) {
+    console.warn('iaMonitor:', e.message);
+  }
   if (processando) return;
   await processarProximoJob(nomeSite);
 }

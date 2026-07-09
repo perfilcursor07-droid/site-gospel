@@ -9,6 +9,17 @@
   </a>
 </div>
 
+<% if (typeof monitorIa !== 'undefined' && monitorIa && monitorIa.temAtivos) { %>
+<div class="fila-ia-banner fila-ia-banner--monitor" id="monitor-ia-banner">
+  <div class="fila-ia-banner-texto">
+    <strong>Automação de IA ativa</strong>
+    <span id="monitor-ia-detalhe"><%= monitorIa.ativos %> monitor(es) buscando assuntos recentes e publicando automaticamente.</span>
+    <span class="dica">Configure em Novo post → Gerar com IA → Automação contínua.</span>
+  </div>
+  <a href="/admin/posts/novo?auto=1" class="btn btn-sec">Ver automações</a>
+</div>
+<% } %>
+
 <% if (typeof filaIa !== 'undefined' && filaIa && filaIa.ativo) { %>
 <div class="fila-ia-banner" id="fila-ia-banner">
   <div class="fila-ia-banner-texto">

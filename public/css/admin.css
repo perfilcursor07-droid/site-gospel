@@ -1043,6 +1043,73 @@ body.modal-capa-aberto { overflow: hidden; }
   line-height: 1.4;
 }
 
+.ia-modo-busca {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.ia-modo-busca-opcao {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  cursor: pointer;
+  background: #fafafa;
+  transition: border-color .15s, background .15s;
+}
+
+.ia-modo-busca-opcao:has(input:checked) {
+  border-color: #ea580c;
+  background: #fff7ed;
+}
+
+.ia-modo-busca-opcao--destaque:has(input:checked) {
+  border-color: #7c3aed;
+  background: #f5f3ff;
+}
+
+.ia-modo-busca-opcao input { margin-top: 3px; flex-shrink: 0; }
+.ia-modo-busca-opcao strong { display: block; font-size: .85rem; color: #111827; }
+.ia-modo-busca-opcao small { display: block; font-size: .72rem; color: #6b7280; margin-top: 2px; }
+
+.ia-auto-painel {
+  margin-top: 8px;
+  padding-top: 16px;
+  border-top: 1px dashed #e5e7eb;
+}
+
+.ia-auto-intro h3 { font-size: .95rem; font-weight: 700; margin-bottom: 6px; }
+.ia-auto-grid { margin-top: 14px; }
+
+.ia-auto-lista-wrap { margin-top: 20px; }
+.ia-auto-lista { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+
+.ia-auto-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fafafa;
+}
+
+.ia-auto-item--ativo { border-left: 3px solid #16a34a; }
+.ia-auto-item--pausado { border-left: 3px solid #d97706; }
+.ia-auto-item--concluido, .ia-auto-item--cancelado { opacity: .75; }
+
+.ia-auto-item-corpo strong { display: block; font-size: .84rem; }
+.ia-auto-item-meta { font-size: .72rem; color: #6b7280; line-height: 1.4; }
+.ia-auto-item-acoes { display: flex; gap: 6px; flex-shrink: 0; }
+.btn-sm { padding: 5px 10px; font-size: .75rem; }
+
+.fila-ia-banner--monitor { border-left-color: #7c3aed; }
+
 .ia-intervalo-config {
   margin-top: 12px;
   padding-top: 12px;
@@ -1157,6 +1224,8 @@ body.modal-capa-aberto { overflow: hidden; }
   .ia-passo-acoes .btn { text-align: center; }
   .painel-ia { padding: 16px; }
   .ia-fontes-grid { grid-template-columns: 1fr; }
+  .ia-modo-busca { grid-template-columns: 1fr; }
+  .ia-auto-item { flex-direction: column; align-items: stretch; }
   body.admin { flex-direction: column; }
   .sidebar {
     width: 100%;
