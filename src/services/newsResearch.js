@@ -4,8 +4,9 @@ const { marcarRespostaBrave, marcarRespostaBraveOk, braveDisponivel } = require(
 const { buscarNoticias } = require('./braveSearch');
 
 const USER_AGENT = 'SiteGospelBot/1.0 (+https://gitlab.com/perfilcursor07-group/obuxixo)';
-const DIAS_RECENTES_PADRAO = 5;
+const DIAS_RECENTES_PADRAO = 1;
 const MS_POR_DIA = 24 * 60 * 60 * 1000;
+const MS_POR_HORA = 60 * 60 * 1000;
 
 const PORTAIS_GOSPEL = [
   'g1.globo.com',
@@ -72,8 +73,22 @@ function parsearIdadeBrave(age) {
   return 0;
 }
 
-function itemEhRecente(item, dias = DIAS_RECENTES_PADRAO) {
-  const limite = Date.now() - dias * MS_POR_DIA;
+function normalizarPeriodo(valor) {
+  const str = String(valor ?? '24h').toLowerCase().trim();
+  if (str === '24h' || str === '24') {
+    return { horas: 24, diasBrave: 1, diasGoogle: 1 };
+  }
+  const dias = Math.min(Math.max(parseInt(str, 10) || 1, 1), 30);
+  return { dias, diasBrave: dias, diasGoogle: dias };
+}
+
+function itemEhRecente(item, periodo = DIAS_RECENTES_PADRAO) {
+  const cfg = typeof periodo === 'object' && periodo !== null
+    ? periodo
+    : normalizarPeriodo(periodo);
+  const limite = cfg.horas
+    ? Date.now() - cfg.horas * MS_POR_HORA
+    : Date.now() - (cfg.dias || DIAS_RECENTES_PADRAO) * MS_POR_DIA;
   const ts = item.dataTimestamp || parsearDataPub(item.data) || parsearIdadeBrave(item.idadeBrave);
   if (!ts) {
     if (item.recente && ['rede_social', 'web', 'portal_gospel', 'noticia'].includes(item.tipoFonte)) return true;
@@ -379,7 +394,14 @@ async function buscarRedesSociais(palavraChave, limite = 6, dias = 5) {
 }
 
 async function pesquisarNichos(palavrasChave, quantidadePorNicho = 5, opcoes = {}) {
-  const { incluirRedesSociais = true, somenteRecentes = true, diasRecentes = DIAS_RECENTES_PADRAO } = opcoes;
+  const {
+    incluirRedesSociais = true,
+    somenteRedesSociais = false,
+    somenteRecentes = true,
+    diasRecentes = '24h'
+  } = opcoes;
+  const periodo = normalizarPeriodo(diasRecentes);
+  const diasBusca = periodo.diasGoogle || periodo.diasBrave || 1;
   const termos = palavrasChave
     .split(/[,;\n]+/)
     .map((t) => t.trim())
@@ -393,7 +415,7 @@ async function pesquisarNichos(palavrasChave, quantidadePorNicho = 5, opcoes = {
   const adicionar = (item) => {
     if (!item?.titulo) return;
     if (!itemQualidadeValida(item)) return;
-    if (somenteRecentes && !itemEhRecente(item, diasRecentes)) return;
+    if (somenteRecentes && !itemEhRecente(item, periodo)) return;
 
     const dup = resultados.find((r) =>
       fatosSimilares(r.titulo, item.titulo, r.resumo, item.resumo)
@@ -415,17 +437,25 @@ async function pesquisarNichos(palavrasChave, quantidadePorNicho = 5, opcoes = {
 
   for (const termo of termos) {
     try {
-      const promessas = [
-        buscarBraveNews(termo, quantidadePorNicho + 4, diasRecentes),
-        buscarEmAlta(termo, 4),
-        buscarGoogleNews24h(termo, 4),
-        buscarGoogleNews(termo, quantidadePorNicho + 2, { dias: diasRecentes }),
-        buscarPortaisGospel(termo, 4, diasRecentes),
-        buscarWebGospel(termo, 4, diasRecentes)
-      ];
+      let promessas;
 
-      if (incluirRedesSociais) {
-        promessas.push(buscarRedesSociais(termo, maxRedesPorTermo, diasRecentes));
+      if (somenteRedesSociais) {
+        promessas = [
+          buscarRedesSociais(termo, Math.max(quantidadePorNicho * 2, 8), diasBusca)
+        ];
+      } else {
+        promessas = [
+          buscarBraveNews(termo, quantidadePorNicho + 4, diasBusca),
+          buscarEmAlta(termo, 4),
+          buscarGoogleNews24h(termo, 4),
+          buscarGoogleNews(termo, quantidadePorNicho + 2, { dias: diasBusca }),
+          buscarPortaisGospel(termo, 4, diasBusca),
+          buscarWebGospel(termo, 4, diasBusca)
+        ];
+
+        if (incluirRedesSociais) {
+          promessas.push(buscarRedesSociais(termo, maxRedesPorTermo, diasBusca));
+        }
       }
 
       const lotes = await Promise.all(promessas);
@@ -462,7 +492,7 @@ async function pesquisarNichos(palavrasChave, quantidadePorNicho = 5, opcoes = {
 
   const finais = deduplicarTopicos([...apurados, ...selecionados.slice(limiteApuracao)])
     .filter((item) => itemQualidadeValida(item))
-    .filter((item) => !somenteRecentes || itemEhRecente(item, diasRecentes) || item.fonte === 'Pauta editorial');
+    .filter((item) => !somenteRecentes || itemEhRecente(item, periodo) || item.fonte === 'Pauta editorial');
 
   return finais.slice(0, termos.length * quantidadePorNicho * 2);
 }

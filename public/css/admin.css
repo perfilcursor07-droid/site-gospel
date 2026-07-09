@@ -836,7 +836,7 @@ body.modal-capa-aberto { overflow: hidden; }
 .seo-conteudo .snippet-google { margin-top: 16px; }
 
 /* Painel de geração por IA */
-.painel-ia { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px 22px; margin-bottom: 0; box-shadow: 0 1px 2px rgba(0,0,0,.04); max-width: 920px; }
+.painel-ia { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 22px 24px; margin-bottom: 0; box-shadow: 0 1px 2px rgba(0,0,0,.04); max-width: none; width: 100%; }
 .painel-ia-intro { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 18px; flex-wrap: wrap; padding-bottom: 14px; border-bottom: 1px solid #f3f4f6; }
 .painel-ia h2 { font-size: 1.1rem; font-weight: 800; color: #111827; margin-bottom: 4px; }
 .painel-ia-intro .dica { font-size: .8rem; line-height: 1.5; max-width: 560px; color: #6b7280; margin: 0; }
@@ -856,6 +856,19 @@ body.modal-capa-aberto { overflow: hidden; }
 .ia-input-grande:focus { outline: none; border-color: #fdba74; box-shadow: 0 0 0 3px rgba(234,88,12,.12); }
 
 .ia-opcoes-linha { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px 14px; margin-bottom: 6px; }
+.ia-opcoes-busca { padding: 12px 14px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px; margin-bottom: 10px; }
+.ia-bloco-fontes { margin-bottom: 14px; }
+.ia-fontes-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.ia-fonte-card {
+  display: flex; flex-direction: column; gap: 4px; padding: 14px 16px;
+  border: 2px solid #e5e7eb; border-radius: 10px; cursor: pointer; transition: border-color .15s, background .15s;
+}
+.ia-fonte-card input { margin-bottom: 4px; }
+.ia-fonte-card:has(input:checked) { border-color: #f97316; background: #fff7ed; }
+.ia-fonte-card--destaque:has(input:checked) { border-color: #ea580c; background: #fff7ed; }
+.ia-fonte-card-titulo { font-size: .9rem; font-weight: 700; color: #111827; }
+.ia-fonte-card-desc { font-size: .78rem; color: #6b7280; line-height: 1.4; }
+.ia-check-compacto[hidden] { display: none; }
 .ia-campo-compacto { min-width: 100px; flex: 0 0 auto; }
 .ia-campo-compacto label { font-size: .72rem; margin-bottom: 4px; }
 .ia-campo-compacto select { padding: 7px 8px; font-size: .82rem; }
@@ -1082,6 +1095,7 @@ body.modal-capa-aberto { overflow: hidden; }
   .ia-passo-acoes { flex-direction: column; }
   .ia-passo-acoes .btn { text-align: center; }
   .painel-ia { padding: 16px; }
+  .ia-fontes-grid { grid-template-columns: 1fr; }
   body.admin { flex-direction: column; }
   .sidebar {
     width: 100%;

@@ -83,15 +83,17 @@ async function gerarArtigoCompleto(topico, nomeSite) {
 
 router.post('/pesquisar', async (req, res) => {
   try {
-    const { palavrasChave, quantidadePorNicho, incluirRedesSociais, somenteRecentes, diasRecentes } = req.body;
+    const { palavrasChave, quantidadePorNicho, incluirRedesSociais, somenteRedesSociais, somenteRecentes, diasRecentes } = req.body;
+    const somenteRedes = somenteRedesSociais === true || somenteRedesSociais === 'true';
     const posts = await carregarPostsExistentes();
     const topicos = await pesquisarNichos(
       palavrasChave || 'gospel',
       Math.min(Math.max(parseInt(quantidadePorNicho, 10) || 5, 1), 10),
       {
-        incluirRedesSociais: incluirRedesSociais !== false,
+        incluirRedesSociais: somenteRedes ? true : incluirRedesSociais !== false,
+        somenteRedesSociais: somenteRedes,
         somenteRecentes: somenteRecentes !== false,
-        diasRecentes: Math.min(Math.max(parseInt(diasRecentes, 10) || 5, 1), 30)
+        diasRecentes: diasRecentes || '24h'
       }
     );
     const topicosUnicos = deduplicarTopicos(topicos);
@@ -250,10 +252,12 @@ router.post('/gerar-lote', async (req, res) => {
 router.post('/preencher-formulario', async (req, res) => {
   try {
     const { palavrasChave, incluirRedesSociais } = req.body;
+    const somenteRedes = req.body.somenteRedesSociais === true || req.body.somenteRedesSociais === 'true';
     const topicos = await pesquisarNichos(palavrasChave || 'gospel', 1, {
-      incluirRedesSociais: req.body.incluirRedesSociais !== false,
+      incluirRedesSociais: somenteRedes ? true : req.body.incluirRedesSociais !== false,
+      somenteRedesSociais: somenteRedes,
       somenteRecentes: req.body.somenteRecentes !== false,
-      diasRecentes: Math.min(Math.max(parseInt(req.body.diasRecentes, 10) || 7, 1), 30)
+      diasRecentes: req.body.diasRecentes || '24h'
     });
     const posts = await carregarPostsExistentes();
     const topicosUnicos = deduplicarTopicos(topicos);

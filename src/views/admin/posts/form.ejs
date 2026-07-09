@@ -43,28 +43,46 @@
         </div>
       </div>
 
-      <div class="ia-opcoes-linha">
+      <div class="ia-bloco ia-bloco-fontes">
+        <span class="ia-bloco-titulo">Onde buscar assuntos</span>
+        <div class="ia-fontes-grid">
+          <label class="ia-fonte-card">
+            <input type="radio" name="ia-fonte-busca" value="todas" checked>
+            <span class="ia-fonte-card-titulo">Notícias + portais + redes</span>
+            <span class="ia-fonte-card-desc">Google News, portais gospel, web e redes sociais</span>
+          </label>
+          <label class="ia-fonte-card ia-fonte-card--destaque">
+            <input type="radio" name="ia-fonte-busca" value="somente_redes">
+            <span class="ia-fonte-card-titulo">Somente redes sociais</span>
+            <span class="ia-fonte-card-desc">Instagram, Facebook e X — polêmicas e assuntos em alta para publicar</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="ia-opcoes-linha ia-opcoes-busca">
         <div class="ia-campo ia-campo-compacto">
           <label for="ia-quantidade">Por nicho</label>
           <select id="ia-quantidade">
             <option value="3">3</option>
             <option value="5" selected>5</option>
             <option value="8">8</option>
+            <option value="10">10</option>
           </select>
         </div>
         <div class="ia-campo ia-campo-compacto">
           <label for="ia-dias">Período</label>
           <select id="ia-dias">
+            <option value="24h" selected>Últimas 24 horas</option>
             <option value="3">3 dias</option>
-            <option value="5" selected>5 dias</option>
+            <option value="5">5 dias</option>
             <option value="7">7 dias</option>
           </select>
         </div>
-        <label class="checkbox ia-check-compacto">
-          <input type="checkbox" id="ia-somente-recentes" checked> Só recentes
+        <label class="checkbox ia-check-compacto" id="label-ia-somente-recentes">
+          <input type="checkbox" id="ia-somente-recentes" checked> Filtrar por período
         </label>
-        <label class="checkbox ia-check-compacto">
-          <input type="checkbox" id="ia-redes-sociais" checked> Redes sociais
+        <label class="checkbox ia-check-compacto" id="label-ia-redes-sociais">
+          <input type="checkbox" id="ia-redes-sociais" checked> Incluir redes (modo misto)
         </label>
       </div>
 
@@ -733,6 +751,31 @@
     return data;
   }
 
+  function opcoesBuscaIa() {
+    var somenteRedes = document.querySelector('input[name="ia-fonte-busca"]:checked')?.value === 'somente_redes';
+    return {
+      incluirRedesSociais: somenteRedes || document.getElementById('ia-redes-sociais').checked,
+      somenteRedesSociais: somenteRedes,
+      somenteRecentes: document.getElementById('ia-somente-recentes').checked,
+      diasRecentes: document.getElementById('ia-dias').value
+    };
+  }
+
+  function atualizarOpcoesFonteBusca() {
+    var somenteRedes = document.querySelector('input[name="ia-fonte-busca"]:checked')?.value === 'somente_redes';
+    var labelRedes = document.getElementById('label-ia-redes-sociais');
+    var chkRedes = document.getElementById('ia-redes-sociais');
+    if (labelRedes && chkRedes) {
+      labelRedes.hidden = somenteRedes;
+      if (somenteRedes) chkRedes.checked = true;
+    }
+  }
+
+  document.querySelectorAll('input[name="ia-fonte-busca"]').forEach(function (radio) {
+    radio.addEventListener('change', atualizarOpcoesFonteBusca);
+  });
+  atualizarOpcoesFonteBusca();
+
   function escapar(s) { var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
 
   function atualizarSelecionarTodos() {
@@ -814,15 +857,16 @@
 
   btnPesquisar.addEventListener('click', async function () {
     setCarregando(btnPesquisar, true);
-    mostrarStatus('Buscando tópicos na internet...', 'info');
+    var busca = opcoesBuscaIa();
+    mostrarStatus(
+      busca.somenteRedesSociais ? 'Buscando assuntos nas redes sociais (24h)...' : 'Buscando tópicos na internet...',
+      'info'
+    );
     try {
-      var data = await chamarApi('/admin/posts/ia/pesquisar', {
+      var data = await chamarApi('/admin/posts/ia/pesquisar', Object.assign({
         palavrasChave: document.getElementById('ia-palavras').value,
-        quantidadePorNicho: document.getElementById('ia-quantidade').value,
-        incluirRedesSociais: document.getElementById('ia-redes-sociais').checked,
-        somenteRecentes: document.getElementById('ia-somente-recentes').checked,
-        diasRecentes: document.getElementById('ia-dias').value
-      });
+        quantidadePorNicho: document.getElementById('ia-quantidade').value
+      }, opcoesBuscaIa()));
       renderizarTopicos(data.topicos);
     } catch (e) { mostrarStatus(e.message, 'erro'); }
     finally { setCarregando(btnPesquisar, false, 'Buscar assuntos'); }
@@ -1017,12 +1061,9 @@
         if (prev.avisoImagem) mostrarStatus(prev.avisoImagem + ' Use "Buscar imagem na web" na barra lateral.', 'aviso');
         if (prev.avisoQualidade) mostrarStatus(prev.avisoQualidade, 'aviso');
       } else {
-        var data = await chamarApi('/admin/posts/ia/preencher-formulario', {
-          palavrasChave: document.getElementById('ia-palavras').value,
-          incluirRedesSociais: document.getElementById('ia-redes-sociais').checked,
-          somenteRecentes: document.getElementById('ia-somente-recentes').checked,
-          diasRecentes: document.getElementById('ia-dias').value
-        });
+        var data = await chamarApi('/admin/posts/ia/preencher-formulario', Object.assign({
+          palavrasChave: document.getElementById('ia-palavras').value
+        }, opcoesBuscaIa()));
         preencherFormulario(data.artigo);
         if (data.avisoImagem) mostrarStatus(data.avisoImagem + ' Use "Buscar imagem na web" na barra lateral.', 'aviso');
         if (data.avisoQualidade) mostrarStatus(data.avisoQualidade, 'aviso');
