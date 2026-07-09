@@ -519,6 +519,44 @@ body.sidebar-overlay::before {
 .badge { display: inline-block; background: #ffedd5; color: #c2410c; font-size: .72rem; font-weight: 700; padding: 3px 10px; border-radius: 12px; text-transform: uppercase; letter-spacing: .5px; }
 .badge-publicado { background: #dcfce7; color: #15803d; }
 .badge-rascunho { background: #fef3c7; color: #a16207; }
+.badge-agendado { background: #dbeafe; color: #1d4ed8; }
+
+.fila-ia-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  padding: 1rem 1.25rem;
+  border-radius: 10px;
+  border: 1px solid #93c5fd;
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+}
+
+.fila-ia-banner-texto {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.fila-ia-banner-texto strong {
+  color: #1e40af;
+  font-size: 1rem;
+}
+
+.fila-ia-banner-texto .dica {
+  font-size: 0.85rem;
+  color: #3b82f6;
+}
+
+.fila-ia-banner--concluida {
+  border-color: #86efac;
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+}
+
+.fila-ia-banner--concluida .fila-ia-banner-texto strong {
+  color: #15803d;
+}
 
 /* ===== Listagem de posts ===== */
 .posts-toolbar {

@@ -10,7 +10,7 @@ const Post = sequelize.define('Post', {
   imagem: { type: DataTypes.STRING, allowNull: true },
   imagemAlt: { type: DataTypes.STRING(500), allowNull: true },
   status: {
-    type: DataTypes.ENUM('rascunho', 'publicado'),
+    type: DataTypes.ENUM('rascunho', 'publicado', 'agendado'),
     allowNull: false,
     defaultValue: 'rascunho'
   },
@@ -28,6 +28,7 @@ Post.beforeValidate((post) => {
 
 Post.beforeSave((post) => {
   if (post.status === 'publicado' && !post.publicadoEm) post.publicadoEm = new Date();
+  if (post.status === 'agendado' && !post.publicadoEm) post.publicadoEm = new Date();
 });
 
 module.exports = Post;

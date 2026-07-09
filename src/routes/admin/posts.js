@@ -2,6 +2,7 @@ const router = require('express').Router();
 const { Post, Category } = require('../../models');
 const uploadCapaPost = require('../../middlewares/uploadCapaPost');
 const { buscarCandidatosCapaManual, salvarCandidatoComoCapa } = require('../../services/imageFetcher');
+const { obterResumoFila } = require('../../services/iaFilaPublicacao');
 
 router.use('/ia', require('./aiPosts'));
 
@@ -12,8 +13,11 @@ function podeEditar(user, post) {
 router.get('/', async (req, res, next) => {
   try {
     const where = req.session.user.papel === 'usuario' ? { autorId: req.session.user.id } : {};
-    const posts = await Post.findAll({ where, include: ['categoria', 'autor'], order: [['createdAt', 'DESC']] });
-    res.render('admin/posts/index', { titulo: 'Posts', posts });
+    const [posts, filaIa] = await Promise.all([
+      Post.findAll({ where, include: ['categoria', 'autor'], order: [['createdAt', 'DESC']] }),
+      obterResumoFila(req.session.user.papel === 'usuario' ? req.session.user.id : null)
+    ]);
+    res.render('admin/posts/index', { titulo: 'Posts', posts, filaIa });
   } catch (e) { next(e); }
 });
 

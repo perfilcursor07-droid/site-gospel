@@ -154,7 +154,7 @@
               <input type="radio" name="ia-modo-pub" value="intervalos">
               <span>
                 <strong>Em intervalos</strong>
-                <small>Lotes com pausa — mantenha a página aberta.</small>
+                <small>Agenda no servidor — pode fechar a página.</small>
               </span>
             </label>
           </div>
@@ -949,7 +949,7 @@
     var lotes = Math.ceil(total / porLote);
     var pausas = Math.max(lotes - 1, 0);
     planoPublicacao.textContent = total + ' matéria(s) em ' + lotes + ' lote(s) de até ' + porLote +
-      ', com pausa de ' + formatarTempo(minutos) + ' entre lotes (' + pausas + ' pausa(s) no total).';
+      ', intervalo de ' + formatarTempo(minutos) + ' no servidor (' + pausas + ' pausa(s)). Pode fechar a página.';
   }
 
   modoPubRadios.forEach(function (radio) {
@@ -977,6 +977,33 @@
     };
   }
 
+  async function agendarFilaApi(topicos) {
+    var opts = opcoesPublicacao();
+    var porLote = parseInt(document.getElementById('ia-qtd-intervalo').value, 10) || 1;
+    var minutos = parseInt(document.getElementById('ia-min-intervalo').value, 10) || 5;
+    return chamarApi('/admin/posts/ia/agendar-fila', Object.assign({
+      topicos: topicos,
+      categoriaId: opts.categoriaId,
+      status: opts.status,
+      porLote: porLote,
+      minutosIntervalo: minutos
+    }, opcoesBuscaIa()));
+  }
+
+  async function agendarTopicosNaFila(sel) {
+    mostrarStatus('Agendando ' + sel.length + ' matéria(s) na fila do servidor...', 'info');
+    try {
+      var data = await agendarFilaApi(sel);
+      mostrarStatus(data.mensagem, 'sucesso');
+      setTimeout(function () {
+        window.location.href = '/admin/posts?fila=1';
+      }, 1200);
+    } catch (e) {
+      mostrarStatus(e.message, 'erro');
+      throw e;
+    }
+  }
+
   async function gerarLoteApi(topicos) {
     var opts = opcoesPublicacao();
     return chamarApi('/admin/posts/ia/gerar-lote', {
@@ -988,9 +1015,7 @@
   }
 
   async function publicarTopicos(sel) {
-    var modoIntervalo = document.querySelector('input[name="ia-modo-pub"]:checked')?.value === 'intervalos';
-    var porLote = modoIntervalo ? (parseInt(document.getElementById('ia-qtd-intervalo').value, 10) || 1) : 5;
-    var minutos = parseInt(document.getElementById('ia-min-intervalo').value, 10) || 15;
+    var porLote = 5;
     var total = sel.length;
     var criados = [];
     var erros = [];
@@ -1025,18 +1050,6 @@
       }
 
       if (cancelarPublicacao || i + porLote >= sel.length) break;
-
-      if (modoIntervalo) {
-        var restante = total - processados;
-        mostrarStatus('Aguardando ' + formatarTempo(minutos) + ' para o próximo lote (' + restante + ' restante(s)). Mantenha esta página aberta.', 'aviso');
-        atualizarProgresso(processados, total, 'Pausa de ' + formatarTempo(minutos) + ' — ' + processados + ' de ' + total + ' concluída(s).');
-        var ms = minutos * 60 * 1000;
-        var passo = 1000;
-        for (var t = 0; t < ms; t += passo) {
-          if (cancelarPublicacao) break;
-          await sleep(passo);
-        }
-      }
     }
 
     publicacaoAtiva = false;
@@ -1053,7 +1066,7 @@
 
     mostrarStatus(msg, erros.length || cancelarPublicacao ? 'aviso' : 'sucesso');
 
-    if (criados.length === 1 && !modoIntervalo) {
+    if (criados.length === 1) {
       window.location.href = '/admin/posts/' + criados[0].id + '/editar';
     } else if (criados.length > 0 && !cancelarPublicacao) {
       setTimeout(function () { window.location.href = '/admin/posts'; }, 2500);
@@ -1095,12 +1108,16 @@
     if (!sel.length) { mostrarStatus('Selecione ao menos um tópico.', 'erro'); return; }
     var modoIntervalo = document.querySelector('input[name="ia-modo-pub"]:checked')?.value === 'intervalos';
     var msgConfirm = modoIntervalo
-      ? 'Publicar ' + sel.length + ' matéria(s) em intervalos? Mantenha esta página aberta até concluir.'
+      ? 'Agendar ' + sel.length + ' matéria(s) em intervalos no servidor? Você poderá fechar esta página.'
       : 'Gerar ' + sel.length + ' matéria(s) de uma vez? Pode levar alguns minutos.';
     if (!confirm(msgConfirm)) return;
     setCarregando(btnLote, true);
     try {
-      await publicarTopicos(sel);
+      if (modoIntervalo) {
+        await agendarTopicosNaFila(sel);
+      } else {
+        await publicarTopicos(sel);
+      }
     } catch (e) {
       mostrarStatus(e.message, 'erro');
     } finally {

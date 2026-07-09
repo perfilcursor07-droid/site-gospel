@@ -7,6 +7,7 @@ const expressLayouts = require('express-ejs-layouts');
 
 const { sequelize, Category, Page, Setting } = require('./models');
 const { obterUrlBase } = require('./utils/requestUrl');
+const { tickFila } = require('./services/iaFilaPublicacao');
 
 const app = express();
 app.set('trust proxy', 1);
@@ -67,8 +68,26 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 3000;
+
+async function iniciarWorkerFila() {
+  let nomeSite = 'Site Gospel';
+  try {
+    const config = await Setting.obterTodas();
+    nomeSite = config.site_nome || nomeSite;
+  } catch { /* ignore */ }
+
+  setInterval(() => {
+    tickFila(nomeSite).catch((e) => console.warn('iaFila:', e.message));
+  }, 30000);
+
+  tickFila(nomeSite).catch(() => {});
+}
+
 sequelize.authenticate().then(() => {
-  app.listen(PORT, () => console.log(`Servidor rodando em http://localhost:${PORT}`));
+  app.listen(PORT, () => {
+    console.log(`Servidor rodando em http://localhost:${PORT}`);
+    iniciarWorkerFila();
+  });
 }).catch((e) => {
   console.error('Erro ao conectar ao banco de dados:', e.message);
   console.error('Verifique o arquivo .env e rode: npm run db:migrate');

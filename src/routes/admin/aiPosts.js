@@ -5,7 +5,7 @@ const { gerarArtigo } = require('../../services/deepseek');
 const { pesquisarNichos, apurarTopico } = require('../../services/newsResearch');
 const { obterImagemParaArtigo, avisoFalhaImagem } = require('../../services/imageFetcher');
 const { marcarTopicosPublicados, deduplicarTopicos, encontrarSimilar } = require('../../utils/topicMatch');
-const { MIN_PALAVRAS_ARTIGO, MAX_PALAVRAS_ARTIGO, mensagemAvisoQualidade, avaliarComprimento } = require('../../services/editorialGuidelines');
+const { agendarTopicos, prepararTopicosParaFila, obterResumoFila, cancelarFilaPendente } = require('../../services/iaFilaPublicacao');
 
 function avisoQualidadeArtigo(artigo) {
   if (artigo._avisoQualidade) return artigo._avisoQualidade;
@@ -255,6 +255,77 @@ router.post('/gerar-lote', async (req, res) => {
     });
   } catch (e) {
     console.error('Erro gerar-lote:', e);
+    responderJson(res, 500, { ok: false, erro: e.message });
+  }
+});
+
+router.post('/agendar-fila', async (req, res) => {
+  try {
+    const {
+      topicos,
+      categoriaId,
+      status,
+      minutosIntervalo,
+      porLote,
+      conteudoInternacional
+    } = req.body;
+
+    if (!Array.isArray(topicos) || !topicos.length) {
+      return responderJson(res, 400, { ok: false, erro: 'Selecione ao menos um tópico.' });
+    }
+
+    const topicosValidos = await prepararTopicosParaFila(topicos);
+    const ignorados = topicos.length - topicosValidos.length;
+
+    if (!topicosValidos.length) {
+      return responderJson(res, 400, {
+        ok: false,
+        erro: 'Todos os tópicos selecionados já foram publicados no site.'
+      });
+    }
+
+    const limite = Math.min(topicosValidos.length, 100);
+    const intervalo = Math.min(Math.max(parseInt(minutosIntervalo, 10) || 5, 1), 120);
+    const lote = Math.min(Math.max(parseInt(porLote, 10) || 1, 1), 5);
+
+    const resultado = await agendarTopicos({
+      topicos: topicosValidos.slice(0, limite),
+      autorId: req.session.user.id,
+      categoriaId: categoriaId || null,
+      statusDesejado: status === 'rascunho' ? 'rascunho' : 'publicado',
+      minutosIntervalo: intervalo,
+      porLote: lote,
+      conteudoInternacional: conteudoInternacional === true || conteudoInternacional === 'true'
+    });
+
+    responderJson(res, 200, {
+      ok: true,
+      ignorados: ignorados + (topicosValidos.length - limite),
+      agendados: resultado.total,
+      primeiroEm: resultado.primeiroEm,
+      ultimoEm: resultado.ultimoEm,
+      mensagem: `${resultado.total} matéria(s) na fila. Você pode fechar esta página — o servidor gera e publica automaticamente nos intervalos definidos.`
+    });
+  } catch (e) {
+    console.error('agendar-fila:', e);
+    responderJson(res, 500, { ok: false, erro: e.message });
+  }
+});
+
+router.get('/fila-status', async (req, res) => {
+  try {
+    const resumo = await obterResumoFila(req.session.user.id);
+    responderJson(res, 200, { ok: true, ...resumo });
+  } catch (e) {
+    responderJson(res, 500, { ok: false, erro: e.message });
+  }
+});
+
+router.post('/fila-cancelar', async (req, res) => {
+  try {
+    const qtd = await cancelarFilaPendente(req.session.user.id);
+    responderJson(res, 200, { ok: true, cancelados: qtd });
+  } catch (e) {
     responderJson(res, 500, { ok: false, erro: e.message });
   }
 });
