@@ -1,50 +1,94 @@
-<div class="page-header">
-  <h1>Dashboard</h1>
+<div class="page-header dash-header">
+  <div>
+    <h1>Dashboard</h1>
+    <p class="page-subtitulo">Visão geral do site</p>
+  </div>
   <div class="atalhos">
-    <a href="/admin/posts/novo" class="btn btn-primario">+ Novo post</a>
-    <% if (usuarioLogado.papel !== 'usuario') { %><a href="/admin/paginas/nova" class="btn btn-sec">+ Nova página</a><% } %>
-    <% if (usuarioLogado.papel === 'administrador') { %><a href="/admin/configuracoes" class="btn btn-sec">Configurações</a><% } %>
+    <a href="/admin/posts/novo" class="btn btn-primario btn-sm btn-com-icone">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Novo post
+    </a>
+    <% if (usuarioLogado.papel !== 'usuario') { %>
+      <a href="/admin/paginas/nova" class="btn btn-sec btn-sm">Nova página</a>
+    <% } %>
+    <% if (usuarioLogado.papel === 'administrador') { %>
+      <a href="/admin/configuracoes" class="btn btn-sec btn-sm">Configurações</a>
+    <% } %>
   </div>
 </div>
 
-<div class="cards-stats">
-  <div class="stat"><span class="numero"><%= totalPosts %></span><span>Posts</span></div>
-  <div class="stat"><span class="numero"><%= totalPublicados %></span><span>Publicados</span></div>
-  <div class="stat"><span class="numero"><%= totalRascunhos %></span><span>Rascunhos</span></div>
-  <div class="stat"><span class="numero"><%= totalPaginas %></span><span>Páginas</span></div>
-  <div class="stat"><span class="numero"><%= totalCategorias %></span><span>Categorias</span></div>
-  <div class="stat"><span class="numero"><%= totalUsuarios %></span><span>Usuários</span></div>
+<div class="dash-stats">
+  <div class="dash-stat">
+    <strong><%= totalPosts %></strong><span>Posts</span>
+  </div>
+  <div class="dash-stat dash-stat-verde">
+    <strong><%= totalPublicados %></strong><span>Publicados</span>
+  </div>
+  <div class="dash-stat dash-stat-amarelo">
+    <strong><%= totalRascunhos %></strong><span>Rascunhos</span>
+  </div>
+  <% if (usuarioLogado.papel !== 'usuario') { %>
+    <div class="dash-stat">
+      <strong><%= totalPaginas %></strong><span>Páginas</span>
+    </div>
+    <div class="dash-stat">
+      <strong><%= totalCategorias %></strong><span>Categorias</span>
+    </div>
+  <% } %>
+  <% if (usuarioLogado.papel === 'administrador') { %>
+    <div class="dash-stat">
+      <strong><%= totalUsuarios %></strong><span>Usuários</span>
+    </div>
+  <% } %>
 </div>
 
-<div class="card">
-  <h2>Posts por mês (últimos 6 meses)</h2>
-  <div class="grafico">
-    <% postsPorMes.forEach(function (m) { %>
-      <div class="grafico-col">
-        <span class="grafico-valor"><%= m.total %></span>
-        <div class="grafico-barra" style="height: <%= Math.max(Math.round((m.total / maxPorMes) * 100), 3) %>%"></div>
-        <span class="grafico-label"><%= m.label %></span>
+<div class="dash-corpo">
+  <div class="dash-card dash-grafico">
+    <h2 class="dash-card-titulo">Posts por mês</h2>
+    <div class="grafico grafico-compacto">
+      <% postsPorMes.forEach(function (m) { %>
+        <div class="grafico-col">
+          <span class="grafico-valor"><%= m.total %></span>
+          <div class="grafico-barra" style="height: <%= Math.max(Math.round((m.total / maxPorMes) * 100), 4) %>%"></div>
+          <span class="grafico-label"><%= m.label %></span>
+        </div>
+      <% }) %>
+    </div>
+  </div>
+
+  <div class="dash-card dash-posts">
+    <div class="dash-card-topo">
+      <h2 class="dash-card-titulo">Últimos posts</h2>
+      <a href="/admin/posts" class="dash-ver-todos">Ver todos</a>
+    </div>
+
+    <% if (ultimosPosts.length) { %>
+      <div class="dash-posts-lista">
+        <% ultimosPosts.forEach(function (post) { %>
+          <div class="dash-post-linha">
+            <div class="dash-post-info">
+              <a href="/admin/posts/<%= post.id %>/editar" class="dash-post-titulo"><%= post.titulo %></a>
+              <p class="dash-post-meta">
+                <span><%= post.categoria ? post.categoria.nome : '—' %></span>
+                <span><%= post.autor ? post.autor.nome : '—' %></span>
+              </p>
+            </div>
+            <span class="badge badge-<%= post.status %>"><%= post.status %></span>
+            <div class="dash-post-acoes">
+              <a href="/admin/posts/<%= post.id %>/editar" class="btn-icone" title="Editar">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              </a>
+              <% if (post.status === 'publicado') { %>
+                <a href="/post/<%= post.slug %>" target="_blank" rel="noopener" class="btn-icone" title="Ver no site">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                </a>
+              <% } %>
+            </div>
+          </div>
+        <% }) %>
       </div>
-    <% }) %>
+    <% } else { %>
+      <p class="dash-vazio">Nenhum post ainda.</p>
+    <% } %>
   </div>
 </div>
-
-<h2>Últimos posts</h2>
-<table class="tabela">
-  <thead><tr><th>Título</th><th>Categoria</th><th>Autor</th><th>Status</th><th>Ações</th></tr></thead>
-  <tbody>
-    <% ultimosPosts.forEach(function (post) { %>
-    <tr>
-      <td><a href="/admin/posts/<%= post.id %>/editar"><%= post.titulo %></a></td>
-      <td><%= post.categoria ? post.categoria.nome : '-' %></td>
-      <td><%= post.autor ? post.autor.nome : '-' %></td>
-      <td><span class="badge badge-<%= post.status %>"><%= post.status %></span></td>
-      <td class="acoes">
-        <a href="/admin/posts/<%= post.id %>/editar" class="btn btn-sec">Editar</a>
-        <% if (post.status === 'publicado') { %><a href="/post/<%= post.slug %>" target="_blank" class="btn btn-sec">Ver no site</a><% } %>
-      </td>
-    </tr>
-    <% }) %>
-    <% if (!ultimosPosts.length) { %><tr><td colspan="5">Nenhum post ainda.</td></tr><% } %>
-  </tbody>
-</table>

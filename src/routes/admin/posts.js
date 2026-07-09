@@ -30,6 +30,8 @@ router.post('/', upload.single('imagem'), async (req, res) => {
     if (!imagem && req.body.imagem_ia_url && req.body.imagem_ia_url.startsWith('/uploads/')) {
       imagem = req.body.imagem_ia_url;
     }
+    let status = ehUsuario ? 'rascunho' : (req.body.status || 'rascunho');
+    if (status === 'publicado' && !imagem) status = 'rascunho';
     await Post.create({
       titulo: req.body.titulo,
       slug: (req.body.slug || '').trim(),
@@ -37,13 +39,16 @@ router.post('/', upload.single('imagem'), async (req, res) => {
       conteudo: req.body.conteudo,
       categoriaId: req.body.categoriaId || null,
       autorId: req.session.user.id,
-      status: ehUsuario ? 'rascunho' : (req.body.status || 'rascunho'),
+      status,
       destaque: ehUsuario ? false : req.body.destaque === 'on',
       metaTitle: (req.body.meta_title || '').trim() || null,
       metaDescription: (req.body.meta_description || '').trim() || null,
-      imagem
+      imagem,
+      imagemAlt: (req.body.imagem_alt || '').trim() || null
     });
-    req.flash('sucesso', 'Post criado com sucesso.');
+    req.flash('sucesso', (!ehUsuario && req.body.status === 'publicado' && !imagem)
+      ? 'Post salvo como rascunho (sem imagem de capa).'
+      : 'Post criado com sucesso.');
     res.redirect('/admin/posts');
   } catch (e) {
     req.flash('erro', 'Erro ao criar post: ' + e.message);
@@ -78,13 +83,20 @@ router.post('/:id', upload.single('imagem'), async (req, res) => {
     post.categoriaId = req.body.categoriaId || null;
     post.metaTitle = (req.body.meta_title || '').trim() || null;
     post.metaDescription = (req.body.meta_description || '').trim() || null;
+    if (req.file) post.imagem = `/uploads/${req.file.filename}`;
+    if (req.body.imagem_alt !== undefined) {
+      post.imagemAlt = (req.body.imagem_alt || '').trim() || null;
+    }
     if (!ehUsuario) {
-      post.status = req.body.status || 'rascunho';
+      let status = req.body.status || 'rascunho';
+      if (status === 'publicado' && !post.imagem) status = 'rascunho';
+      post.status = status;
       post.destaque = req.body.destaque === 'on';
     }
-    if (req.file) post.imagem = `/uploads/${req.file.filename}`;
     await post.save();
-    req.flash('sucesso', 'Post atualizado com sucesso.');
+    req.flash('sucesso', (!ehUsuario && req.body.status === 'publicado' && !post.imagem)
+      ? 'Post salvo como rascunho (sem imagem de capa).'
+      : 'Post atualizado com sucesso.');
     res.redirect('/admin/posts');
   } catch (e) {
     req.flash('erro', 'Erro ao atualizar post: ' + e.message);

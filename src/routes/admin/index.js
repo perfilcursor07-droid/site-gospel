@@ -48,7 +48,7 @@ router.get('/', async (req, res, next) => {
     const ultimosPosts = await Post.findAll({
       include: ['autor', 'categoria'],
       order: [['createdAt', 'DESC']],
-      limit: 10
+      limit: 6
     });
 
     res.render('admin/dashboard', {

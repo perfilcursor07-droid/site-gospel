@@ -2,11 +2,10 @@ require('dotenv').config();
 const { sequelize, User, Category, Post, Page, Setting } = require('./models');
 
 const categoriasBase = [
-  { nome: 'Notícias', cor: '#dc2626', ordem: 1, descricao: 'As principais notícias do mundo gospel no Brasil e no mundo.' },
-  { nome: 'Louvor', cor: '#f97316', ordem: 2, descricao: 'Lançamentos, ministérios e histórias por trás das canções.' },
-  { nome: 'Estudos Bíblicos', cor: '#2563eb', ordem: 3, descricao: 'Estudos profundos para crescer no conhecimento da Palavra.' },
-  { nome: 'Testemunhos', cor: '#16a34a', ordem: 4, descricao: 'Histórias reais de fé, superação e transformação.' },
-  { nome: 'Devocionais', cor: '#9333ea', ordem: 5, descricao: 'Reflexões diárias para fortalecer sua caminhada com Deus.' }
+  { nome: 'Notícias', cor: '#dc2626', ordem: 1, descricao: 'Novidades, eventos e acontecimentos do meio gospel.' },
+  { nome: 'Músicas', cor: '#f97316', ordem: 2, descricao: 'Lançamentos, artistas, álbuns e tendências da música gospel.' },
+  { nome: 'Estudos Bíblicos', cor: '#2563eb', ordem: 3, descricao: 'Ensino bíblico e reflexões para aprofundar a fé.' },
+  { nome: 'Devocionais', cor: '#9333ea', ordem: 4, descricao: 'Mensagens diárias para edificação e comunhão com Deus.' }
 ];
 
 const postsBase = [
@@ -19,7 +18,7 @@ const postsBase = [
   },
   {
     titulo: 'Novo álbum de adoração congregacional é lançado com participações especiais',
-    categoria: 'Louvor',
+    categoria: 'Músicas',
     destaque: true,
     resumo: 'Projeto gravado ao vivo traz dez canções inéditas focadas na igreja local.',
     conteudo: '<p>Foi lançado nesta semana um novo álbum de adoração congregacional gravado ao vivo, com dez canções inéditas. O projeto nasceu com o propósito de servir a igreja local com músicas acessíveis para o culto.</p><p>As letras percorrem temas como graça, comunhão e esperança, e as cifras foram disponibilizadas gratuitamente para ministérios de louvor.</p>'
@@ -32,8 +31,8 @@ const postsBase = [
     conteudo: '<p>Em Romanos 6, o apóstolo Paulo apresenta uma das verdades mais profundas da vida cristã: fomos sepultados com Cristo e ressuscitamos para andar em novidade de vida.</p><p>Este estudo percorre o capítulo verso a verso, mostrando como a união com Cristo transforma a identidade do cristão e sua relação com o pecado.</p><p>Ao final, propomos perguntas de aplicação para pequenos grupos e devocionais pessoais.</p>'
   },
   {
-    titulo: 'De volta à vida: o testemunho de superação de um ex-dependente químico',
-    categoria: 'Testemunhos',
+    titulo: 'De volta à vida: história de superação após anos de dependência química',
+    categoria: 'Notícias',
     destaque: false,
     resumo: 'Depois de dez anos nas ruas, ele encontrou restauração completa e hoje lidera um projeto social.',
     conteudo: '<p>Durante dez anos, João viveu nas ruas em dependência química, afastado da família. O encontro com uma comunidade de fé mudou completamente a direção da sua história.</p><p>Hoje, restaurado e reconciliado com a família, ele lidera um projeto social que acolhe pessoas em situação de rua, oferecendo alimentação, acompanhamento e esperança.</p>'
@@ -83,19 +82,32 @@ const postsBase = [
         where: { nome: c.nome },
         defaults: { descricao: c.descricao, corHex: c.cor, ordem: c.ordem }
       });
-      if (cat.corHex !== c.cor || cat.ordem !== c.ordem) {
-        cat.corHex = c.cor;
-        cat.ordem = c.ordem;
-        await cat.save();
-      }
+      cat.descricao = c.descricao;
+      cat.corHex = c.cor;
+      cat.ordem = c.ordem;
+      await cat.save();
       categorias[c.nome] = cat;
+    }
+
+    // Migra categorias antigas do seed anterior
+    const migracoes = [
+      { slug: 'louvor', novoNome: 'Músicas' },
+      { slug: 'testemunhos', novoNome: 'Notícias' }
+    ];
+    for (const m of migracoes) {
+      const antiga = await Category.findOne({ where: { slug: m.slug } });
+      const destino = categorias[m.novoNome];
+      if (antiga && destino && antiga.id !== destino.id) {
+        await Post.update({ categoriaId: destino.id }, { where: { categoriaId: antiga.id } });
+        await antiga.destroy();
+      }
     }
 
     await Page.findOrCreate({
       where: { slug: 'sobre' },
       defaults: {
         titulo: 'Sobre',
-        conteudo: '<p>Somos um portal de notícias gospel dedicado a levar informação, edificação e esperança. Aqui você encontra notícias, estudos bíblicos, testemunhos, devocionais e o melhor do louvor.</p>',
+        conteudo: '<p>Somos um portal gospel dedicado a levar informação, edificação e esperança. Aqui você encontra notícias, músicas, estudos bíblicos e devocionais.</p>',
         status: 'publicado'
       }
     });
@@ -122,11 +134,11 @@ const postsBase = [
     const configPadrao = {
       site_nome: 'Site Gospel',
       site_slogan: 'Notícias, louvor e edificação',
-      site_descricao: 'Portal de notícias gospel com estudos bíblicos, testemunhos, devocionais e o melhor do louvor.',
+      site_descricao: 'Portal gospel com notícias, músicas, estudos bíblicos e devocionais.',
       cor_primaria: '#ea580c',
       seo_titulo: 'Site Gospel — Notícias, louvor e edificação',
-      seo_descricao: 'Acompanhe as principais notícias do mundo gospel, estudos bíblicos, testemunhos e devocionais diários.',
-      seo_palavras_chave: 'gospel, notícias gospel, louvor, estudos bíblicos, devocionais, testemunhos',
+      seo_descricao: 'Acompanhe notícias gospel, lançamentos musicais, estudos bíblicos e devocionais diários.',
+      seo_palavras_chave: 'gospel, notícias gospel, música gospel, estudos bíblicos, devocionais',
       seo_indexar: 'sim',
       footer_copyright: '',
       footer_links: 'Sobre|/pagina/sobre\nBusca|/busca'

@@ -1,4 +1,6 @@
 const USER_AGENT = 'Mozilla/5.0 (compatible; SiteGospelBot/1.0; +https://gitlab.com/perfilcursor07-group/obuxixo)';
+const { buscarContextoLlm } = require('./braveSearch');
+const { braveDisponivel } = require('./braveApi');
 
 const DOMINIOS_IMAGEM_REJEITADOS = [
   'news.google.com', 'google.com', 'googleusercontent.com', 'gstatic.com', 'ggpht.com',
@@ -128,8 +130,15 @@ function extrairImagensDoHtml(html, baseUrl) {
 }
 
 async function apurarTopico(topico) {
-  const tituloLimpo = decodificarHtml(topico.titulo || '');
-  const resumoLimpo = decodificarHtml(topico.resumo || '');
+  const tituloLimpo = decodificarHtml(topico.titulo || '')
+    .replace(/\s*[-–—|]\s*[^-|–—]{2,60}$/u, '')
+    .trim();
+  const resumoLimpo = decodificarHtml(topico.resumo || '')
+    .replace(/https?:\/\/\S+/gi, '')
+    .replace(/news\.google\.com[^\s]*/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 400);
 
   const base = {
     ...topico,
@@ -151,6 +160,27 @@ async function apurarTopico(topico) {
       resumo: meta.descricao || resumoLimpo,
       trecho: meta.trecho
     });
+  }
+
+  if (braveDisponivel()) {
+    try {
+      const consultaContexto = [tituloLimpo, resumoLimpo, meta.titulo, meta.descricao]
+        .filter(Boolean)
+        .join(' ')
+        .slice(0, 200);
+      const contextoBrave = await buscarContextoLlm(`${consultaContexto} gospel brasil`);
+      if (contextoBrave && contextoBrave.length > 80) {
+        fontesApuracao.push({
+          veiculo: 'Apuração web (Brave)',
+          url: meta.urlReal || topico.link,
+          titulo: tituloLimpo,
+          resumo: resumoLimpo,
+          trecho: contextoBrave.slice(0, 1500)
+        });
+      }
+    } catch (e) {
+      console.warn('buscarContextoLlm:', e.message);
+    }
   }
 
   return {

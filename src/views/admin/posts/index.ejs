@@ -1,25 +1,121 @@
 <div class="page-header">
-  <h1>Posts</h1>
-  <a href="/admin/posts/novo" class="btn btn-primario">+ Novo post</a>
+  <div>
+    <h1>Posts</h1>
+    <p class="page-subtitulo">Gerencie os artigos do site</p>
+  </div>
+  <a href="/admin/posts/novo" class="btn btn-primario btn-com-icone">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    Novo post
+  </a>
 </div>
-<table class="tabela">
-  <thead><tr><th>Título</th><th>Categoria</th><th>Autor</th><th>Status</th><th>Ações</th></tr></thead>
-  <tbody>
-    <% posts.forEach(function (post) { %>
-    <tr>
-      <td><%= post.destaque ? '★ ' : '' %><%= post.titulo %></td>
-      <td><%= post.categoria ? post.categoria.nome : '-' %></td>
-      <td><%= post.autor ? post.autor.nome : '-' %></td>
-      <td><span class="badge badge-<%= post.status %>"><%= post.status %></span></td>
-      <td class="acoes">
-        <a href="/admin/posts/<%= post.id %>/editar" class="btn btn-sec">Editar</a>
-        <% if (post.status === 'publicado') { %><a href="/post/<%= post.slug %>" target="_blank" class="btn btn-sec">Ver</a><% } %>
+
+<div class="posts-toolbar">
+  <div class="posts-filtros">
+    <button type="button" class="filtro-btn ativo" data-filtro="todos">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      Todos
+    </button>
+    <button type="button" class="filtro-btn" data-filtro="publicado">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      Publicados
+    </button>
+    <button type="button" class="filtro-btn" data-filtro="rascunho">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      Rascunhos
+    </button>
+  </div>
+  <label class="posts-busca">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input type="search" id="posts-busca" placeholder="Buscar por título..." autocomplete="off">
+  </label>
+</div>
+
+<% if (!posts.length) { %>
+  <div class="posts-vazio">
+    <p>Nenhum post encontrado.</p>
+    <a href="/admin/posts/novo" class="btn btn-primario btn-com-icone">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Criar post
+    </a>
+  </div>
+<% } else { %>
+  <div class="posts-lista-simples" id="posts-lista">
+    <div class="posts-lista-cabecalho">
+      <span>Título</span>
+      <span>Categoria</span>
+      <span>Autor</span>
+      <span>Data</span>
+      <span>Status</span>
+      <span>Ações</span>
+    </div>
+    <% posts.forEach(function (post) {
+      const dataPost = post.publicadoEm || post.createdAt;
+      const dataFmt = dataPost ? new Date(dataPost).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-';
+    %>
+    <div class="post-linha" data-status="<%= post.status %>" data-titulo="<%= post.titulo.toLowerCase() %>">
+      <span class="post-linha-titulo">
+        <a href="/admin/posts/<%= post.id %>/editar"><%= post.titulo %></a>
+        <% if (post.destaque) { %>
+          <span class="post-destaque" title="Em destaque">
+            <svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          </span>
+        <% } %>
+      </span>
+      <span class="post-linha-categoria"><%= post.categoria ? post.categoria.nome : '—' %></span>
+      <span class="post-linha-autor"><%= post.autor ? post.autor.nome : '—' %></span>
+      <span class="post-linha-data"><%= dataFmt %></span>
+      <span class="post-linha-status"><span class="badge badge-<%= post.status %>"><%= post.status %></span></span>
+      <span class="post-linha-acoes">
+        <a href="/admin/posts/<%= post.id %>/editar" class="btn-icone" title="Editar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </a>
+        <% if (post.status === 'publicado') { %>
+          <a href="/post/<%= post.slug %>" target="_blank" rel="noopener" class="btn-icone" title="Ver no site">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          </a>
+        <% } %>
         <form action="/admin/posts/<%= post.id %>/excluir" method="post" onsubmit="return confirm('Excluir este post?')">
-          <button class="btn btn-perigo">Excluir</button>
+          <button type="submit" class="btn-icone btn-icone-perigo" title="Excluir">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          </button>
         </form>
-      </td>
-    </tr>
+      </span>
+    </div>
     <% }) %>
-    <% if (!posts.length) { %><tr><td colspan="5">Nenhum post encontrado.</td></tr><% } %>
-  </tbody>
-</table>
+  </div>
+  <p class="posts-contador" id="posts-contador"><%= posts.length %> post<%= posts.length !== 1 ? 's' : '' %></p>
+<% } %>
+
+<script>
+  (function () {
+    var filtroAtual = 'todos';
+    var buscaInput = document.getElementById('posts-busca');
+    var lista = document.getElementById('posts-lista');
+    var contador = document.getElementById('posts-contador');
+    if (!lista) return;
+
+    function aplicarFiltros() {
+      var termo = buscaInput ? buscaInput.value.trim().toLowerCase() : '';
+      var visiveis = 0;
+      lista.querySelectorAll('.post-linha').forEach(function (item) {
+        var okStatus = filtroAtual === 'todos' || item.dataset.status === filtroAtual;
+        var okBusca = !termo || (item.dataset.titulo || '').includes(termo);
+        var mostrar = okStatus && okBusca;
+        item.hidden = !mostrar;
+        if (mostrar) visiveis++;
+      });
+      if (contador) contador.textContent = visiveis + ' post' + (visiveis !== 1 ? 's' : '');
+    }
+
+    document.querySelectorAll('.filtro-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        document.querySelectorAll('.filtro-btn').forEach(function (b) { b.classList.remove('ativo'); });
+        btn.classList.add('ativo');
+        filtroAtual = btn.dataset.filtro;
+        aplicarFiltros();
+      });
+    });
+
+    if (buscaInput) buscaInput.addEventListener('input', aplicarFiltros);
+  })();
+</script>

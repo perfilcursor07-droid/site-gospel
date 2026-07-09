@@ -8,37 +8,105 @@
     const re = new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
     return esc.replace(re, '<mark class="bg-orange-100 text-orange-800 rounded px-0.5">$1</mark>');
   }
+
+  const totalLocal = posts.length;
+  const totalWeb = (typeof noticiasWeb !== 'undefined' ? noticiasWeb.length : 0)
+    + (typeof resultadosWeb !== 'undefined' ? resultadosWeb.length : 0);
+  const totalGeral = totalLocal + totalWeb;
 %>
 <section>
   <h1 class="flex items-center gap-3 text-2xl font-extrabold text-gray-900 mb-2">
     <span class="w-1.5 h-7 bg-primary rounded-full"></span> Resultados para: "<%= q %>"
   </h1>
-  <% if (q) { %><p class="text-sm text-gray-500 mb-6"><%= posts.length %> resultado<%= posts.length === 1 ? '' : 's' %> encontrado<%= posts.length === 1 ? '' : 's' %></p><% } %>
+  <% if (q) { %>
+    <p class="text-sm text-gray-500 mb-6">
+      <%= totalGeral %> resultado<%= totalGeral === 1 ? '' : 's' %>
+      <% if (totalLocal && totalWeb) { %> · <%= totalLocal %> no site · <%= totalWeb %> na web<% } %>
+    </p>
+  <% } %>
 
   <% if (posts.length) { %>
-  <div class="bg-white rounded-lg border border-gray-200 divide-y divide-gray-100">
-    <% posts.forEach(function (post) { %>
-      <article class="group">
-        <a href="/post/<%= post.slug %>" class="flex justify-between gap-5 p-5">
-          <div class="flex-1 min-w-0">
-            <% if (post.categoria) { %><span class="text-xs font-extrabold uppercase tracking-widest" style="color: <%= post.categoria.corHex || '#ea580c' %>"><%= post.categoria.nome %></span><% } %>
-            <h3 class="mt-1 text-lg font-extrabold leading-snug text-gray-900 group-hover:underline"><%- destacar(post.titulo) %></h3>
-            <% if (post.resumo) { %><p class="mt-1 text-sm text-gray-500 line-clamp-2"><%- destacar(post.resumo) %></p><% } %>
-            <p class="mt-2 text-xs text-gray-400">
-              <% if (post.autor) { %>Por <%= post.autor.nome %><% } %>
-              <% if (post.publicadoEm) { %> • <%= new Date(post.publicadoEm).toLocaleDateString('pt-BR') %><% } %>
-            </p>
-          </div>
-          <% if (post.imagem) { %><img src="<%= post.imagem %>" alt="<%= post.titulo %>" class="w-24 h-20 sm:w-32 sm:h-24 object-cover rounded flex-shrink-0"><% } %>
-        </a>
-      </article>
-    <% }) %>
+  <div class="mb-8">
+    <h2 class="busca-secao-titulo">
+      <span class="post-secao-barra"></span> No <%= config.site_nome || 'site' %>
+    </h2>
+    <div class="bg-white rounded-lg border border-gray-200 divide-y divide-gray-100">
+      <% posts.forEach(function (post) { %>
+        <article class="group">
+          <a href="/post/<%= post.slug %>" class="flex justify-between gap-5 p-5">
+            <div class="flex-1 min-w-0">
+              <% if (post.categoria) { %><span class="text-xs font-extrabold uppercase tracking-widest" style="color: <%= post.categoria.corHex || '#ea580c' %>"><%= post.categoria.nome %></span><% } %>
+              <h3 class="mt-1 text-lg font-extrabold leading-snug text-gray-900 group-hover:underline"><%- destacar(post.titulo) %></h3>
+              <% if (post.resumo) { %><p class="mt-1 text-sm text-gray-500 line-clamp-2"><%- destacar(post.resumo) %></p><% } %>
+              <p class="mt-2 text-xs text-gray-400">
+                <% if (post.autor) { %>Por <%= post.autor.nome %><% } %>
+                <% if (post.publicadoEm) { %> • <%= new Date(post.publicadoEm).toLocaleDateString('pt-BR') %><% } %>
+              </p>
+            </div>
+            <% if (post.imagem) { %><img src="<%= post.imagem %>" alt="<%= post.imagemAlt || post.titulo %>" class="w-24 h-20 sm:w-32 sm:h-24 object-cover rounded flex-shrink-0"><% } %>
+          </a>
+        </article>
+      <% }) %>
+    </div>
   </div>
-  <% } else { %>
+  <% } %>
+
+  <% if (typeof noticiasWeb !== 'undefined' && noticiasWeb.length) { %>
+  <div class="mb-8">
+    <h2 class="busca-secao-titulo">
+      <span class="post-secao-barra"></span> Notícias gospel na web
+    </h2>
+    <div class="busca-web-lista">
+      <% noticiasWeb.forEach(function (item) { %>
+        <article class="busca-web-item">
+          <a href="<%= item.link %>" target="_blank" rel="noopener noreferrer" class="busca-web-link">
+            <div class="busca-web-corpo">
+              <% if (item.veiculo) { %><span class="busca-web-veiculo"><%= item.veiculo %></span><% } %>
+              <h3 class="busca-web-titulo"><%- destacar(item.titulo) %></h3>
+              <% if (item.resumo) { %><p class="busca-web-resumo"><%- destacar(item.resumo) %></p><% } %>
+            </div>
+            <span class="busca-web-externo" aria-hidden="true">↗</span>
+          </a>
+        </article>
+      <% }) %>
+    </div>
+  </div>
+  <% } %>
+
+  <% if (typeof resultadosWeb !== 'undefined' && resultadosWeb.length) { %>
+  <div class="mb-8">
+    <h2 class="busca-secao-titulo">
+      <span class="post-secao-barra"></span> Mais resultados na internet
+    </h2>
+    <div class="busca-web-lista">
+      <% resultadosWeb.forEach(function (item) { %>
+        <article class="busca-web-item">
+          <a href="<%= item.link %>" target="_blank" rel="noopener noreferrer" class="busca-web-link">
+            <div class="busca-web-corpo">
+              <% if (item.veiculo) { %><span class="busca-web-veiculo"><%= item.veiculo %></span><% } %>
+              <h3 class="busca-web-titulo"><%- destacar(item.titulo) %></h3>
+              <% if (item.resumo) { %><p class="busca-web-resumo"><%- destacar(item.resumo) %></p><% } %>
+            </div>
+            <span class="busca-web-externo" aria-hidden="true">↗</span>
+          </a>
+        </article>
+      <% }) %>
+    </div>
+  </div>
+  <% } %>
+
+  <% if (!posts.length && !(noticiasWeb && noticiasWeb.length) && !(resultadosWeb && resultadosWeb.length)) { %>
   <div class="bg-white rounded-lg border border-gray-200 p-10 text-center">
     <p class="text-4xl mb-3">🔍</p>
     <p class="text-lg font-bold text-gray-700"><%= q ? 'Nenhum resultado encontrado' : 'Digite algo para buscar' %></p>
-    <p class="mt-1 text-sm text-gray-500"><%= q ? 'Tente outras palavras ou navegue pelas categorias no menu.' : 'Use o campo de busca no topo da página.' %></p>
+    <p class="mt-1 text-sm text-gray-500">
+      <% if (q) { %>
+        Tente outras palavras ou navegue pelas categorias no menu.
+        <% if (!buscaBraveAtiva) { %> Configure a Brave Search API para buscar também na web.<% } %>
+      <% } else { %>
+        Use o campo de busca no topo da página.
+      <% } %>
+    </p>
     <a href="/" class="inline-block mt-6 px-6 py-2.5 bg-primary text-white font-bold rounded-full hover:opacity-90 transition">Voltar ao início</a>
   </div>
   <% } %>

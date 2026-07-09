@@ -1,40 +1,31 @@
 const router = require('express').Router();
 const { Op } = require('sequelize');
-const { Post, Page, Category } = require('../models');
+const { Post, Page, Category, Comment } = require('../models');
+const { dividirConteudoParaLeiaMais } = require('../utils/postContent');
+const { gerarCaptcha, validarCaptcha } = require('../utils/commentCaptcha');
+const { buscarHibrida } = require('../services/braveSearch');
+const { braveDisponivel } = require('../services/braveApi');
 
 const includePadrao = ['categoria', 'autor'];
 
+function emailValido(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
 router.get('/', async (req, res, next) => {
   try {
-    const [destaques, recentes, categorias] = await Promise.all([
-      Post.findAll({
-        where: { status: 'publicado', destaque: true },
-        include: includePadrao,
-        order: [['publicadoEm', 'DESC']],
-        limit: 5
-      }),
-      Post.findAll({
-        where: { status: 'publicado' },
-        include: includePadrao,
-        order: [['publicadoEm', 'DESC']],
-        limit: 10
-      }),
-      Category.findAll({ order: [['ordem', 'ASC'], ['nome', 'ASC']] })
-    ]);
+    const recentes = await Post.findAll({
+      where: { status: 'publicado' },
+      include: includePadrao,
+      order: [['publicadoEm', 'DESC']],
+      limit: 10
+    });
 
-    // Blocos editoriais por categoria (apenas categorias com posts)
-    const blocosCategorias = [];
-    for (const categoria of categorias) {
-      const posts = await Post.findAll({
-        where: { categoriaId: categoria.id, status: 'publicado' },
-        include: includePadrao,
-        order: [['publicadoEm', 'DESC']],
-        limit: 4
-      });
-      if (posts.length) blocosCategorias.push({ categoria, posts });
-    }
+    const principal = recentes[0] || null;
+    const laterais = recentes.slice(1, 4); // 2ª a 4ª matéria
+    const ultimasPublicacoes = recentes.slice(4); // 5ª em diante
 
-    res.render('site/home', { titulo: 'Início', destaques, recentes, blocosCategorias });
+    res.render('site/home', { titulo: 'Início', principal, laterais, publicacoes: recentes, ultimasPublicacoes });
   } catch (e) { next(e); }
 });
 
@@ -69,28 +60,42 @@ router.get('/post/:slug', async (req, res, next) => {
       include: includePadrao
     });
     if (!post) return next();
-    const [relacionados, leiaMais, ultimas] = await Promise.all([
+    const [relacionados, leiaMais] = await Promise.all([
       post.categoriaId
         ? Post.findAll({
             where: { categoriaId: post.categoriaId, status: 'publicado', id: { [Op.ne]: post.id } },
             include: includePadrao,
             order: [['publicadoEm', 'DESC']],
-            limit: 4
+            limit: 6
           })
-        : [],
+        : Post.findAll({
+            where: { status: 'publicado', id: { [Op.ne]: post.id } },
+            include: includePadrao,
+            order: [['publicadoEm', 'DESC']],
+            limit: 6
+          }),
       Post.findAll({
         where: { status: 'publicado', id: { [Op.ne]: post.id } },
         include: includePadrao,
         order: [['publicadoEm', 'DESC']],
-        limit: 6
-      }),
-      Post.findAll({
-        where: { status: 'publicado', id: { [Op.ne]: post.id } },
-        include: includePadrao,
-        order: [['publicadoEm', 'DESC']],
-        limit: 8
+        limit: 3
       })
     ]);
+
+    const conteudoPartes = dividirConteudoParaLeiaMais(post.conteudo);
+
+    const comentarios = await Comment.findAll({
+      where: { postId: post.id, status: 'aprovado' },
+      order: [['createdAt', 'ASC']]
+    });
+
+    const captcha = gerarCaptcha();
+    req.session.commentCaptcha = {
+      postId: post.id,
+      pergunta: captcha.pergunta,
+      resposta: captcha.resposta
+    };
+
     res.render('site/post', {
       titulo: post.titulo,
       metaDescricao: post.metaDescription || post.resumo || null,
@@ -98,9 +103,63 @@ router.get('/post/:slug', async (req, res, next) => {
       post,
       relacionados,
       leiaMais,
-      ultimas
+      conteudoPartes,
+      comentarios,
+      captchaPergunta: captcha.pergunta
     });
   } catch (e) { next(e); }
+});
+
+router.post('/post/:slug/comentario', async (req, res) => {
+  const slug = req.params.slug;
+  try {
+    const post = await Post.findOne({ where: { slug, status: 'publicado' } });
+    if (!post) {
+      req.flash('erro', 'Matéria não encontrada.');
+      return res.redirect('/');
+    }
+
+    if (req.body.website) {
+      return res.redirect(`/post/${slug}#comentarios`);
+    }
+
+    const nome = (req.body.nome || '').trim();
+    const email = (req.body.email || '').trim().toLowerCase();
+    const conteudo = (req.body.conteudo || '').trim();
+    const respostaCaptcha = req.body.resposta_captcha;
+
+    if (nome.length < 2 || nome.length > 80) {
+      req.flash('erro', 'Informe seu nome (mínimo 2 caracteres).');
+      return res.redirect(`/post/${slug}#comentarios`);
+    }
+    if (!emailValido(email)) {
+      req.flash('erro', 'Informe um e-mail válido.');
+      return res.redirect(`/post/${slug}#comentarios`);
+    }
+    if (conteudo.length < 5 || conteudo.length > 2000) {
+      req.flash('erro', 'O comentário deve ter entre 5 e 2000 caracteres.');
+      return res.redirect(`/post/${slug}#comentarios`);
+    }
+    if (!validarCaptcha(req.session.commentCaptcha, post.id, respostaCaptcha)) {
+      req.flash('erro', 'Resposta de segurança incorreta. Tente novamente.');
+      return res.redirect(`/post/${slug}#comentarios`);
+    }
+
+    await Comment.create({
+      postId: post.id,
+      nome,
+      email,
+      conteudo,
+      status: 'aprovado'
+    });
+
+    delete req.session.commentCaptcha;
+    req.flash('sucesso', 'Comentário publicado com sucesso!');
+    res.redirect(`/post/${slug}#comentarios`);
+  } catch (e) {
+    req.flash('erro', 'Não foi possível enviar o comentário. Tente novamente.');
+    res.redirect(`/post/${slug}#comentarios`);
+  }
 });
 
 router.get('/pagina/:slug', async (req, res, next) => {
@@ -120,14 +179,33 @@ router.get('/busca', async (req, res, next) => {
             status: 'publicado',
             [Op.or]: [
               { titulo: { [Op.like]: `%${q}%` } },
+              { resumo: { [Op.like]: `%${q}%` } },
               { conteudo: { [Op.like]: `%${q}%` } }
             ]
           },
           include: includePadrao,
-          order: [['publicadoEm', 'DESC']]
+          order: [['publicadoEm', 'DESC']],
+          limit: 20
         })
       : [];
-    res.render('site/busca', { titulo: 'Busca', posts, q });
+
+    let buscaWeb = { noticias: [], web: [] };
+    if (q && q.length >= 2 && braveDisponivel()) {
+      try {
+        buscaWeb = await buscarHibrida(q);
+      } catch (e) {
+        console.warn('buscarHibrida:', e.message);
+      }
+    }
+
+    res.render('site/busca', {
+      titulo: 'Busca',
+      posts,
+      q,
+      noticiasWeb: buscaWeb.noticias,
+      resultadosWeb: buscaWeb.web,
+      buscaBraveAtiva: braveDisponivel()
+    });
   } catch (e) { next(e); }
 });
 

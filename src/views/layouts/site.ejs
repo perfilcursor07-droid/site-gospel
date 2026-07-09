@@ -40,12 +40,14 @@
   <meta property="og:url" content="<%= urlAtual %>">
   <meta property="og:locale" content="pt_BR">
   <% if (ogImagem) { %><meta property="og:image" content="<%= ogImagem %>"><% } %>
+  <% if (ehArtigo && artigo.imagemAlt) { %><meta property="og:image:alt" content="<%= artigo.imagemAlt %>"><% } %>
   <% if (ehArtigo && artigo.publicadoEm) { %><meta property="article:published_time" content="<%= new Date(artigo.publicadoEm).toISOString() %>"><% } %>
 
   <meta name="twitter:card" content="<%= ogImagem ? 'summary_large_image' : 'summary' %>">
   <meta name="twitter:title" content="<%= tituloSeo %>">
   <% if (desc) { %><meta name="twitter:description" content="<%= desc %>"><% } %>
   <% if (ogImagem) { %><meta name="twitter:image" content="<%= ogImagem %>"><% } %>
+  <% if (ehArtigo && artigo.imagemAlt) { %><meta name="twitter:image:alt" content="<%= artigo.imagemAlt %>"><% } %>
 
   <script type="application/ld+json">
   {
@@ -150,19 +152,22 @@
     <%- body %>
   </main>
 
-  <footer class="bg-gray-900 text-gray-400 mt-16">
-    <div class="max-w-6xl mx-auto px-4 py-12 grid sm:grid-cols-2 lg:grid-cols-3 gap-10">
+  <footer class="site-footer mt-16" style="--cor-primaria: <%= corPrimaria %>">
+    <div class="site-footer-inner max-w-6xl mx-auto px-4 py-12 grid sm:grid-cols-2 lg:grid-cols-3 gap-10">
       <div>
-        <p class="text-2xl font-light tracking-tight" style="color: <%= corPrimaria %>">
-          <% if (config.logo) { %><img src="<%= config.logo %>" alt="<%= nomeSite %>" class="h-9 w-auto"><% } else { %>site<span class="font-extrabold">gospel</span><% } %>
-        </p>
-        <% if (config.site_slogan) { %><p class="mt-2 text-sm font-bold text-gray-300"><%= config.site_slogan %></p><% } %>
-        <% if (config.site_descricao) { %><p class="mt-2 text-sm leading-relaxed"><%= config.site_descricao %></p><% } %>
+        <a href="/" class="site-footer-logo inline-block">
+          <% if (config.logo) { %>
+            <img src="<%= config.logo %>" alt="<%= nomeSite %>">
+          <% } else { %>
+            <span class="site-footer-logo-text" style="color: <%= corPrimaria %>">site<span class="font-extrabold">gospel</span></span>
+          <% } %>
+        </a>
+        <% if (config.site_slogan) { %><p class="site-footer-slogan"><%= config.site_slogan %></p><% } %>
+        <% if (config.site_descricao) { %><p class="site-footer-desc"><%= config.site_descricao %></p><% } %>
         <% if (redes.length) { %>
-        <div class="mt-4 flex gap-3">
+        <div class="site-footer-redes">
           <% redes.forEach(function (r) { %>
-            <a href="<%= config[r.chave] %>" target="_blank" rel="noopener" title="<%= r.nome %>"
-              class="w-9 h-9 flex items-center justify-center rounded-full bg-gray-800 text-gray-300 text-xs font-extrabold uppercase hover:text-white transition" style="border: 1px solid <%= corPrimaria %>">
+            <a href="<%= config[r.chave] %>" target="_blank" rel="noopener" title="<%= r.nome %>" class="site-footer-rede">
               <%= r.nome.slice(0, 2) %>
             </a>
           <% }) %>
@@ -170,31 +175,31 @@
         <% } %>
       </div>
       <div>
-        <h3 class="text-sm font-extrabold uppercase tracking-widest text-white mb-4">Categorias</h3>
-        <ul class="space-y-2 text-sm">
+        <h3 class="site-footer-titulo">Categorias</h3>
+        <ul class="site-footer-links">
           <% categoriasNav.forEach(function (c) { %>
-            <li><a href="/categoria/<%= c.slug %>" class="hover:text-white transition"><%= c.nome %></a></li>
+            <li><a href="/categoria/<%= c.slug %>"><%= c.nome %></a></li>
           <% }) %>
         </ul>
       </div>
       <div>
-        <h3 class="text-sm font-extrabold uppercase tracking-widest text-white mb-4">Links úteis</h3>
-        <ul class="space-y-2 text-sm">
+        <h3 class="site-footer-titulo">Links úteis</h3>
+        <ul class="site-footer-links">
           <% if (linksFooter.length) { %>
             <% linksFooter.forEach(function (l) { %>
-              <li><a href="<%= l.url %>" class="hover:text-white transition"><%= l.texto %></a></li>
+              <li><a href="<%= l.url %>"><%= l.texto %></a></li>
             <% }) %>
           <% } else { %>
-            <li><a href="/pagina/sobre" class="hover:text-white transition">Sobre</a></li>
-            <li><a href="/busca" class="hover:text-white transition">Busca</a></li>
+            <li><a href="/pagina/sobre">Sobre</a></li>
+            <li><a href="/busca">Busca</a></li>
           <% } %>
         </ul>
       </div>
     </div>
-    <div class="border-t border-gray-800">
+    <div class="site-footer-rodape">
       <div class="max-w-6xl mx-auto px-4 py-5 flex flex-col sm:flex-row justify-between gap-2 text-sm">
         <p><%= config.footer_copyright || `© ${new Date().getFullYear()} ${nomeSite}. Todos os direitos reservados.` %></p>
-        <a href="/login" class="hover:text-white transition">área administrativa</a>
+        <a href="/login" class="site-footer-admin">área administrativa</a>
       </div>
     </div>
   </footer>

@@ -20,82 +20,158 @@
   <section class="painel-ia modo-painel" id="painel-ia" hidden>
     <div class="painel-ia-intro">
       <div>
-        <h2>Reportagem automática com IA</h2>
-        <p class="dica">Pesquisa fontes reais na internet, apura assuntos em alta e gera matéria original com tom jornalístico (estilo g1), capa e SEO.</p>
+        <h2>Gerar matérias com IA</h2>
+        <p class="dica">Matérias originais com furo de reportagem (550–850 palavras), padrão Google E-E-A-T. Reescreve fontes — não plágia. Revise antes de publicar.</p>
       </div>
-      <span class="badge-ia">DeepSeek V4 Flash</span>
+      <span class="badge-ia">DeepSeek</span>
     </div>
 
-    <div class="ia-passos">
-      <div class="ia-passo ativo" data-passo="1"><span>1</span> Nichos</div>
-      <div class="ia-passo" data-passo="2"><span>2</span> Tópicos</div>
-      <div class="ia-passo" data-passo="3"><span>3</span> Publicar</div>
+    <div class="ia-passos" role="tablist" aria-label="Etapas">
+      <div class="ia-passo ativo" data-passo="1"><span>1</span> Buscar</div>
+      <div class="ia-passo" data-passo="2"><span>2</span> Escolher</div>
+      <div class="ia-passo" data-passo="3"><span>3</span> Gerar</div>
     </div>
 
     <div class="ia-passo-conteudo" id="ia-passo-1">
-      <div class="ia-grid">
-        <div class="ia-campo ia-campo-largo">
-          <label for="ia-palavras">Palavras-chave / nichos</label>
-          <input type="text" id="ia-palavras" placeholder="gospel, pastor, pastora, louvor, igreja" value="gospel, pastor, pastora, louvor">
-          <p class="dica">Separe por vírgula. Ex: culto, adoração, testemunho, congresso</p>
+      <div class="ia-bloco">
+        <label for="ia-palavras" class="ia-bloco-titulo">O que buscar?</label>
+        <input type="text" id="ia-palavras" class="ia-input-grande" placeholder="Ex: gospel, pastor, louvor, testemunho" value="gospel, pastor, pastora, louvor">
+        <div class="tags-rapidas">
+          <% ['gospel', 'pastor', 'pastora', 'louvor', 'adoração', 'congresso', 'testemunho'].forEach(function (tag) { %>
+            <button type="button" class="tag-rapida" data-tag="<%= tag %>"><%= tag %></button>
+          <% }) %>
         </div>
-        <div class="ia-campo">
-          <label for="ia-quantidade">Tópicos por nicho</label>
+      </div>
+
+      <div class="ia-opcoes-linha">
+        <div class="ia-campo ia-campo-compacto">
+          <label for="ia-quantidade">Por nicho</label>
           <select id="ia-quantidade">
             <option value="3">3</option>
             <option value="5" selected>5</option>
             <option value="8">8</option>
           </select>
         </div>
+        <div class="ia-campo ia-campo-compacto">
+          <label for="ia-dias">Período</label>
+          <select id="ia-dias">
+            <option value="3">3 dias</option>
+            <option value="5" selected>5 dias</option>
+            <option value="7">7 dias</option>
+          </select>
+        </div>
+        <label class="checkbox ia-check-compacto">
+          <input type="checkbox" id="ia-somente-recentes" checked> Só recentes
+        </label>
+        <label class="checkbox ia-check-compacto">
+          <input type="checkbox" id="ia-redes-sociais" checked> Redes sociais
+        </label>
       </div>
-      <div class="tags-rapidas">
-        <span class="dica">Sugestões:</span>
-        <% ['gospel', 'pastor', 'pastora', 'louvor', 'adoração', 'congresso', 'testemunho'].forEach(function (tag) { %>
-          <button type="button" class="tag-rapida" data-tag="<%= tag %>"><%= tag %></button>
-        <% }) %>
+
+      <div class="ia-passo-acoes ia-passo-acoes-inicio">
+        <button type="button" class="btn btn-primario btn-ia-principal" id="btn-ia-pesquisar">Buscar assuntos</button>
       </div>
-      <button type="button" class="btn btn-primario" id="btn-ia-pesquisar">Buscar tópicos na internet</button>
     </div>
 
     <div class="ia-passo-conteudo" id="ia-passo-2" hidden>
       <div class="ia-passo-topo">
-        <h3>Tópicos encontrados</h3>
+        <div>
+          <h3>Assuntos encontrados</h3>
+          <p class="dica ia-dica-topo">Marque os que deseja gerar. Itens <strong>Já publicado</strong> estão bloqueados.</p>
+        </div>
         <label class="checkbox ia-selecionar-todos">
-          <input type="checkbox" id="ia-selecionar-todos" checked> Selecionar todos
+          <input type="checkbox" id="ia-selecionar-todos" checked> Todos
         </label>
       </div>
       <div id="ia-lista-topicos" class="ia-lista-topicos"></div>
       <div class="ia-passo-acoes">
-        <button type="button" class="btn btn-sec" id="btn-ia-voltar-1">← Voltar</button>
-        <button type="button" class="btn btn-sec" id="btn-ia-uma">Gerar 1 no formulário</button>
+        <button type="button" class="btn btn-sec" id="btn-ia-voltar-1">← Buscar de novo</button>
+        <button type="button" class="btn btn-sec" id="btn-ia-uma">Gerar 1 para revisar</button>
         <button type="button" class="btn btn-primario" id="btn-ia-continuar-2">Continuar →</button>
       </div>
     </div>
 
     <div class="ia-passo-conteudo" id="ia-passo-3" hidden>
-      <div class="ia-grid ia-grid-3">
-        <div class="ia-campo">
-          <label for="ia-categoria">Categoria</label>
-          <select id="ia-categoria">
-            <option value="">Sem categoria</option>
-            <% categorias.forEach(function (c) { %>
-              <option value="<%= c.id %>"><%= c.nome %></option>
-            <% }) %>
-          </select>
+      <div class="ia-pub-resumo" id="ia-resumo-selecao">Nenhuma matéria selecionada.</div>
+
+      <div class="ia-pub-grid">
+        <div class="ia-pub-card">
+          <h4 class="ia-pub-card-titulo">Antes de gerar</h4>
+          <div class="ia-campo">
+            <label for="ia-categoria">Categoria</label>
+            <select id="ia-categoria">
+              <option value="">Sem categoria</option>
+              <% categorias.forEach(function (c) { %>
+                <option value="<%= c.id %>"><%= c.nome %></option>
+              <% }) %>
+            </select>
+          </div>
+          <div class="ia-campo">
+            <label for="ia-status">Salvar como</label>
+            <select id="ia-status">
+              <option value="rascunho">Rascunho</option>
+              <option value="publicado" selected>Publicado</option>
+            </select>
+            <p class="dica ia-dica-status">Sem capa → vira rascunho automaticamente.</p>
+          </div>
         </div>
-        <div class="ia-campo">
-          <label for="ia-status">Salvar como</label>
-          <select id="ia-status">
-            <option value="rascunho">Rascunho</option>
-            <option value="publicado">Publicado</option>
-          </select>
-        </div>
-        <div class="ia-campo ia-campo-acao">
-          <label>&nbsp;</label>
-          <button type="button" class="btn btn-primario btn-bloco" id="btn-ia-lote">Gerar matérias selecionadas</button>
+
+        <div class="ia-pub-card">
+          <h4 class="ia-pub-card-titulo">Modo de geração</h4>
+          <div class="ia-modo-opcoes ia-modo-opcoes-compacto">
+            <label class="ia-modo-opcao">
+              <input type="radio" name="ia-modo-pub" value="todos" checked>
+              <span>
+                <strong>Tudo de uma vez</strong>
+                <small>Gera todas em sequência.</small>
+              </span>
+            </label>
+            <label class="ia-modo-opcao">
+              <input type="radio" name="ia-modo-pub" value="intervalos">
+              <span>
+                <strong>Em intervalos</strong>
+                <small>Lotes com pausa — mantenha a página aberta.</small>
+              </span>
+            </label>
+          </div>
+
+          <div class="ia-intervalo-config" id="ia-intervalo-config" hidden>
+            <div class="ia-opcoes-linha ia-opcoes-linha-intervalo">
+              <div class="ia-campo ia-campo-compacto">
+                <label for="ia-qtd-intervalo">Por lote</label>
+                <select id="ia-qtd-intervalo">
+                  <option value="1" selected>1</option>
+                  <option value="2">2</option>
+                  <option value="3">3</option>
+                  <option value="5">5</option>
+                </select>
+              </div>
+              <div class="ia-campo ia-campo-compacto">
+                <label for="ia-min-intervalo">Pausa</label>
+                <select id="ia-min-intervalo">
+                  <option value="5">5 min</option>
+                  <option value="15" selected>15 min</option>
+                  <option value="30">30 min</option>
+                  <option value="60">1 h</option>
+                  <option value="120">2 h</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <p class="dica ia-plano-publicacao" id="ia-plano-publicacao"></p>
         </div>
       </div>
-      <button type="button" class="btn btn-sec btn-link" id="btn-ia-voltar-2">← Voltar aos tópicos</button>
+
+      <div class="ia-progresso" id="ia-progresso" hidden>
+        <div class="ia-progresso-barra"><span id="ia-progresso-fill"></span></div>
+        <p class="ia-progresso-texto" id="ia-progresso-texto"></p>
+      </div>
+
+      <div class="ia-passo-acoes ia-passo-acoes-publicar">
+        <button type="button" class="btn btn-sec" id="btn-ia-voltar-2">← Voltar</button>
+        <button type="button" class="btn btn-primario btn-ia-principal" id="btn-ia-lote">Gerar matérias</button>
+        <button type="button" class="btn btn-perigo btn-link" id="btn-ia-cancelar" hidden>Cancelar</button>
+      </div>
     </div>
 
     <div id="ia-status-msg" class="ia-status-msg" hidden></div>
@@ -158,10 +234,12 @@
               <option value="rascunho" <%= post && post.status === 'rascunho' ? 'selected' : (!post ? 'selected' : '') %>>Rascunho</option>
               <option value="publicado" <%= post && post.status === 'publicado' ? 'selected' : '' %>>Publicado</option>
             </select>
+            <% if (post) { %>
             <label class="checkbox sidebar-check">
-              <input type="checkbox" name="destaque" <%= post && post.destaque ? 'checked' : '' %>>
+              <input type="checkbox" name="destaque" <%= post.destaque ? 'checked' : '' %>>
               Destaque na home
             </label>
+            <% } %>
           <% } else { %>
             <p class="dica sidebar-aviso">Salvo como rascunho para revisão.</p>
           <% } %>
@@ -198,7 +276,9 @@
             <input type="file" name="imagem" id="campo-imagem" accept="image/*" class="upload-input">
           </div>
           <input type="hidden" name="imagem_ia_url" id="imagem-ia-url" value="">
-          <p class="dica">Usada na capa e ao compartilhar nas redes.</p>
+          <label for="imagem-alt-ia" class="sidebar-label" style="margin-top: 12px;">Legenda da capa</label>
+          <textarea name="imagem_alt" id="imagem-alt-ia" rows="2" maxlength="500" class="sidebar-textarea" placeholder="Descrição visível abaixo da foto (SEO e acessibilidade)"><%= post && post.imagemAlt ? post.imagemAlt : '' %></textarea>
+          <p class="dica">Aparece abaixo da imagem na matéria e no atributo alt para buscadores.</p>
         </div>
 
         <div class="sidebar-card">
@@ -476,35 +556,64 @@
   }
 
   async function chamarApi(url, body) {
-    var res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-    var data = await res.json();
+    var res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify(body)
+    });
+    var text = await res.text();
+    var data;
+    try { data = JSON.parse(text); } catch (e) {
+      throw new Error(res.ok ? 'Resposta inválida do servidor.' : 'Erro no servidor (código ' + res.status + '). Tente novamente.');
+    }
     if (!data.ok) throw new Error(data.erro || 'Erro na requisição');
     return data;
   }
 
   function escapar(s) { var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
 
+  function atualizarSelecionarTodos() {
+    if (!selecionarTodos) return;
+    var habilitados = document.querySelectorAll('.ia-topico-check:not(:disabled)');
+    var marcados = document.querySelectorAll('.ia-topico-check:not(:disabled):checked');
+    selecionarTodos.checked = habilitados.length > 0 && marcados.length === habilitados.length;
+    selecionarTodos.disabled = habilitados.length === 0;
+  }
+
   function renderizarTopicos(topicos) {
     topicosEncontrados = topicos;
     listaTopicos.innerHTML = '';
+    var novos = 0;
     topicos.forEach(function (t, i) {
+      var jaPub = !!t.jaPublicado;
+      if (!jaPub) novos++;
       var label = document.createElement('label');
-      label.className = 'ia-topico-item';
-      label.innerHTML = '<input type="checkbox" class="ia-topico-check" data-index="' + i + '" checked>' +
+      label.className = 'ia-topico-item' + (jaPub ? ' ia-topico-item--publicado' : '');
+      label.innerHTML = '<input type="checkbox" class="ia-topico-check" data-index="' + i + '"' +
+        (jaPub ? ' disabled' : ' checked') + '>' +
         '<div><strong>' + escapar(t.titulo) + '</strong>' +
         '<span class="ia-topico-meta">' + escapar(t.nicho || '') +
         (t.emAlta ? ' · <em class="ia-em-alta">em alta</em>' : '') +
-        (t.fonte ? ' · ' + escapar(t.fonte) : '') +
-        (t.veiculo ? ' · ' + escapar(t.veiculo) : '') + '</span>' +
+        (t.recente !== false ? ' · <span class="ia-badge-recente">recente</span>' : '') +
+        (t.redeSocial ? ' · <span class="ia-badge-rede">' + escapar(t.redeSocial) + '</span>' : (t.fonte ? ' · ' + escapar(t.fonte) : '')) +
+        (t.veiculo ? ' · ' + escapar(t.veiculo) : '') +
+        (jaPub ? ' · <span class="ia-badge-publicado">Já publicado</span>' : '') +
+        (jaPub && t.postExistente ? ' · <a href="/admin/posts/' + t.postExistente.id + '/editar" class="ia-link-post" onclick="event.stopPropagation()">Ver matéria</a>' : '') +
+        '</span>' +
         (t.resumo ? '<p class="ia-topico-resumo">' + escapar(t.resumo) + '</p>' : '') + '</div>';
       listaTopicos.appendChild(label);
     });
+    atualizarSelecionarTodos();
+    var msg = topicos.length + ' tópico(s) encontrado(s)';
+    if (novos < topicos.length) msg += ' · ' + (topicos.length - novos) + ' já publicado(s), não podem ser gerados novamente';
+    mostrarStatus(msg, novos ? 'sucesso' : 'aviso');
     irPasso(2);
   }
 
   function topicosSelecionados() {
-    return Array.from(document.querySelectorAll('.ia-topico-check:checked'))
-      .map(function (cb) { return topicosEncontrados[parseInt(cb.dataset.index, 10)]; }).filter(Boolean);
+    return Array.from(document.querySelectorAll('.ia-topico-check:checked:not(:disabled)'))
+      .map(function (cb) { return topicosEncontrados[parseInt(cb.dataset.index, 10)]; })
+      .filter(function (t) { return t && !t.jaPublicado; });
   }
 
   function preencherFormulario(artigo) {
@@ -526,7 +635,13 @@
       document.getElementById('imagem-ia-url').value = artigo.imagem;
     } else {
       document.getElementById('imagem-ia-url').value = '';
+      if (statusSelect) {
+        statusSelect.value = 'rascunho';
+        statusSelect.dispatchEvent(new Event('change'));
+      }
     }
+    var altIa = document.getElementById('imagem-alt-ia');
+    if (altIa) altIa.value = artigo.imagemAlt || artigo.imagem_alt || '';
     modoTabs[0].click();
     mostrarStatus('Matéria gerada! Revise o texto e a capa antes de publicar.', 'sucesso');
     formPost.scrollIntoView({ behavior: 'smooth' });
@@ -538,20 +653,193 @@
     try {
       var data = await chamarApi('/admin/posts/ia/pesquisar', {
         palavrasChave: document.getElementById('ia-palavras').value,
-        quantidadePorNicho: document.getElementById('ia-quantidade').value
+        quantidadePorNicho: document.getElementById('ia-quantidade').value,
+        incluirRedesSociais: document.getElementById('ia-redes-sociais').checked,
+        somenteRecentes: document.getElementById('ia-somente-recentes').checked,
+        diasRecentes: document.getElementById('ia-dias').value
       });
       renderizarTopicos(data.topicos);
-      mostrarStatus(data.topicos.length + ' tópico(s) encontrado(s).', 'sucesso');
     } catch (e) { mostrarStatus(e.message, 'erro'); }
-    finally { setCarregando(btnPesquisar, false, 'Buscar tópicos na internet'); }
+    finally { setCarregando(btnPesquisar, false, 'Buscar assuntos'); }
   });
 
   document.getElementById('btn-ia-voltar-1').addEventListener('click', function () { irPasso(1); });
   document.getElementById('btn-ia-continuar-2').addEventListener('click', function () {
     if (!topicosSelecionados().length) { mostrarStatus('Selecione ao menos um tópico.', 'erro'); return; }
+    atualizarResumoPublicacao();
     irPasso(3);
   });
-  document.getElementById('btn-ia-voltar-2').addEventListener('click', function () { irPasso(2); });
+  document.getElementById('btn-ia-voltar-2').addEventListener('click', function () {
+    if (publicacaoAtiva) return;
+    irPasso(2);
+  });
+
+  var modoPubRadios = document.querySelectorAll('input[name="ia-modo-pub"]');
+  var intervaloConfig = document.getElementById('ia-intervalo-config');
+  var resumoSelecao = document.getElementById('ia-resumo-selecao');
+  var planoPublicacao = document.getElementById('ia-plano-publicacao');
+  var progressoEl = document.getElementById('ia-progresso');
+  var progressoFill = document.getElementById('ia-progresso-fill');
+  var progressoTexto = document.getElementById('ia-progresso-texto');
+  var btnCancelar = document.getElementById('btn-ia-cancelar');
+  var publicacaoAtiva = false;
+  var cancelarPublicacao = false;
+
+  function sleep(ms) {
+    return new Promise(function (resolve) { setTimeout(resolve, ms); });
+  }
+
+  function formatarTempo(minutos) {
+    if (minutos >= 60) return (minutos / 60) + ' h';
+    return minutos + ' min';
+  }
+
+  function atualizarResumoPublicacao() {
+    var sel = topicosSelecionados();
+    if (resumoSelecao) {
+      resumoSelecao.innerHTML = sel.length
+        ? '<strong>' + sel.length + '</strong> matéria(s) pronta(s) para gerar'
+        : 'Nenhuma matéria selecionada.';
+    }
+    atualizarPlanoPublicacao();
+  }
+
+  function atualizarPlanoPublicacao() {
+    if (!planoPublicacao) return;
+    var sel = topicosSelecionados();
+    var total = sel.length;
+    if (!total) {
+      planoPublicacao.textContent = '';
+      return;
+    }
+    var modoIntervalo = document.querySelector('input[name="ia-modo-pub"]:checked')?.value === 'intervalos';
+    if (!modoIntervalo) {
+      planoPublicacao.textContent = total === 1 ? '1 matéria será gerada agora.' : total + ' matérias em sequência.';
+      return;
+    }
+    var porLote = parseInt(document.getElementById('ia-qtd-intervalo').value, 10) || 1;
+    var minutos = parseInt(document.getElementById('ia-min-intervalo').value, 10) || 15;
+    var lotes = Math.ceil(total / porLote);
+    var pausas = Math.max(lotes - 1, 0);
+    planoPublicacao.textContent = total + ' matéria(s) em ' + lotes + ' lote(s) de até ' + porLote +
+      ', com pausa de ' + formatarTempo(minutos) + ' entre lotes (' + pausas + ' pausa(s) no total).';
+  }
+
+  modoPubRadios.forEach(function (radio) {
+    radio.addEventListener('change', function () {
+      if (intervaloConfig) intervaloConfig.hidden = radio.value !== 'intervalos' || !radio.checked;
+      atualizarPlanoPublicacao();
+    });
+  });
+  document.getElementById('ia-qtd-intervalo').addEventListener('change', atualizarPlanoPublicacao);
+  document.getElementById('ia-min-intervalo').addEventListener('change', atualizarPlanoPublicacao);
+
+  function atualizarProgresso(atual, total, texto) {
+    if (!progressoEl) return;
+    progressoEl.hidden = false;
+    var pct = total ? Math.round((atual / total) * 100) : 0;
+    if (progressoFill) progressoFill.style.width = pct + '%';
+    if (progressoTexto) progressoTexto.textContent = texto;
+  }
+
+  function opcoesPublicacao() {
+    return {
+      categoriaId: document.getElementById('ia-categoria').value || null,
+      status: document.getElementById('ia-status').value,
+      destaque: false
+    };
+  }
+
+  async function gerarLoteApi(topicos) {
+    var opts = opcoesPublicacao();
+    return chamarApi('/admin/posts/ia/gerar-lote', {
+      topicos: topicos,
+      categoriaId: opts.categoriaId,
+      status: opts.status,
+      destaque: opts.destaque
+    });
+  }
+
+  async function publicarTopicos(sel) {
+    var modoIntervalo = document.querySelector('input[name="ia-modo-pub"]:checked')?.value === 'intervalos';
+    var porLote = modoIntervalo ? (parseInt(document.getElementById('ia-qtd-intervalo').value, 10) || 1) : 5;
+    var minutos = parseInt(document.getElementById('ia-min-intervalo').value, 10) || 15;
+    var total = sel.length;
+    var criados = [];
+    var erros = [];
+    var ignorados = 0;
+    var rascunhosSemImagem = 0;
+    var processados = 0;
+
+    publicacaoAtiva = true;
+    cancelarPublicacao = false;
+    if (btnCancelar) btnCancelar.hidden = false;
+    btnLote.disabled = true;
+    document.getElementById('btn-ia-voltar-2').disabled = true;
+
+    for (var i = 0; i < sel.length; i += porLote) {
+      if (cancelarPublicacao) break;
+      var lote = sel.slice(i, i + porLote);
+      var fim = Math.min(i + porLote, total);
+      atualizarProgresso(processados, total, 'Gerando matérias ' + (i + 1) + '–' + fim + ' de ' + total + '...');
+      mostrarStatus('Gerando lote ' + (Math.floor(i / porLote) + 1) + ': matérias ' + (i + 1) + ' a ' + fim + ' de ' + total + '...', 'info');
+
+      try {
+        var data = await gerarLoteApi(lote);
+        criados = criados.concat(data.criados || []);
+        erros = erros.concat(data.erros || []);
+        ignorados += data.ignorados || 0;
+        rascunhosSemImagem += data.rascunhosSemImagem || 0;
+        processados = Math.min(fim, total);
+        atualizarProgresso(processados, total, processados + ' de ' + total + ' matéria(s) processada(s).');
+      } catch (e) {
+        erros.push({ titulo: lote[0]?.titulo || 'Lote', erro: e.message });
+        processados = Math.min(fim, total);
+      }
+
+      if (cancelarPublicacao || i + porLote >= sel.length) break;
+
+      if (modoIntervalo) {
+        var restante = total - processados;
+        mostrarStatus('Aguardando ' + formatarTempo(minutos) + ' para o próximo lote (' + restante + ' restante(s)). Mantenha esta página aberta.', 'aviso');
+        atualizarProgresso(processados, total, 'Pausa de ' + formatarTempo(minutos) + ' — ' + processados + ' de ' + total + ' concluída(s).');
+        var ms = minutos * 60 * 1000;
+        var passo = 1000;
+        for (var t = 0; t < ms; t += passo) {
+          if (cancelarPublicacao) break;
+          await sleep(passo);
+        }
+      }
+    }
+
+    publicacaoAtiva = false;
+    if (btnCancelar) btnCancelar.hidden = true;
+    btnLote.disabled = false;
+    document.getElementById('btn-ia-voltar-2').disabled = false;
+
+    var msg = cancelarPublicacao
+      ? 'Publicação cancelada. ' + criados.length + ' matéria(s) gerada(s) antes do cancelamento.'
+      : criados.length + ' matéria(s) criada(s)' +
+        (ignorados ? ', ' + ignorados + ' ignorada(s)' : '') +
+        (rascunhosSemImagem ? ', ' + rascunhosSemImagem + ' salva(s) como rascunho por falta de imagem' : '') +
+        (erros.length ? ', ' + erros.length + ' com erro' : '') + '.';
+
+    mostrarStatus(msg, erros.length || cancelarPublicacao ? 'aviso' : 'sucesso');
+
+    if (criados.length === 1 && !modoIntervalo) {
+      window.location.href = '/admin/posts/' + criados[0].id + '/editar';
+    } else if (criados.length > 0 && !cancelarPublicacao) {
+      setTimeout(function () { window.location.href = '/admin/posts'; }, 2500);
+    }
+  }
+
+  if (btnCancelar) {
+    btnCancelar.addEventListener('click', function () {
+      if (publicacaoAtiva && confirm('Cancelar a publicação? O lote atual termina; os próximos não serão gerados.')) {
+        cancelarPublicacao = true;
+      }
+    });
+  }
 
   btnUma.addEventListener('click', async function () {
     var sel = topicosSelecionados();
@@ -562,39 +850,48 @@
         var prev = await chamarApi('/admin/posts/ia/gerar-preview', { topico: sel[0] });
         preencherFormulario(prev.artigo);
         if (prev.avisoImagem) mostrarStatus(prev.avisoImagem, 'aviso');
+        if (prev.avisoQualidade) mostrarStatus(prev.avisoQualidade, 'aviso');
       } else {
         var data = await chamarApi('/admin/posts/ia/preencher-formulario', {
-          palavrasChave: document.getElementById('ia-palavras').value
+          palavrasChave: document.getElementById('ia-palavras').value,
+          incluirRedesSociais: document.getElementById('ia-redes-sociais').checked,
+          somenteRecentes: document.getElementById('ia-somente-recentes').checked,
+          diasRecentes: document.getElementById('ia-dias').value
         });
         preencherFormulario(data.artigo);
         if (data.avisoImagem) mostrarStatus(data.avisoImagem, 'aviso');
+        if (data.avisoQualidade) mostrarStatus(data.avisoQualidade, 'aviso');
       }
     } catch (e) { mostrarStatus(e.message, 'erro'); }
-    finally { setCarregando(btnUma, false, 'Gerar 1 no formulário'); }
+    finally { setCarregando(btnUma, false, 'Gerar 1 para revisar'); }
   });
 
   btnLote.addEventListener('click', async function () {
     var sel = topicosSelecionados();
     if (!sel.length) { mostrarStatus('Selecione ao menos um tópico.', 'erro'); return; }
-    if (!confirm('Gerar ' + sel.length + ' matéria(s)? Pode levar alguns minutos.')) return;
+    var modoIntervalo = document.querySelector('input[name="ia-modo-pub"]:checked')?.value === 'intervalos';
+    var msgConfirm = modoIntervalo
+      ? 'Publicar ' + sel.length + ' matéria(s) em intervalos? Mantenha esta página aberta até concluir.'
+      : 'Gerar ' + sel.length + ' matéria(s) de uma vez? Pode levar alguns minutos.';
+    if (!confirm(msgConfirm)) return;
     setCarregando(btnLote, true);
-    mostrarStatus('Gerando ' + sel.length + ' matéria(s)...', 'info');
     try {
-      var data = await chamarApi('/admin/posts/ia/gerar-lote', {
-        topicos: sel,
-        categoriaId: document.getElementById('ia-categoria').value || null,
-        status: document.getElementById('ia-status').value,
-        destaque: false
-      });
-      mostrarStatus(data.mensagem, data.erros.length ? 'aviso' : 'sucesso');
-      if (data.criados.length === 1) window.location.href = '/admin/posts/' + data.criados[0].id + '/editar';
-      else if (data.criados.length > 1) setTimeout(function () { window.location.href = '/admin/posts'; }, 2000);
-    } catch (e) { mostrarStatus(e.message, 'erro'); }
-    finally { setCarregando(btnLote, false, 'Gerar matérias selecionadas'); }
+      await publicarTopicos(sel);
+    } catch (e) {
+      mostrarStatus(e.message, 'erro');
+    } finally {
+      setCarregando(btnLote, false, 'Gerar matérias');
+    }
   });
 
   selecionarTodos.addEventListener('change', function () {
-    document.querySelectorAll('.ia-topico-check').forEach(function (cb) { cb.checked = selecionarTodos.checked; });
+    document.querySelectorAll('.ia-topico-check:not(:disabled)').forEach(function (cb) {
+      cb.checked = selecionarTodos.checked;
+    });
+  });
+
+  listaTopicos.addEventListener('change', function (e) {
+    if (e.target.classList.contains('ia-topico-check')) atualizarSelecionarTodos();
   });
   <% } %>
 })();

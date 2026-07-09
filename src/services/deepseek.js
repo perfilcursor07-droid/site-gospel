@@ -1,5 +1,15 @@
 const DEEPSEEK_BASE_URL = process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com';
 const DEEPSEEK_MODEL = process.env.DEEPSEEK_MODEL || 'deepseek-v4-flash';
+const {
+  blocoRegrasEditoriais,
+  avaliarComprimento,
+  MIN_PALAVRAS_ARTIGO,
+  MAX_PALAVRAS_ARTIGO,
+  IDEAL_MIN_PALAVRAS,
+  IDEAL_MAX_PALAVRAS,
+  contarPalavrasConteudo,
+  mensagemAvisoQualidade
+} = require('./editorialGuidelines');
 
 function obterApiKey() {
   const key = process.env.DEEPSEEK_API_KEY;
@@ -50,6 +60,202 @@ function normalizarArtigo(raw) {
   };
 }
 
+function textoPlano(html) {
+  return (html || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+async function gerarAltImagem({ titulo, resumo, assuntoImagem, pessoaPrincipal }) {
+  const prompt = `Crie um texto alternativo (alt) SEO para a imagem de capa desta matéria gospel.
+
+TÍTULO: ${titulo}
+RESUMO: ${resumo}
+${assuntoImagem ? `CENA DA FOTO: ${assuntoImagem}` : ''}
+${pessoaPrincipal ? `PESSOA: ${pessoaPrincipal}` : ''}
+
+REGRAS:
+- Português do Brasil, descritivo e natural
+- Máximo 125 caracteres
+- Descreva o que aparece na foto em relação à matéria
+- Sem aspas, sem "imagem de"
+
+JSON: {"alt": "texto alt aqui"}`;
+
+  const resposta = await chatCompletion(
+    [
+      { role: 'system', content: 'Você escreve alt text para SEO. Retorne somente JSON válido.' },
+      { role: 'user', content: prompt }
+    ],
+    { json: true, temperature: 0.2, maxTokens: 200 }
+  );
+
+  const raw = typeof resposta === 'string' ? parsearJson(resposta) : resposta;
+  const alt = (raw.alt || '').trim().slice(0, 125);
+  return alt || `${titulo}`.slice(0, 125);
+}
+
+async function identificarCapaArtigo({ titulo, resumo, conteudo, pessoaPrincipal }) {
+  const texto = textoPlano(conteudo).slice(0, 2800);
+  const prompt = `Analise esta matéria jornalística gospel brasileira e defina a capa ideal.
+
+TÍTULO: ${titulo}
+RESUMO: ${resumo}
+${pessoaPrincipal ? `PESSOA JÁ IDENTIFICADA: ${pessoaPrincipal}` : ''}
+
+TEXTO DA MATÉRIA:
+${texto || resumo}
+
+Com base no texto COMPLETO (não invente pessoas que não aparecem), retorne JSON:
+{
+  "pessoa_principal": "nome completo da pastora/pastor/cantor central citado no texto, ou null",
+  "assunto_imagem": "descrição precisa em português da foto ideal (quem aparece, o que faz, cenário, local). Se a pessoa for anônima, descreva a CENA (ex: homem em praça pública, resgate, comunidade) — NUNCA invente nome de pastor famoso",
+  "termos_busca": ["3 a 6 buscas para encontrar a foto REAL desta notícia — use manchete, nome, cidade, evento"],
+  "elementos_obrigatorios": ["palavras-chave do fato: nomes, cidades, eventos — ex: Goiás, pastora, igreja inclusiva"],
+  "evitar": ["tipos de imagem irrelevantes: filme, série, stock genérico, igreja vazia, etc."]
+}`;
+
+  const resposta = await chatCompletion(
+    [
+      {
+        role: 'system',
+        content: 'Você é editor de arte de portal de notícias. Retorne somente JSON válido.'
+      },
+      { role: 'user', content: prompt }
+    ],
+    { json: true, temperature: 0.25, maxTokens: 900 }
+  );
+
+  const raw = typeof resposta === 'string' ? parsearJson(resposta) : resposta;
+  return {
+    pessoa_principal: raw.pessoa_principal || pessoaPrincipal || null,
+    assunto_imagem: raw.assunto_imagem || '',
+    termos_busca: Array.isArray(raw.termos_busca) ? raw.termos_busca.filter(Boolean) : [],
+    elementos_obrigatorios: Array.isArray(raw.elementos_obrigatorios) ? raw.elementos_obrigatorios.filter(Boolean) : [],
+    evitar: Array.isArray(raw.evitar) ? raw.evitar.filter(Boolean) : []
+  };
+}
+
+async function validarImagemParaArtigo(
+  { titulo, resumo, conteudo, assuntoImagem, pessoaPrincipal },
+  candidato
+) {
+  if (!candidato?.url) return false;
+
+  const textoMateria = textoPlano(conteudo).slice(0, 1200);
+  const prompt = `Valide se esta IMAGEM CANDIDATA ilustra corretamente a matéria jornalística abaixo.
+
+MATÉRIA:
+TÍTULO: ${titulo}
+RESUMO: ${resumo}
+${assuntoImagem ? `FOTO IDEAL: ${assuntoImagem}` : ''}
+${pessoaPrincipal ? `PESSOA CENTRAL: ${pessoaPrincipal}` : ''}
+${textoMateria ? `TRECHO DO TEXTO:\n${textoMateria}` : ''}
+
+IMAGEM CANDIDATA (metadados — você NÃO vê a foto, só descrição/URL):
+- título: ${(candidato.title || candidato.alt || 'sem título').slice(0, 120)}
+- URL: ${(candidato.url || '').slice(0, 120)}
+- página de origem: ${(candidato.contextLink || candidato.source || 'desconhecida').slice(0, 120)}
+
+REJEITE (adequada: false) se:
+- for cena de filme, série, novela, ator famoso, entretenimento sem relação
+- for stock genérico (igreja vazia, banco de imagens, wallpaper)
+- for anime, cartoon, meme ou imagem totalmente desconectada do fato
+- a pessoa/cena não corresponde ao assunto (ex.: homens de drama em matéria sobre pastora)
+- a URL/título cita pastor/cantor FAMOSO (Silas Malafaia, Marcos Feliciano, Edir Macedo, Damares, Fernandinho, etc.) mas a matéria NÃO menciona essa pessoa pelo nome
+- a matéria fala de pessoa anônima (ex-líder de gangue, nome não divulgado) e a imagem parece ser de celebridade gospel conhecida
+
+APROVE somente se os metadados indicam forte relação com o fato ESPECÍFICO desta matéria.
+
+JSON: {"adequada": true ou false, "motivo": "breve"}`;
+
+  try {
+    const resposta = await chatCompletion(
+      [
+        {
+          role: 'system',
+          content: 'Você valida capas jornalísticas. Seja rigoroso. Retorne somente JSON válido.'
+        },
+        { role: 'user', content: prompt }
+      ],
+      { json: true, temperature: 0.05, maxTokens: 200 }
+    );
+
+    const raw = typeof resposta === 'string' ? parsearJson(resposta) : resposta;
+    return raw.adequada === true;
+  } catch (e) {
+    console.warn('validarImagemParaArtigo:', e.message);
+    return false;
+  }
+}
+
+async function selecionarMelhorImagem(artigo, candidatos, opcoes = {}) {
+  if (!candidatos.length) return { candidato: null, rejeitouTodas: true };
+
+  const { titulo, resumo, assuntoImagem, pessoaPrincipal, conteudo } = artigo;
+  const { candidatosDaNoticia = false } = opcoes;
+
+  if (candidatos.length === 1) {
+    const ok = await validarImagemParaArtigo(artigo, candidatos[0]);
+    return { candidato: ok ? candidatos[0] : null, rejeitouTodas: !ok };
+  }
+
+  const lista = candidatos.slice(0, 12).map((c, i) => {
+    const pagina = (c.contextLink || c.source || '').replace(/^https?:\/\//, '').slice(0, 60);
+    const origem = c.fromFonte ? ' [FONTE ORIGINAL]' : (c.fromNoticia ? ' [NOTÍCIA]' : '');
+    return `${i}: "${(c.title || c.alt || 'sem título').slice(0, 100)}" | página: ${pagina || '?'}${origem}`;
+  }).join('\n');
+
+  const regraNoticia = candidatosDaNoticia
+    ? `- PRIORIZE imagens [FONTE ORIGINAL] ou [NOTÍCIA] que correspondam ao título/assunto
+- Rejeite (-1) se for logo, ícone, banner, filme/série ou matéria diferente`
+    : `- Rejeite (-1) se NENHUMA ilustrar o fato: pessoa errada, stock genérico, filme/série, anime, tema gospel genérico
+- A capa deve corresponder ao FATO específico desta matéria`;
+
+  const prompt = `Escolha a imagem de capa MAIS ADEQUADA para esta matéria de portal gospel.
+
+TÍTULO: ${titulo}
+RESUMO: ${resumo}
+FOTO IDEAL: ${assuntoImagem || 'cena relacionada ao fato da matéria'}
+${pessoaPrincipal ? `PESSOA CENTRAL: ${pessoaPrincipal}` : ''}
+${conteudo ? `CONTEXTO: ${textoPlano(conteudo).slice(0, 600)}` : ''}
+
+CANDIDATAS:
+${lista}
+
+REGRAS:
+- Retorne o índice (0 a ${Math.min(candidatos.length, 12) - 1}) da melhor imagem
+- NUNCA escolha imagem de filme, série ou entretenimento sem relação com o fato
+${regraNoticia}
+- Se nenhuma servir, retorne indice -1
+
+JSON: {"indice": N, "motivo": "breve explicação"}`;
+
+  try {
+    const resposta = await chatCompletion(
+      [
+        {
+          role: 'system',
+          content: 'Você seleciona capas jornalísticas. Seja rigoroso. Retorne somente JSON válido.'
+        },
+        { role: 'user', content: prompt }
+      ],
+      { json: true, temperature: 0.1, maxTokens: 300 }
+    );
+
+    const raw = typeof resposta === 'string' ? parsearJson(resposta) : resposta;
+    const indice = parseInt(raw.indice, 10);
+    if (Number.isNaN(indice) || indice < 0) {
+      return { candidato: null, rejeitouTodas: true };
+    }
+    const candidato = candidatos[indice] || null;
+    if (!candidato) return { candidato: null, rejeitouTodas: true };
+    const ok = await validarImagemParaArtigo(artigo, candidato);
+    return { candidato: ok ? candidato : null, rejeitouTodas: !ok };
+  } catch (e) {
+    console.warn('selecionarMelhorImagem:', e.message);
+    return { candidato: null, rejeitouTodas: true };
+  }
+}
+
 async function gerarArtigo({
   tituloReferencia,
   resumoReferencia,
@@ -59,7 +265,8 @@ async function gerarArtigo({
   contextoApuracao,
   fontesApuracao,
   dataReferencia,
-  emAlta
+  emAlta,
+  redeSocial
 }) {
   const hoje = new Date().toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
   const listaFontes = (fontesApuracao || [])
@@ -75,49 +282,103 @@ async function gerarArtigo({
     emAlta ? 'Este assunto está em alta nos últimos dias.' : null
   ].filter(Boolean).join('\n');
 
-  const prompt = `Você é repórter de portal de notícias gospel no Brasil, com estilo editorial próximo ao jornalismo do g1/Globo: clareza, ritmo humano, apuração e responsabilidade.
+  const prompt = `Você é repórter de portal de notícias gospel no Brasil. Estilo: G1/Globo — direto, humano, com furo no lead.
 
-DATA DE HOJE: ${hoje}
+DATA: ${hoje} | SITE: ${nomeSite || 'Portal Gospel'}
 
-PAUTA E APURAÇÃO (use como base factual — NÃO plageie, NÃO copie frases):
-${contexto || 'Crie uma matéria original sobre um tema relevante e atual do universo gospel/evangélico brasileiro.'}
+PAUTA (base factual — reescreva, NÃO copie):
+${contexto || 'Matéria original sobre tema atual do universo gospel/evangélico brasileiro.'}
 
-${listaFontes ? `FONTES CONSULTADAS (cite de forma genérica, ex: "segundo relatos", "de acordo com informações divulgadas", sem inventar nomes de jornalistas):\n${listaFontes}` : ''}
+${listaFontes ? `FONTES (atribua genericamente, sem inventar entrevistas):\n${listaFontes}` : ''}
 
-REGRAS OBRIGATÓRIAS:
-1. Texto 100% original em português do Brasil — reescreva com suas palavras.
-2. Tom jornalístico humano: frases variadas, natural, sem parecer robô ou release.
-3. Traga ângulo de reportagem: o que aconteceu, por que importa agora, contexto, repercussão e próximos passos.
-4. Se houver furo ou novidade no assunto, destaque no lead (primeiro parágrafo).
-5. Não invente citações entre aspas atribuídas a pessoas reais. Pode usar "segundo a assessoria", "de acordo com organizadores".
-6. Mínimo 6 parágrafos substanciais + 2 subtítulos <h2>.
-7. Pode usar <blockquote> para destaque de informação-chave (sem aspas falsas de entrevista).
-8. Adequado ao público evangélico, mas com padrão de redação profissional de redação.
+${blocoRegrasEditoriais(nomeSite)}
+
+ESTRUTURA OBRIGATÓRIA DA MATÉRIA:
+1. LEAD (1º <p>): o furo — o que aconteceu e por que o leitor deve se importar AGORA.
+2. DESENVOLVIMENTO (3–4 <p>): fatos, contexto breve, repercussão na comunidade gospel.
+3. <h2> + 1–2 <p>: detalhes ou desdobramento do caso.
+4. <h2> + 1–2 <p>: impacto, reações ou próximos passos.
+5. FECHAMENTO (1 <p> curto): síntese sem repetir o lead.
+
+REGRAS DE ESCRITA:
+- ${IDEAL_MIN_PALAVRAS}–${IDEAL_MAX_PALAVRAS} palavras no corpo (nunca ultrapasse ${MAX_PALAVRAS_ARTIGO}).
+- Frases variadas; zero tom de release ou robô.
+- Valor único: o que sua redação acrescenta além de copiar a fonte.
+- Sem citações inventadas entre aspas.
+${redeSocial ? '- Pauta de rede social: reporte repercussão, NÃO transcreva posts.' : ''}
 
 Retorne APENAS JSON válido:
 {
-  "titulo": "manchete forte, atual, máx 90 caracteres",
-  "resumo": "linha fina / subtítulo jornalístico, máx 200 caracteres",
-  "conteudo": "HTML com <p> e <h2>",
+  "titulo": "manchete com furo, máx 90 caracteres, sem clickbait",
+  "resumo": "linha fina jornalística, máx 200 caracteres",
+  "conteudo": "HTML: <p> e 2 <h2> — entre ${IDEAL_MIN_PALAVRAS} e ${IDEAL_MAX_PALAVRAS} palavras",
   "meta_title": "SEO máx 60 caracteres",
   "meta_description": "SEO máx 160 caracteres",
-  "pessoa_principal": "nome completo da pessoa central da matéria, se houver (ex: Felipe Golim). Null se não houver pessoa específica.",
-  "assunto_imagem": "descrição em português do que DEVE aparecer na foto de capa — seja específico (ex: Pastor Felipe Golim pregando em culto com público). Nunca sugira igreja vazia genérica.",
-  "termos_imagem": "termos de busca em inglês e português para achar a foto certa, incluindo nome da pessoa se houver. Ex: Felipe Golim pastor, gospel preacher brazil crowd"
+  "pessoa_principal": "nome completo se houver pessoa identificada, senão null",
+  "assunto_imagem": "cena precisa da foto ideal; se anônimo, descreva o fato visualmente",
+  "termos_imagem": "3 buscas separadas por vírgula"
 }`;
+
+  const systemMsg = 'Redator investigativo gospel brasileiro. Conteúdo people-first, E-E-A-T, original, com furo de reportagem. Reportagem a partir de fontes externas: sim. Plágio: nunca. Matérias ENXUTAS e densas, não longas. Retorne somente JSON válido.';
 
   const resposta = await chatCompletion(
     [
-      {
-        role: 'system',
-        content: 'Você é redator investigativo brasileiro. Retorne somente JSON válido, sem markdown. Nunca plageie texto de fontes.'
-      },
+      { role: 'system', content: systemMsg },
       { role: 'user', content: prompt }
     ],
-    { json: true, temperature: 0.85, maxTokens: 6000 }
+    { json: true, temperature: 0.78, maxTokens: 5000 }
   );
 
-  return normalizarArtigo(resposta);
+  let artigo = normalizarArtigo(resposta);
+  let qualidade = avaliarComprimento(artigo.conteudo);
+
+  if (qualidade.curto) {
+    const expandPrompt = `Artigo CURTO (${qualidade.palavras} palavras). Complemente até ${IDEAL_MIN_PALAVRAS}–${IDEAL_MAX_PALAVRAS} palavras SEM repetir o lead nem encher linguiça. Mantenha os mesmos fatos.
+
+${blocoRegrasEditoriais(nomeSite)}
+
+ARTIGO:
+${JSON.stringify({ titulo: artigo.titulo, resumo: artigo.resumo, conteudo: artigo.conteudo })}
+
+Retorne JSON completo atualizado.`;
+
+    try {
+      const expandido = await chatCompletion(
+        [{ role: 'system', content: systemMsg }, { role: 'user', content: expandPrompt }],
+        { json: true, temperature: 0.7, maxTokens: 5000 }
+      );
+      artigo = normalizarArtigo(expandido);
+      qualidade = avaliarComprimento(artigo.conteudo);
+    } catch (e) {
+      console.warn('Expandir artigo curto:', e.message);
+    }
+  }
+
+  if (qualidade.longo) {
+    const encurtarPrompt = `Artigo LONGO (${qualidade.palavras} palavras). Enxugue para ${IDEAL_MIN_PALAVRAS}–${IDEAL_MAX_PALAVRAS} palavras (máx ${MAX_PALAVRAS_ARTIGO}). Remova repetições e parágrafos genéricos. Mantenha o furo, os fatos e 2 <h2>.
+
+ARTIGO:
+${JSON.stringify({ titulo: artigo.titulo, resumo: artigo.resumo, conteudo: artigo.conteudo })}
+
+Retorne JSON completo enxuto.`;
+
+    try {
+      const enxuto = await chatCompletion(
+        [{ role: 'system', content: systemMsg }, { role: 'user', content: encurtarPrompt }],
+        { json: true, temperature: 0.65, maxTokens: 4500 }
+      );
+      artigo = normalizarArtigo(enxuto);
+      qualidade = avaliarComprimento(artigo.conteudo);
+    } catch (e) {
+      console.warn('Encurtar artigo longo:', e.message);
+    }
+  }
+
+  artigo._palavras = qualidade.palavras;
+  artigo._qualidadeOk = qualidade.ok;
+  artigo._avisoQualidade = mensagemAvisoQualidade(qualidade);
+
+  return artigo;
 }
 
 function parsearJson(texto) {
@@ -131,4 +392,14 @@ function parsearJson(texto) {
   }
 }
 
-module.exports = { chatCompletion, gerarArtigo, parsearJson, normalizarArtigo };
+module.exports = {
+  chatCompletion,
+  gerarArtigo,
+  parsearJson,
+  normalizarArtigo,
+  identificarCapaArtigo,
+  selecionarMelhorImagem,
+  validarImagemParaArtigo,
+  gerarAltImagem,
+  textoPlano
+};

@@ -8,6 +8,7 @@ const Post = sequelize.define('Post', {
   resumo: { type: DataTypes.TEXT, allowNull: true },
   conteudo: { type: DataTypes.TEXT('long'), allowNull: false },
   imagem: { type: DataTypes.STRING, allowNull: true },
+  imagemAlt: { type: DataTypes.STRING(500), allowNull: true },
   status: {
     type: DataTypes.ENUM('rascunho', 'publicado'),
     allowNull: false,
