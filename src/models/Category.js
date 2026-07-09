@@ -11,7 +11,8 @@ const Category = sequelize.define('Category', {
 }, { tableName: 'categories' });
 
 Category.beforeValidate((categoria) => {
-  if (categoria.nome) categoria.slug = slugify(categoria.nome, { lower: true, strict: true });
+  const base = (categoria.slug && String(categoria.slug).trim()) ? categoria.slug : categoria.nome;
+  if (base) categoria.slug = slugify(base, { lower: true, strict: true });
 });
 
 module.exports = Category;

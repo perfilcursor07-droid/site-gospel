@@ -1,8 +1,15 @@
 <h1><%= categoria ? 'Editar categoria' : 'Nova categoria' %></h1>
 <form action="<%= categoria ? '/admin/categorias/' + categoria.id : '/admin/categorias' %>" method="post" class="form">
   <label>Nome
-    <input type="text" name="nome" value="<%= categoria ? categoria.nome : '' %>" required>
+    <input type="text" name="nome" id="campo-nome" value="<%= categoria ? categoria.nome : '' %>" required>
   </label>
+  <label>Slug (URL)
+    <div class="slug-box">
+      <span class="slug-prefix">/categoria/</span>
+      <input type="text" name="slug" id="campo-slug" value="<%= categoria ? categoria.slug : '' %>" placeholder="auto" class="slug-input">
+    </div>
+  </label>
+  <p class="dica">Gerado automaticamente a partir do nome. Edite se precisar de uma URL específica (ex.: <code>colunistas</code>).</p>
   <label>Descrição
     <textarea name="descricao" rows="3"><%= categoria ? (categoria.descricao || '') : '' %></textarea>
   </label>
@@ -18,3 +25,30 @@
     <a href="/admin/categorias" class="btn btn-sec">Cancelar</a>
   </div>
 </form>
+
+<script>
+  (function () {
+    var nome = document.getElementById('campo-nome');
+    var slug = document.getElementById('campo-slug');
+    if (!nome || !slug) return;
+
+    var slugEditado = slug.value !== '';
+
+    function gerarSlug(texto) {
+      return (texto || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+    }
+
+    nome.addEventListener('input', function () {
+      if (!slugEditado) slug.value = gerarSlug(nome.value);
+    });
+
+    slug.addEventListener('input', function () {
+      slugEditado = slug.value.trim() !== '';
+    });
+  })();
+</script>

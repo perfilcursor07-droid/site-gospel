@@ -1,4 +1,5 @@
 const { Post, Page, Category } = require('../models');
+const { obterUrlBase } = require('../utils/requestUrl');
 
 const LIMITE_URLS = 50000;
 const LIMITE_NEWS_HORAS = 48;
@@ -20,10 +21,7 @@ function sim(config, chave, padrao = true) {
 }
 
 function obterBaseUrl(config, req) {
-  const canonica = (config.sitemap_url_canonica || '').trim().replace(/\/+$/, '');
-  if (canonica) return canonica;
-  if (req) return `${req.protocol}://${req.get('host')}`;
-  return '';
+  return obterUrlBase(req, config);
 }
 
 function formatarLastmod(data) {

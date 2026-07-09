@@ -19,6 +19,7 @@ router.post('/', async (req, res) => {
   try {
     await Category.create({
       nome: req.body.nome,
+      slug: (req.body.slug || '').trim(),
       descricao: req.body.descricao,
       corHex: req.body.cor_hex || '#ea580c',
       ordem: parseInt(req.body.ordem, 10) || 0
@@ -50,6 +51,7 @@ router.post('/:id', async (req, res) => {
       return res.redirect('/admin/categorias');
     }
     categoria.nome = req.body.nome;
+    categoria.slug = (req.body.slug || '').trim();
     categoria.descricao = req.body.descricao;
     categoria.corHex = req.body.cor_hex || '#ea580c';
     categoria.ordem = parseInt(req.body.ordem, 10) || 0;
