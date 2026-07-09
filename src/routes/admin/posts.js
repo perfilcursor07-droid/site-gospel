@@ -1,6 +1,6 @@
 const router = require('express').Router();
 const { Post, Category } = require('../../models');
-const upload = require('../../config/upload');
+const uploadCapaPost = require('../../middlewares/uploadCapaPost');
 const { buscarCandidatosCapaManual, salvarCandidatoComoCapa } = require('../../services/imageFetcher');
 
 router.use('/ia', require('./aiPosts'));
@@ -77,7 +77,7 @@ router.post('/vincular-imagem', async (req, res) => {
   }
 });
 
-router.post('/', upload.single('imagem'), async (req, res) => {
+router.post('/', ...uploadCapaPost, async (req, res) => {
   try {
     const ehUsuario = req.session.user.papel === 'usuario';
     let imagem = req.file ? `/uploads/${req.file.filename}` : null;
@@ -122,7 +122,7 @@ router.get('/:id/editar', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-router.post('/:id', upload.single('imagem'), async (req, res) => {
+router.post('/:id', ...uploadCapaPost, async (req, res) => {
   try {
     const post = await Post.findByPk(req.params.id);
     if (!post || !podeEditar(req.session.user, post)) {
