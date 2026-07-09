@@ -279,6 +279,29 @@
           <label for="imagem-alt-ia" class="sidebar-label" style="margin-top: 12px;">Legenda da capa</label>
           <textarea name="imagem_alt" id="imagem-alt-ia" rows="2" maxlength="500" class="sidebar-textarea" placeholder="Descrição visível abaixo da foto (SEO e acessibilidade)"><%= post && post.imagemAlt ? post.imagemAlt : '' %></textarea>
           <p class="dica">Aparece abaixo da imagem na matéria e no atributo alt para buscadores.</p>
+          <div class="capa-busca-acoes">
+            <button type="button" class="btn btn-sec btn-bloco" id="btn-buscar-capa">Buscar imagem na web</button>
+            <p class="dica capa-busca-dica">Usa Brave Search e DuckDuckGo — escolha uma foto e vincule como capa sem baixar manualmente.</p>
+          </div>
+          <div class="capa-sem-imagem" id="aviso-sem-capa" <%= post && !post.imagem ? '' : 'hidden' %>>
+            <strong>Sem capa.</strong> Use o botão acima para buscar uma imagem ou faça upload.
+          </div>
+        </div>
+
+        <div class="modal-capa" id="modal-buscar-capa" hidden aria-hidden="true">
+          <div class="modal-capa-backdrop" id="modal-capa-fechar"></div>
+          <div class="modal-capa-painel" role="dialog" aria-labelledby="modal-capa-titulo" aria-modal="true">
+            <header class="modal-capa-header">
+              <h3 id="modal-capa-titulo">Buscar imagem de capa</h3>
+              <button type="button" class="modal-capa-x" id="modal-capa-x" aria-label="Fechar">×</button>
+            </header>
+            <div class="modal-capa-busca">
+              <input type="text" id="capa-termos-busca" class="ia-input-grande" placeholder="Termos de busca (padrão: título da matéria)">
+              <button type="button" class="btn btn-prim" id="btn-executar-busca-capa">Buscar</button>
+            </div>
+            <p class="modal-capa-status" id="modal-capa-status"></p>
+            <div class="modal-capa-grid" id="modal-capa-grid"></div>
+          </div>
         </div>
 
         <div class="sidebar-card">
@@ -463,8 +486,147 @@
     previewImagem.hidden = false;
     if (uploadPlaceholder) uploadPlaceholder.hidden = true;
     if (uploadZona) uploadZona.classList.add('has-preview');
+    var avisoSem = document.getElementById('aviso-sem-capa');
+    if (avisoSem) avisoSem.hidden = true;
     atualizarChecklist();
   }
+
+  (function initBuscaCapa() {
+    var modal = document.getElementById('modal-buscar-capa');
+    var btnAbrir = document.getElementById('btn-buscar-capa');
+    var btnFechar = document.getElementById('modal-capa-x');
+    var backdrop = document.getElementById('modal-capa-fechar');
+    var btnBuscar = document.getElementById('btn-executar-busca-capa');
+    var campoTermos = document.getElementById('capa-termos-busca');
+    var grid = document.getElementById('modal-capa-grid');
+    var statusModal = document.getElementById('modal-capa-status');
+    var campoIaUrl = document.getElementById('imagem-ia-url');
+    var campoAlt = document.getElementById('imagem-alt-ia');
+
+    if (!modal || !btnAbrir) return;
+
+    function fecharModal() {
+      modal.hidden = true;
+      modal.setAttribute('aria-hidden', 'true');
+      document.body.classList.remove('modal-capa-aberto');
+    }
+
+    function abrirModal() {
+      if (campoTermos && titulo && !campoTermos.value.trim()) {
+        campoTermos.value = titulo.value.trim();
+      }
+      modal.hidden = false;
+      modal.setAttribute('aria-hidden', 'false');
+      document.body.classList.add('modal-capa-aberto');
+      if (campoTermos) campoTermos.focus();
+    }
+
+    function textoPlanoHtml(html) {
+      return (html || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    }
+
+    function escaparHtml(s) {
+      return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function setStatusModal(msg, tipo) {
+      if (!statusModal) return;
+      statusModal.textContent = msg || '';
+      statusModal.className = 'modal-capa-status' + (tipo ? ' is-' + tipo : '');
+    }
+
+    async function buscarImagensCapa() {
+      var termos = campoTermos ? campoTermos.value.trim() : '';
+      if (!termos && titulo) termos = titulo.value.trim();
+      if (!termos) {
+        setStatusModal('Informe termos de busca ou preencha o título da matéria.', 'erro');
+        return;
+      }
+      setStatusModal('Buscando imagens…', 'info');
+      if (grid) grid.innerHTML = '';
+      btnBuscar.disabled = true;
+      try {
+        var res = await fetch('/admin/posts/buscar-imagens', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body: JSON.stringify({
+            titulo: titulo ? titulo.value.trim() : '',
+            resumo: resumo ? resumo.value.trim() : '',
+            termos: termos,
+            assuntoImagem: campoAlt ? campoAlt.value.trim() : ''
+          })
+        });
+        var data = await res.json();
+        if (!data.ok) throw new Error(data.erro || 'Erro na busca.');
+        if (!data.candidatos || !data.candidatos.length) {
+          setStatusModal(data.mensagem || 'Nenhuma imagem encontrada. Tente outros termos.', 'aviso');
+          return;
+        }
+        setStatusModal(data.mensagem, 'sucesso');
+        data.candidatos.forEach(function (c) {
+          var btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'modal-capa-item';
+          btn.title = c.title || 'Usar como capa';
+          btn.innerHTML =
+            '<img src="' + escaparHtml(c.preview || c.url) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' +
+            (c.title ? '<span class="modal-capa-item-titulo">' + escaparHtml(c.title) + '</span>' : '');
+          btn.addEventListener('click', function () { vincularImagemCapa(c, btn); });
+          grid.appendChild(btn);
+        });
+      } catch (e) {
+        setStatusModal(e.message, 'erro');
+      } finally {
+        btnBuscar.disabled = false;
+      }
+    }
+
+    async function vincularImagemCapa(candidato, btn) {
+      if (btn) {
+        btn.disabled = true;
+        btn.classList.add('carregando');
+      }
+      setStatusModal('Baixando e vinculando imagem…', 'info');
+      try {
+        var res = await fetch('/admin/posts/vincular-imagem', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body: JSON.stringify({
+            url: candidato.url,
+            source: candidato.source || '',
+            titulo: titulo ? titulo.value.trim() : '',
+            resumo: resumo ? resumo.value.trim() : '',
+            assuntoImagem: campoAlt ? campoAlt.value.trim() : '',
+            alt: candidato.title || ''
+          })
+        });
+        var data = await res.json();
+        if (!data.ok) throw new Error(data.erro || 'Não foi possível vincular a imagem.');
+        mostrarImagem(data.imagem);
+        if (campoIaUrl) campoIaUrl.value = data.imagem;
+        if (campoAlt && data.alt && !campoAlt.value.trim()) campoAlt.value = data.alt;
+        if (inputImagem) inputImagem.value = '';
+        fecharModal();
+      } catch (e) {
+        setStatusModal(e.message, 'erro');
+        if (btn) {
+          btn.disabled = false;
+          btn.classList.remove('carregando');
+        }
+      }
+    }
+
+    btnAbrir.addEventListener('click', abrirModal);
+    btnFechar.addEventListener('click', fecharModal);
+    backdrop.addEventListener('click', fecharModal);
+    btnBuscar.addEventListener('click', buscarImagensCapa);
+    campoTermos.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); buscarImagensCapa(); }
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && !modal.hidden) fecharModal();
+    });
+  })();
 
   if (inputImagem) {
     inputImagem.addEventListener('change', function () {
@@ -635,6 +797,8 @@
       document.getElementById('imagem-ia-url').value = artigo.imagem;
     } else {
       document.getElementById('imagem-ia-url').value = '';
+      var avisoSem = document.getElementById('aviso-sem-capa');
+      if (avisoSem) avisoSem.hidden = false;
       if (statusSelect) {
         statusSelect.value = 'rascunho';
         statusSelect.dispatchEvent(new Event('change'));
@@ -849,7 +1013,7 @@
       if (sel.length) {
         var prev = await chamarApi('/admin/posts/ia/gerar-preview', { topico: sel[0] });
         preencherFormulario(prev.artigo);
-        if (prev.avisoImagem) mostrarStatus(prev.avisoImagem, 'aviso');
+        if (prev.avisoImagem) mostrarStatus(prev.avisoImagem + ' Use "Buscar imagem na web" na barra lateral.', 'aviso');
         if (prev.avisoQualidade) mostrarStatus(prev.avisoQualidade, 'aviso');
       } else {
         var data = await chamarApi('/admin/posts/ia/preencher-formulario', {
@@ -859,7 +1023,7 @@
           diasRecentes: document.getElementById('ia-dias').value
         });
         preencherFormulario(data.artigo);
-        if (data.avisoImagem) mostrarStatus(data.avisoImagem, 'aviso');
+        if (data.avisoImagem) mostrarStatus(data.avisoImagem + ' Use "Buscar imagem na web" na barra lateral.', 'aviso');
         if (data.avisoQualidade) mostrarStatus(data.avisoQualidade, 'aviso');
       }
     } catch (e) { mostrarStatus(e.message, 'erro'); }

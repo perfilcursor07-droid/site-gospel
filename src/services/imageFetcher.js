@@ -3,7 +3,7 @@ const path = require('path');
 const { extrairMetadadosArtigo, urlImagemInvalida } = require('./articleSource');
 const { identificarCapaArtigo, selecionarMelhorImagem, gerarAltImagem, validarImagemParaArtigo } = require('./deepseek');
 const { salvarComoWebp } = require('../utils/imageProcessor');
-const { buscarImagemPython } = require('./pythonImageSearch');
+const { buscarImagemPython, listarImagensPython } = require('./pythonImageSearch');
 const { marcarRespostaBrave, marcarRespostaBraveOk, braveDisponivel, braveQuotaExcedida } = require('./braveApi');
 
 const UPLOADS_DIR = path.join(__dirname, '..', '..', 'uploads');
@@ -642,6 +642,7 @@ async function buscarBraveImagens(termos, ctx, { consultaDireta = false, filtroR
     return (data.results || [])
       .map((item) => ({
         url: item.properties?.url || item.thumbnail?.src,
+        thumbnail: item.thumbnail?.src || item.properties?.url || '',
         title: item.title || '',
         alt: item.title || '',
         contextLink: item.url || '',
@@ -1185,14 +1186,124 @@ async function obterImagemParaArtigo({
   return capa;
 }
 
+function formatarCandidatoManual(img) {
+  if (!img?.url) return null;
+  return {
+    url: img.url,
+    preview: img.thumbnail || img.url,
+    title: (img.title || img.alt || '').slice(0, 200),
+    source: img.contextLink || img.source || ''
+  };
+}
+
+/**
+ * Busca imagens na web para escolha manual no admin (Brave + fallback Python/DuckDuckGo).
+ */
+async function buscarCandidatosCapaManual({
+  titulo,
+  resumo,
+  termosBusca,
+  assuntoImagem,
+  pessoaPrincipal
+}) {
+  const entidades = extrairEntidades(titulo, resumo, pessoaPrincipal);
+  const ctx = criarContextoRelevancia({
+    titulo,
+    resumo,
+    assuntoImagem,
+    termosImagem: termosBusca,
+    pessoaPrincipal,
+    entidades,
+    tituloReferencia: titulo
+  });
+
+  let consultas = [];
+  if (termosBusca && String(termosBusca).trim()) {
+    consultas = String(termosBusca)
+      .split(/[,;]+/)
+      .map((t) => t.trim())
+      .filter((t) => t.length > 3);
+  }
+  if (!consultas.length) {
+    consultas = montarConsultasImagem({
+      termosImagem: termosBusca,
+      assuntoImagem,
+      titulo,
+      resumo,
+      entidades,
+      pessoaPrincipal
+    });
+  }
+  if (!consultas.length && titulo) consultas.push(titulo.trim());
+
+  const vistos = new Set();
+  const candidatos = [];
+  const adicionar = (lista) => {
+    for (const img of lista) {
+      const fmt = formatarCandidatoManual(img);
+      if (!fmt || vistos.has(fmt.url)) continue;
+      if (!passaFiltroBasico(img)) continue;
+      vistos.add(fmt.url);
+      candidatos.push(fmt);
+    }
+  };
+
+  for (const q of consultas.slice(0, 4)) {
+    if (braveDisponivel()) {
+      adicionar(await buscarBraveImagens(q, ctx, { consultaDireta: true, filtroRigoroso: false }));
+    }
+  }
+
+  if (candidatos.length < 8) {
+    try {
+      const python = await listarImagensPython({
+        titulo,
+        resumo,
+        assunto_imagem: assuntoImagem || '',
+        termos_busca: consultas.slice(0, 5),
+        modo: 'listar'
+      });
+      if (python?.length) adicionar(python.map((c) => ({
+        url: c.url,
+        thumbnail: c.preview || c.url,
+        title: c.title || '',
+        contextLink: c.source || ''
+      })));
+    } catch (e) {
+      console.warn('listarImagensPython:', e.message);
+    }
+  }
+
+  return candidatos.slice(0, 30);
+}
+
+async function salvarCandidatoComoCapa({ url, contextLink, titulo, resumo, assuntoImagem, alt }) {
+  if (!url) return null;
+  const salva = await baixarImagem(url, contextLink || '');
+  if (!salva) return null;
+
+  let altFinal = (alt || '').trim();
+  if (!altFinal && titulo) {
+    try {
+      altFinal = await gerarAltImagem({ titulo, resumo, assuntoImagem });
+    } catch {
+      altFinal = titulo.slice(0, 125);
+    }
+  }
+
+  return { imagem: salva, alt: altFinal || null };
+}
+
 module.exports = {
   obterImagemParaArtigo,
   baixarImagem,
   extrairEntidades,
+  buscarCandidatosCapaManual,
+  salvarCandidatoComoCapa,
   avisoFalhaImagem() {
     if (braveQuotaExcedida()) {
       return 'API Brave temporariamente pausada (limite atingido). Se você já aumentou o limite no painel, aguarde ~1 min ou reinicie o servidor e tente de novo. Enquanto isso, envie a capa manualmente.';
     }
-    return 'Não foi possível baixar imagem automaticamente. Envie uma capa manualmente.';
+    return 'Não foi possível baixar imagem automaticamente. Use "Buscar imagem na web" na barra lateral ou envie uma capa manualmente.';
   }
 };

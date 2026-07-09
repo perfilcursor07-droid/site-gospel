@@ -383,7 +383,7 @@ def montar_alt(titulo: str, assunto: str, pessoa: str | None) -> str:
     return alt[:125]
 
 
-def buscar(payload: dict) -> dict:
+def coletar_candidatos(payload: dict) -> list[dict]:
     payload = sanitizar_payload(payload)
     titulo = payload.get("titulo") or ""
     resumo = payload.get("resumo") or ""
@@ -391,7 +391,6 @@ def buscar(payload: dict) -> dict:
     titulo_ref = payload.get("titulo_referencia") or titulo
     url_fonte = payload.get("url_fonte") or ""
     assunto = payload.get("assunto_imagem") or ""
-    pessoa = payload.get("pessoa_principal")
     termos_extra = payload.get("termos_busca") or []
 
     termos = list(dict.fromkeys(extrair_termos(titulo, resumo, titulo_ref, conteudo) + termos_extra))
@@ -429,10 +428,61 @@ def buscar(payload: dict) -> dict:
         for q in consultas[:5]:
             add_lista(brave_web(q, brave_key))
         for q in consultas[:3]:
-            add_lista(brave_images(q, brave_key))
+            add_lista(brave_images(q, brave_key, count=20))
 
-    for q in consultas[:2]:
-        add_lista(duckduckgo_images(q))
+    for q in consultas[:3]:
+        add_lista(duckduckgo_images(q, max_results=15))
+
+    return candidatos
+
+
+def listar(payload: dict) -> dict:
+    candidatos = coletar_candidatos(payload)
+    titulo = payload.get("titulo") or ""
+    resumo = payload.get("resumo") or ""
+    conteudo = payload.get("conteudo") or ""
+
+    filtrados = [
+        c for c in candidatos
+        if c.get("url") and not url_proibida(c.get("url", ""))
+        and not imagem_pessoa_inadequada(
+            f"{c.get('title', '')} {c.get('url', '')} {c.get('source', '')}",
+            titulo, resumo, titulo, conteudo
+        )
+    ]
+
+    if not filtrados:
+        return {"ok": False, "erro": "Nenhuma imagem encontrada na busca web."}
+
+    termos = extrair_termos(titulo, resumo, titulo, conteudo)
+    filtrados.sort(key=lambda c: pontuar(c, termos))
+
+    saida = []
+    for c in filtrados[:30]:
+        u = c.get("url", "")
+        saida.append({
+            "url": u,
+            "preview": u,
+            "title": (c.get("title") or "")[:200],
+            "source": c.get("source") or "",
+        })
+
+    return {"ok": True, "candidatos": saida}
+
+
+def buscar(payload: dict) -> dict:
+    payload = sanitizar_payload(payload)
+    titulo = payload.get("titulo") or ""
+    resumo = payload.get("resumo") or ""
+    conteudo = payload.get("conteudo") or ""
+    titulo_ref = payload.get("titulo_referencia") or titulo
+    url_fonte = payload.get("url_fonte") or ""
+    assunto = payload.get("assunto_imagem") or ""
+    pessoa = payload.get("pessoa_principal")
+    termos_extra = payload.get("termos_busca") or []
+
+    termos = list(dict.fromkeys(extrair_termos(titulo, resumo, titulo_ref, conteudo) + termos_extra))
+    candidatos = coletar_candidatos(payload)
 
     def candidato_valido(c: dict) -> bool:
         meta = f"{c.get('title', '')} {c.get('url', '')} {c.get('source', '')}"
@@ -470,7 +520,10 @@ def main():
         raw = sys.stdin.buffer.read().decode("utf-8", errors="replace")
         payload = json.loads(raw) if raw.strip() else {}
         payload = sanitizar_payload(payload)
-        result = buscar(payload)
+        if payload.get("modo") == "listar":
+            result = listar(payload)
+        else:
+            result = buscar(payload)
         emitir_json(result)
         sys.exit(0 if result.get("ok") else 1)
     except Exception as e:

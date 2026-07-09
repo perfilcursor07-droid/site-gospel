@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const { Post, Category } = require('../../models');
 const upload = require('../../config/upload');
+const { buscarCandidatosCapaManual, salvarCandidatoComoCapa } = require('../../services/imageFetcher');
 
 router.use('/ia', require('./aiPosts'));
 
@@ -21,6 +22,58 @@ router.get('/novo', async (req, res, next) => {
     const categorias = await Category.findAll({ order: [['ordem', 'ASC'], ['nome', 'ASC']] });
     res.render('admin/posts/form', { titulo: 'Novo Post', post: null, categorias });
   } catch (e) { next(e); }
+});
+
+router.post('/buscar-imagens', async (req, res) => {
+  try {
+    const { titulo, resumo, termos, assuntoImagem } = req.body;
+    if (!titulo && !termos) {
+      return res.status(400).json({ ok: false, erro: 'Informe o título da matéria ou termos de busca.' });
+    }
+    const candidatos = await buscarCandidatosCapaManual({
+      titulo: titulo || '',
+      resumo: resumo || '',
+      termosBusca: termos || '',
+      assuntoImagem: assuntoImagem || ''
+    });
+    res.json({
+      ok: true,
+      candidatos,
+      mensagem: candidatos.length
+        ? `${candidatos.length} imagem(ns) encontrada(s). Clique para usar como capa.`
+        : 'Nenhuma imagem encontrada. Tente outros termos de busca.'
+    });
+  } catch (e) {
+    console.error('buscar-imagens:', e);
+    res.status(500).json({ ok: false, erro: e.message });
+  }
+});
+
+router.post('/vincular-imagem', async (req, res) => {
+  try {
+    const { url, source, titulo, resumo, assuntoImagem, alt } = req.body;
+    if (!url || typeof url !== 'string') {
+      return res.status(400).json({ ok: false, erro: 'URL da imagem obrigatória.' });
+    }
+    const resultado = await salvarCandidatoComoCapa({
+      url,
+      contextLink: source || '',
+      titulo: titulo || '',
+      resumo: resumo || '',
+      assuntoImagem: assuntoImagem || '',
+      alt: alt || ''
+    });
+    if (!resultado) {
+      return res.status(400).json({
+        ok: false,
+        erro: 'Não foi possível baixar esta imagem. Tente outra ou faça upload manual.'
+      });
+    }
+    res.json({ ok: true, ...resultado });
+  } catch (e) {
+    console.error('vincular-imagem:', e);
+    res.status(500).json({ ok: false, erro: e.message });
+  }
 });
 
 router.post('/', upload.single('imagem'), async (req, res) => {
@@ -84,6 +137,9 @@ router.post('/:id', upload.single('imagem'), async (req, res) => {
     post.metaTitle = (req.body.meta_title || '').trim() || null;
     post.metaDescription = (req.body.meta_description || '').trim() || null;
     if (req.file) post.imagem = `/uploads/${req.file.filename}`;
+    else if (req.body.imagem_ia_url && req.body.imagem_ia_url.startsWith('/uploads/')) {
+      post.imagem = req.body.imagem_ia_url;
+    }
     if (req.body.imagem_alt !== undefined) {
       post.imagemAlt = (req.body.imagem_alt || '').trim() || null;
     }

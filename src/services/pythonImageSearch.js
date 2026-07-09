@@ -30,6 +30,25 @@ function comandoPython() {
  * @returns {Promise<{imagem: string, alt: string}|null>}
  */
 async function buscarImagemPython(payload) {
+  const data = await executarScriptPython(payload);
+  if (data?.ok && data.imagem) {
+    return { imagem: data.imagem, alt: data.alt || null };
+  }
+  if (data?.erro) console.warn('Python imagem:', data.erro);
+  return null;
+}
+
+/**
+ * Lista candidatos de imagem (modo listar no script Python).
+ * @returns {Promise<Array<{url: string, preview: string, title: string, source: string}>>}
+ */
+async function listarImagensPython(payload) {
+  const data = await executarScriptPython({ ...payload, modo: 'listar' });
+  if (data?.ok && Array.isArray(data.candidatos)) return data.candidatos;
+  return [];
+}
+
+function executarScriptPython(payload) {
   return new Promise((resolve) => {
     const py = comandoPython();
     const proc = spawn(py, [SCRIPT], {
@@ -49,18 +68,12 @@ async function buscarImagemPython(payload) {
       resolve(null);
     });
 
-    proc.on('close', (code) => {
+    proc.on('close', () => {
       if (stderr.trim()) {
         console.warn('buscar_imagem.py:', stderr.trim().slice(0, 300));
       }
       try {
-        const data = JSON.parse(stdout.trim() || '{}');
-        if (data.ok && data.imagem) {
-          resolve({ imagem: data.imagem, alt: data.alt || null });
-        } else {
-          if (data.erro) console.warn('Python imagem:', data.erro);
-          resolve(null);
-        }
+        resolve(JSON.parse(stdout.trim() || '{}'));
       } catch (e) {
         console.warn('Python imagem JSON inválido:', e.message);
         resolve(null);
@@ -76,4 +89,4 @@ async function buscarImagemPython(payload) {
   });
 }
 
-module.exports = { buscarImagemPython, comandoPython };
+module.exports = { buscarImagemPython, listarImagensPython, comandoPython };
