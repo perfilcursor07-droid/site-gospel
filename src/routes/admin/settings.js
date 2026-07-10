@@ -150,10 +150,7 @@ router.post('/', upload.fields([
 
 router.post('/google-indexing/testar', async (req, res) => {
   try {
-    const config = await Setting.obterTodas();
-    const base = obterUrlBase(req, config);
-    const urlTeste = base ? `${base}/sitemap.xml` : null;
-    const resultado = await testarConexao(urlTeste);
+    const resultado = await testarConexao();
     res.json(resultado);
   } catch (e) {
     res.status(500).json({ ok: false, erro: e.message });

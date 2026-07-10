@@ -148,7 +148,7 @@ async function enviarUrls(urls, opcoes = {}) {
   return { ...resultados, quota: quotaAtual };
 }
 
-async function testarConexao(urlTeste) {
+async function testarConexao() {
   if (!estaConfigurado()) {
     return {
       ok: false,
@@ -158,10 +158,8 @@ async function testarConexao(urlTeste) {
 
   const email = obterEmailContaServico();
   try {
-    await obterClienteAuth();
-    if (urlTeste) {
-      await consultarUrl(urlTeste);
-    }
+    const client = await obterClienteAuth();
+    await client.getAccessToken();
     const quota = await obterQuotaHoje();
     return {
       ok: true,
@@ -176,6 +174,13 @@ async function testarConexao(urlTeste) {
         ok: false,
         email,
         erro: `Conta ${email} precisa ser PROPRIETÁRIA no Search Console de https://www.obuxixogospel.com.br/`
+      };
+    }
+    if (msg.includes('API has not been used') || msg.includes('Indexing API')) {
+      return {
+        ok: false,
+        email,
+        erro: 'Ative a "Web Search Indexing API" no Google Cloud Console do projeto gen-lang-client-0972652469.'
       };
     }
     return { ok: false, email, erro: msg };

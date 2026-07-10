@@ -511,11 +511,11 @@ async function buscarGoogleNews(palavraChave, limite = 5, { dias = DIAS_RECENTES
     .filter((item) => itemEhRecente(item, dias))
     .slice(0, limite)
     .map((item) => ({
-      ...item,
-      nicho: palavraChave,
+    ...item,
+    nicho: palavraChave,
       fonte: 'Google News',
       recente: true
-    }));
+  }));
 }
 
 async function buscarEmAlta(palavraChave, limite = 4) {
@@ -529,9 +529,9 @@ async function buscarEmAlta(palavraChave, limite = 4) {
       .filter((item) => itemEhRecente(item, 1))
       .slice(0, limite)
       .map((item) => ({
-        ...item,
-        nicho: palavraChave,
-        fonte: 'Google News — em alta',
+      ...item,
+      nicho: palavraChave,
+      fonte: 'Google News — em alta',
         emAlta: true,
         recente: true
       }));
@@ -571,7 +571,7 @@ async function buscarGoogleNewsSite(site, palavraChave, limite = 2, dias = 5) {
         redeSocial: rede,
         tipoFonte: 'rede_social',
         recente: true
-      }));
+    }));
   } catch {
     return [];
   }
@@ -1001,12 +1001,12 @@ async function pesquisarNichos(palavrasChave, quantidadePorNicho = 5, opcoes = {
 
   if (!selecionados.length) {
     if (!somenteRedesSociais) {
-      for (const termo of termos) {
+    for (const termo of termos) {
         adicionar({
           titulo: `Apuração: o que está em alta sobre ${termo} no meio gospel esta semana`,
           resumo: `Levantamento de fatos recentes e repercussão sobre ${termo} no cenário evangélico brasileiro.`,
-          link: null,
-          nicho: termo,
+        link: null,
+        nicho: termo,
           fonte: 'Pauta editorial',
           dataTimestamp: Date.now(),
           recente: true
