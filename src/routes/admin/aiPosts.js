@@ -14,6 +14,12 @@ const {
   pausarMonitor,
   retomarMonitor
 } = require('../../services/iaMonitorAutomatico');
+const {
+  avaliarComprimento,
+  mensagemAvisoQualidade,
+  MIN_PALAVRAS_ARTIGO,
+  MAX_PALAVRAS_ARTIGO
+} = require('../../services/editorialGuidelines');
 
 function avisoQualidadeArtigo(artigo) {
   if (artigo._avisoQualidade) return artigo._avisoQualidade;
