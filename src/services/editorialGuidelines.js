@@ -54,7 +54,7 @@ REPORTAGEM COM FURO (permitido e desejado):
 - Pode reportar assuntos com base em outras matérias, portais ou redes — como jornalismo de repercussão.
 - Reescreva 100% com palavras próprias; NUNCA copie frases, leads ou trechos das fontes.
 - Destaque o ângulo único: o que é novo, o que viralizou, impacto na comunidade gospel, próximos passos.
-- Se a pauta veio de rede social, descreva a repercussão sem transcrever postagens.
+- Se a pauta veio de rede social, extraia fatos e repercussão com redação jornalística própria — use o conteúdo como base factual, sem transcrever postagens.
 
 ORIGINALIDADE E ANTI-SPAM:
 - Conteúdo único: estrutura, ordem dos fatos e redação próprias.

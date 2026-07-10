@@ -129,6 +129,18 @@ function extrairImagensDoHtml(html, baseUrl) {
   return candidatos;
 }
 
+function ehTopicoRedeSocial(topico) {
+  return topico.tipoFonte === 'rede_social' || !!topico.redeSocial;
+}
+
+function montarTextoPostRede(topico, titulo, resumo) {
+  const chunks = [];
+  if (topico.conteudoRede && topico.conteudoRede.length > 15) chunks.push(topico.conteudoRede);
+  if (resumo && resumo.length > 15 && resumo !== titulo) chunks.push(resumo);
+  if (titulo && titulo.length > 15) chunks.push(titulo);
+  return chunks.join(' — ').slice(0, 900);
+}
+
 async function apurarTopico(topico) {
   const tituloLimpo = decodificarHtml(topico.titulo || '')
     .replace(/\s*[-–—|]\s*[^-|–—]{2,60}$/u, '')
@@ -138,19 +150,44 @@ async function apurarTopico(topico) {
     .replace(/news\.google\.com[^\s]*/gi, '')
     .replace(/\s+/g, ' ')
     .trim()
-    .slice(0, 400);
+    .slice(0, ehTopicoRedeSocial(topico) ? 600 : 400);
 
   const base = {
     ...topico,
     titulo: tituloLimpo,
-    resumo: resumoLimpo.slice(0, 400),
-    veiculo: extrairVeiculo(tituloLimpo)
+    resumo: resumoLimpo,
+    veiculo: topico.redeSocial || extrairVeiculo(tituloLimpo),
+    redeSocial: topico.redeSocial || (ehTopicoRedeSocial(topico) ? detectarRedeDaUrl(topico.link) : null)
   };
 
-  if (!topico.link) return base;
+  const fontesApuracao = [];
+
+  if (ehTopicoRedeSocial(topico)) {
+    const textoPost = montarTextoPostRede(topico, tituloLimpo, resumoLimpo);
+    if (textoPost.length > 40) {
+      fontesApuracao.push({
+        veiculo: base.redeSocial || 'Rede social',
+        url: topico.link,
+        titulo: tituloLimpo,
+        resumo: resumoLimpo,
+        trecho: textoPost,
+        ehRedeSocial: true
+      });
+    }
+  }
+
+  if (!topico.link) {
+    return {
+      ...base,
+      contextoApuracao: fontesApuracao.length
+        ? montarContextoApuracao(fontesApuracao, base)
+        : undefined,
+      fontesApuracao,
+      dataReferencia: topico.data || new Date().toISOString()
+    };
+  }
 
   const meta = await extrairMetadadosArtigo(topico.link);
-  const fontesApuracao = [];
 
   if (meta.titulo || meta.descricao || meta.trecho) {
     fontesApuracao.push({
@@ -158,27 +195,31 @@ async function apurarTopico(topico) {
       url: meta.urlReal,
       titulo: meta.titulo || tituloLimpo,
       resumo: meta.descricao || resumoLimpo,
-      trecho: meta.trecho
+      trecho: meta.trecho || (ehTopicoRedeSocial(topico) ? meta.descricao : null),
+      ehRedeSocial: ehTopicoRedeSocial(topico)
     });
   }
 
   if (braveDisponivel()) {
     try {
-      const consultaContexto = [tituloLimpo, resumoLimpo, meta.titulo, meta.descricao]
+      const consultaContexto = [tituloLimpo, resumoLimpo, topico.conteudoRede, meta.titulo, meta.descricao]
         .filter(Boolean)
         .join(' ')
-        .slice(0, 200);
+        .slice(0, 220);
       const consultaBrave = topico.fonteInternacional
         ? `${consultaContexto} christian gospel news`
-        : `${consultaContexto} gospel brasil`;
+        : ehTopicoRedeSocial(topico)
+          ? `${consultaContexto} gospel brasil repercussão redes sociais`
+          : `${consultaContexto} gospel brasil`;
       const contextoBrave = await buscarContextoLlm(consultaBrave);
       if (contextoBrave && contextoBrave.length > 80) {
         fontesApuracao.push({
-          veiculo: 'Apuração web (Brave)',
+          veiculo: ehTopicoRedeSocial(topico) ? 'Apuração web (contexto)' : 'Apuração web (Brave)',
           url: meta.urlReal || topico.link,
           titulo: tituloLimpo,
           resumo: resumoLimpo,
-          trecho: contextoBrave.slice(0, 1500)
+          trecho: contextoBrave.slice(0, 1500),
+          ehRedeSocial: ehTopicoRedeSocial(topico)
         });
       }
     } catch (e) {
@@ -198,6 +239,17 @@ async function apurarTopico(topico) {
   };
 }
 
+function detectarRedeDaUrl(url) {
+  const lower = (url || '').toLowerCase();
+  if (lower.includes('instagram.com')) return 'Instagram';
+  if (lower.includes('facebook.com') || lower.includes('fb.com')) return 'Facebook';
+  if (lower.includes('twitter.com') || lower.includes('x.com')) return 'X (Twitter)';
+  if (lower.includes('threads.net')) return 'Threads';
+  if (lower.includes('tiktok.com')) return 'TikTok';
+  if (lower.includes('youtube.com')) return 'YouTube';
+  return null;
+}
+
 function extrairVeiculo(titulo) {
   const partes = titulo.split(' - ');
   if (partes.length > 1) return partes[partes.length - 1].trim();
@@ -208,13 +260,18 @@ function montarContextoApuracao(fontes, topico) {
   const linhas = [
     `Assunto em pauta: ${topico.titulo}`,
     topico.resumo ? `Contexto inicial: ${topico.resumo}` : null,
+    topico.redeSocial ? `Origem: publicação em ${topico.redeSocial}` : null,
     topico.data ? `Data da notícia de referência: ${topico.data}` : null
   ];
 
   fontes.forEach((f, i) => {
     linhas.push(`\nFonte ${i + 1} (${f.veiculo || 'veículo'}): ${f.titulo || ''}`);
     if (f.resumo) linhas.push(`Resumo da fonte: ${f.resumo}`);
-    if (f.trecho) linhas.push(`Trecho para apuração (NÃO copiar literalmente): ${f.trecho}`);
+    if (f.trecho && f.ehRedeSocial) {
+      linhas.push(`Conteúdo da publicação (extraia os fatos e reescreva — NÃO copie frases): ${f.trecho}`);
+    } else if (f.trecho) {
+      linhas.push(`Trecho para apuração (NÃO copiar literalmente): ${f.trecho}`);
+    }
     if (f.url) linhas.push(`URL: ${f.url}`);
   });
 

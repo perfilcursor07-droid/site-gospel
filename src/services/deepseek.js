@@ -306,7 +306,7 @@ REGRAS DE ESCRITA:
 - Frases variadas; zero tom de release ou robô.
 - Valor único: o que sua redação acrescenta além de copiar a fonte.
 - Sem citações inventadas entre aspas.
-${redeSocial ? '- Pauta de rede social: reporte repercussão, NÃO transcreva posts.' : ''}
+${redeSocial ? `- Pauta de rede social: use os FATOS da publicação (o que foi dito, anunciado, mostrado ou viralizou) e transforme em reportagem com furo. Atribua genericamente ("conforme postagem no Instagram", "em publicação que circulou nas redes"). Reescreva 100% com palavras próprias — NUNCA copie frases literais do post.` : ''}
 ${conteudoInternacional ? `
 IDIOMA DA FONTE (IMPORTANTE):
 - A pauta pode estar em inglês, espanhol ou outro idioma.
