@@ -1,7 +1,14 @@
 const fs = require('fs');
 const path = require('path');
-const { GoogleAuth } = require('google-auth-library');
 const { Setting } = require('../models');
+
+function carregarGoogleAuth() {
+  try {
+    return require('google-auth-library').GoogleAuth;
+  } catch {
+    return null;
+  }
+}
 
 const SCOPES = ['https://www.googleapis.com/auth/indexing'];
 const API_PUBLISH = 'https://indexing.googleapis.com/v3/urlNotifications:publish';
@@ -17,6 +24,7 @@ function obterCaminhoChave() {
 }
 
 function estaConfigurado() {
+  if (!carregarGoogleAuth()) return false;
   const arquivo = obterCaminhoChave();
   return !!(arquivo && fs.existsSync(arquivo));
 }
@@ -33,6 +41,10 @@ function obterEmailContaServico() {
 }
 
 async function obterClienteAuth() {
+  const GoogleAuth = carregarGoogleAuth();
+  if (!GoogleAuth) {
+    throw new Error('Pacote google-auth-library não instalado. Rode: npm install');
+  }
   const keyFile = obterCaminhoChave();
   if (!keyFile) {
     throw new Error('Arquivo JSON da conta de serviço não encontrado. Configure GOOGLE_INDEXING_KEY_FILE no .env.');
