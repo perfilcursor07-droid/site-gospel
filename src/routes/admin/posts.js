@@ -64,8 +64,11 @@ router.post('/buscar-imagens', async (req, res) => {
 
     let mensagem;
     if (!candidatos.length) {
+      const focoPessoa = /\b(?:cantor(?:a)?|pastor(?:a)?)\s+\w/i.test(termos || '');
       mensagem = braveDisponivel()
-        ? 'Nenhuma imagem relevante. Tente o nome da igreja, cidade ou evento (ex.: Aliança em Cristo Santo André).'
+        ? (focoPessoa
+          ? 'Nenhuma foto dessa pessoa encontrada. Tente só o nome (ex.: Midian Lima) ou variações da grafia.'
+          : 'Nenhuma imagem relevante. Tente o nome da igreja, cidade ou evento (ex.: Aliança em Cristo Santo André).')
         : 'Nenhuma imagem encontrada. Configure BRAVE_SEARCH_API_KEY no servidor (plano grátis em api-dashboard.search.brave.com) para buscas melhores.';
     } else {
       mensagem = `${candidatos.length} imagem(ns) relevante(s). Clique para usar como capa.`;

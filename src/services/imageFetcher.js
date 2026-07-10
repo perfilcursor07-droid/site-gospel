@@ -205,8 +205,12 @@ function imagemPareceLixoManual(img) {
   return false;
 }
 
-function imagemCombinaMateriaManual(img, ctx) {
+function imagemCombinaMateriaManual(img, ctx, { focoPessoa = [] } = {}) {
   if (!img?.url || urlImagemProibida(img.url, img.contextLink)) return false;
+
+  if (focoPessoa.length) {
+    return imagemMencionaPessoa(img, focoPessoa);
+  }
 
   if (img.fromNoticia && paginaCombinaMateria(img, ctx.titulo, ctx.resumo, ctx.tituloReferencia)) {
     return true;
@@ -219,13 +223,107 @@ function imagemCombinaMateriaManual(img, ctx) {
   return imagemCombinaMateria(img, { ...ctx, entidades: [] }, { ignorarOrigem: true });
 }
 
-function passaFiltroManual(img, ctx) {
+function decodificarHtmlEntidades(str) {
+  return String(str || '')
+    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(parseInt(n, 10)))
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#8211;|&ndash;/g, '–')
+    .replace(/&#8212;|&mdash;/g, '—');
+}
+
+function variantesNomePessoa(nome) {
+  const partes = (nome || '').trim().split(/\s+/).filter(Boolean);
+  if (partes.length < 2) return [nome].filter(Boolean);
+
+  const variantes = new Set([partes.join(' ')]);
+  const primeiro = partes[0];
+  if (primeiro.length > 4) {
+    variantes.add([primeiro.replace(/ian$/i, 'iam'), ...partes.slice(1)].join(' '));
+    variantes.add([primeiro.replace(/iam$/i, 'ian'), ...partes.slice(1)].join(' '));
+  }
+  return [...variantes];
+}
+
+function extrairPessoaDosTermos(termos, titulo) {
+  // Busca manual: priorizar só o que o usuário digitou (não misturar título da matéria)
+  const fontes = [];
+  if (termos && String(termos).trim()) fontes.push(String(termos).trim());
+  else if (titulo && String(titulo).trim()) fontes.push(String(titulo).trim());
+
+  const pessoas = new Set();
+  const padraoProfissao = /\b(?:o\s+|a\s+)?(?:cantor(?:a)?|pastor(?:a)?|pregador(?:a)?|bispo|apóstolo|apostolo)\s+([A-ZÀ-Ú][\wà-ú]+(?:\s+[A-ZÀ-Ú][\wà-ú]+)?)/gi;
+
+  for (const texto of fontes) {
+    for (const m of texto.matchAll(padraoProfissao)) {
+      const nome = limparNomeEntidade((m[1] || '').trim());
+      if (nome.length > 4 && pareceNomeProprio(nome)) pessoas.add(nome);
+    }
+
+    const limpo = texto
+      .replace(/^(?:a\s+|o\s+)?(?:cantor(?:a)?|pastor(?:a)?|pregador(?:a)?|bispo)\s+/i, '')
+      .trim();
+
+    const partes = limpo.split(/\s+/).filter(Boolean);
+    if (partes.length >= 2 && partes.length <= 4) {
+      const nomeCurto = partes
+        .slice(0, 2)
+        .map((p) => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase())
+        .join(' ');
+      if (pareceNomeProprio(nomeCurto)) pessoas.add(nomeCurto);
+
+      if (partes.length > 2) {
+        const nomeLongo = partes
+          .slice(0, 3)
+          .map((p) => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase())
+          .join(' ');
+        if (pareceNomeProprio(nomeLongo)) pessoas.add(nomeLongo);
+      }
+    }
+  }
+
+  return [...pessoas];
+}
+
+function montarConsultasPessoaFoco(nome) {
+  const aspas = `"${nome}"`;
+  return [
+    `${aspas} cantora gospel foto`,
+    `${aspas} cantora evangelica`,
+    `${nome} gospel louvor foto`,
+    `${nome} cantora`,
+    `${nome} foto`,
+    `${nome} cantora gospel show`,
+    `site:instagram.com ${nome} gospel`,
+    `site:instagram.com ${nome} cantora`,
+    `site:youtube.com ${nome} cantora gospel`,
+    `${nome} show culto igreja`
+  ];
+}
+
+function imagemMencionaPessoa(img, pessoas) {
+  if (!pessoas?.length) return true;
+  const texto = textoImagem(img);
+  return pessoas.some((p) =>
+    variantesNomePessoa(p).some((variante) => imagemCombinaEntidade(texto, variante))
+  );
+}
+
+function passaFiltroManual(img, ctx, { focoPessoa = [] } = {}) {
   if (!passaFiltroBasico(img)) return false;
   if (imagemPareceLixoManual(img)) return false;
   if (imagemPessoaInadequada(img, ctx)) return false;
   if (imagemUrlGenerica(img.url)) return false;
 
-  if (imagemCombinaMateriaManual(img, ctx)) return true;
+  if (focoPessoa.length && !imagemMencionaPessoa(img, focoPessoa)) {
+    return false;
+  }
+
+  if (imagemCombinaMateriaManual(img, ctx, { focoPessoa })) return true;
+
+  if (focoPessoa.length) return false;
 
   return pontuarImagemStock(img, ctx) <= 5;
 }
@@ -282,7 +380,17 @@ function imagemCombinaEntidade(texto, entidade) {
 
   const sobrenome = partes[partes.length - 1];
   const primeiro = partes[0];
-  return norm.includes(sobrenome) && norm.includes(primeiro);
+  if (norm.includes(sobrenome) && norm.includes(primeiro)) return true;
+
+  const compacto = norm.replace(/\s+/g, '');
+  const nomeCompacto = partes.join('');
+  if (nomeCompacto.length > 6 && compacto.includes(nomeCompacto)) return true;
+
+  return variantesNomePessoa(entidade).some((variante) => {
+    const vPartes = partesNome(variante);
+    if (vPartes.length < 2) return false;
+    return norm.includes(vPartes[vPartes.length - 1]) && norm.includes(vPartes[0]);
+  });
 }
 
 function imagemCombinaAlgumaEntidade(img, entidades) {
@@ -1381,12 +1489,19 @@ async function obterImagemParaArtigo({
 
 function formatarCandidatoManual(img) {
   if (!img?.url) return null;
+  const titulo = decodificarHtmlEntidades(img.title || img.alt || '').slice(0, 200);
   return {
     url: img.url,
     preview: img.thumbnail || img.url,
-    title: (img.title || img.alt || '').slice(0, 200),
-    source: img.contextLink || img.source || ''
+    title: titulo,
+    source: decodificarHtmlEntidades(img.contextLink || img.source || '')
   };
+}
+
+function chaveUnicaCandidato(img) {
+  const url = (img.url || '').split('?')[0];
+  const titulo = normalizarTexto(decodificarHtmlEntidades(img.title || '')).slice(0, 70);
+  return `${url}|${titulo}`;
 }
 
 /**
@@ -1399,91 +1514,110 @@ async function buscarCandidatosCapaManual({
   assuntoImagem,
   pessoaPrincipal
 }) {
-  const organizacoes = extrairOrganizacoes(titulo, resumo);
+  const focoPessoa = extrairPessoaDosTermos(termosBusca, '');
+  const organizacoes = focoPessoa.length ? [] : extrairOrganizacoes(titulo, resumo);
   const entidades = [...new Set([
+    ...focoPessoa,
     ...extrairEntidades(titulo, resumo, pessoaPrincipal),
-    ...organizacoes
+    ...extrairPessoaDosTermos(titulo, ''),
+    ...(focoPessoa.length ? [] : organizacoes)
   ])];
 
   const ctx = criarContextoRelevancia({
-    titulo,
+    titulo: focoPessoa.length ? focoPessoa.join(' ') : titulo,
     resumo,
-    assuntoImagem,
+    assuntoImagem: focoPessoa[0] || assuntoImagem,
     termosImagem: termosBusca,
-    pessoaPrincipal,
-    entidades,
+    pessoaPrincipal: focoPessoa[0] || pessoaPrincipal,
+    entidades: focoPessoa.length ? focoPessoa : entidades,
     tituloReferencia: titulo
   });
 
   let consultas = [];
-  if (termosBusca && String(termosBusca).trim()) {
-    consultas = String(termosBusca)
-      .split(/[,;]+/)
-      .map((t) => t.trim())
-      .filter((t) => t.length > 3);
+
+  if (focoPessoa.length) {
+    focoPessoa.forEach((nome) => montarConsultasPessoaFoco(nome).forEach((q) => consultas.push(q)));
+    if (termosBusca && String(termosBusca).trim()) {
+      consultas.push(String(termosBusca).trim());
+    }
+  } else {
+    if (termosBusca && String(termosBusca).trim()) {
+      consultas = String(termosBusca)
+        .split(/[,;]+/)
+        .map((t) => t.trim())
+        .filter((t) => t.length > 3);
+    }
+
+    consultas = [...new Set([
+      ...consultas,
+      ...montarConsultasCapaManual({ titulo, resumo, assuntoImagem, entidades, organizacoes }),
+      ...montarConsultasImagem({
+        termosImagem: termosBusca,
+        assuntoImagem,
+        titulo,
+        resumo,
+        entidades,
+        pessoaPrincipal
+      })
+    ])];
   }
 
-  consultas = [...new Set([
-    ...consultas,
-    ...montarConsultasCapaManual({ titulo, resumo, assuntoImagem, entidades, organizacoes }),
-    ...montarConsultasImagem({
-      termosImagem: termosBusca,
-      assuntoImagem,
-      titulo,
-      resumo,
-      entidades,
-      pessoaPrincipal
-    })
-  ])];
-
+  consultas = [...new Set(consultas.filter(Boolean))];
   if (!consultas.length && titulo) consultas.push(titulo.trim());
 
   const vistos = new Set();
   const brutos = [];
+  const filtroOpts = { focoPessoa };
 
   const adicionarBruto = (lista, extras = {}) => {
     for (const img of lista) {
-      if (!img?.url || vistos.has(img.url)) continue;
-      if (!passaFiltroManual(img, ctx)) continue;
-      vistos.add(img.url);
+      if (!img?.url) continue;
+      const chave = chaveUnicaCandidato(img);
+      if (vistos.has(chave)) continue;
+      if (!passaFiltroManual(img, ctx, filtroOpts)) continue;
+      vistos.add(chave);
       brutos.push({ ...img, ...extras });
     }
   };
 
-  // 1) Fotos das páginas de notícia (og:image) — mais preciso
-  adicionarBruto(await buscarImagensViaBraveWeb(consultas, ctx));
-
-  // 2) API de imagens Brave (mesma chave do site — plano grátis ~1000 buscas/mês)
-  if (braveDisponivel()) {
-    for (const q of consultas.slice(0, 5)) {
-      const imgs = await buscarBraveImagens(q, ctx, { consultaDireta: true, filtroRigoroso: true });
-      adicionarBruto(imgs);
+  // Modo pessoa: busca direta por nome; filtro de relevância fica no passaFiltroManual
+  if (focoPessoa.length && braveDisponivel()) {
+    for (const q of consultas.slice(0, 8)) {
+      adicionarBruto(await buscarBraveImagens(q, ctx, { consultaDireta: true, filtroRigoroso: false }));
+    }
+  } else {
+    adicionarBruto(await buscarImagensViaBraveWeb(consultas, ctx));
+    if (braveDisponivel()) {
+      for (const q of consultas.slice(0, 5)) {
+        adicionarBruto(await buscarBraveImagens(q, ctx, { consultaDireta: true, filtroRigoroso: true }));
+      }
     }
   }
 
-  // 3) Bing Imagens (se tiver chave legada)
   if (process.env.BING_SEARCH_API_KEY) {
     for (const q of consultas.slice(0, 3)) {
       adicionarBruto(await buscarBingImagens(q, ctx));
     }
   }
 
-  // 4) Fallback leve: Brave sem filtro máximo, mas ainda com relevância
   if (brutos.length < 6 && braveDisponivel()) {
-    for (const q of consultas.slice(0, 2)) {
+    for (const q of consultas.slice(0, 3)) {
       const imgs = await buscarBraveImagens(q, ctx, { consultaDireta: true, filtroRigoroso: false });
-      adicionarBruto(imgs.filter((img) => imagemCombinaMateriaManual(img, ctx)));
+      adicionarBruto(imgs.filter((img) => (
+        focoPessoa.length
+          ? imagemMencionaPessoa(img, focoPessoa)
+          : imagemCombinaMateriaManual(img, ctx)
+      )));
     }
   }
 
-  // 5) Python/DuckDuckGo só se ainda faltar — com os mesmos filtros
-  if (brutos.length < 5) {
+  if (brutos.length < 4) {
     try {
       const python = await listarImagensPython({
-        titulo,
+        titulo: focoPessoa[0] || titulo,
         resumo,
-        assunto_imagem: assuntoImagem || '',
-        termos_busca: consultas.slice(0, 5),
+        assunto_imagem: focoPessoa[0] || assuntoImagem || '',
+        termos_busca: consultas.slice(0, 6),
         modo: 'listar'
       });
       if (python?.length) {
