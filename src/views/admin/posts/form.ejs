@@ -928,7 +928,7 @@
     var somenteRedes = document.querySelector('input[name="ia-fonte-busca-auto"]:checked')?.value === 'somente_redes';
     var chkTrends = document.getElementById('ia-auto-google-trends');
     return {
-      incluirRedesSociais: !somenteRedes,
+      incluirRedesSociais: true,
       somenteRedesSociais: somenteRedes,
       somenteRecentes: true,
       diasRecentes: document.getElementById('ia-auto-dias')?.value || '24h',

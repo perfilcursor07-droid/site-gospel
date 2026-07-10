@@ -322,7 +322,8 @@ module.exports = {
       attributes: ['id', 'titulo', 'slug', 'resumo', 'status'],
       where: { status: ['publicado', 'rascunho', 'agendado'] }
     });
-    const unicos = deduplicarTopicos(topicos);
+    const temRedes = topicos.some((t) => t.redeSocial || t.tipoFonte === 'rede_social');
+    const unicos = deduplicarTopicos(topicos, { modoRedes: temRedes });
     return marcarTopicosPublicados(unicos, posts).filter((t) => !t.jaPublicado);
   }
 };
