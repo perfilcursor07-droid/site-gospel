@@ -194,118 +194,184 @@ function pontuarTopico(item) {
   return score;
 }
 
+const TERMOS_GOSPEL_CONTEXTO = /gospel|evangel|igreja|louvor|adora|adoracao|adoracao|worship|cristao|crista|biblia|ministerio|ministerio|pregacao|pregador|pregadora|culto|louvou|hino|louvores|jesus|deus|oracao|fe\b|seminario|congresso gospel|testemunho|redeemer|church|chapel|worship/i;
+
+const TERMOS_AMBIGUOS_REDE = new Set([
+  'pastor', 'pastora', 'pastores', 'louvor', 'louvores', 'adoracao', 'adoracao',
+  'culto', 'congresso', 'testemunho', 'gospel', 'pregador', 'pregadora', 'cantor', 'cantora'
+]);
+
+const RUIDO_REDES_SOCIAIS = [
+  'messi', 'mbappe', 'ronaldo', 'real madrid', 'barcelona', 'fútbol', 'futebol',
+  'premier league', 'champions league', 'nba', 'ufc', 'netflix', 'disney', 'crunchyroll',
+  'derbez', 'hollywood', 'anime', 'naruto', 'btc', 'bitcoin', 'criptomoeda',
+  'horóscopo', 'horoscopo', 'receita de bolo', 'loteria', 'wimbledon', 'mbappe',
+  'bellingham', 'stardew', 'clash of clans', 'mmorpg', 'mmorpg', 'enhypen', 'k-pop',
+  'copa do mundo', 'world cup', 'dolby atmos', 'heartstopper', 'euphoria', 'reddit.com/r/',
+  'stardewvalley', 'futbol', 'soccer', 'tennis', 'wrestling', 'ufc', 'magalu', 'cupom',
+  'afiliad', 'day trade', 'mmonews', 'jogos olimpicos', 'selecao espanola', 'orbán',
+  'palestin', 'ucrania', 'ukraine', 'hungria', 'iranian', 'hegseth', 'homeland security',
+  'pastores afganos', 'pastor alemao', 'pastor alemão', 'raça pastor', 'dog breed',
+  'philippine', 'filipino man', 'kwai', 'tiktok dance', 'meme', 'shitpost'
+];
+
 function extrairTermosChaveBusca(palavraChave) {
-  const stop = new Set(['gospel', 'evangelico', 'evangélico', 'evangelica', 'evangélica', 'brasil', 'noticia', 'notícia', 'louvor', 'adoracao', 'adoração']);
-  return (palavraChave || '')
+  const bruto = (palavraChave || '')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .split(/[\s,;+/]+/)
     .map((t) => t.trim())
-    .filter((t) => t.length > 2 && !stop.has(t));
+    .filter((t) => t.length > 2);
+
+  if (!bruto.length) return [];
+
+  const stopParcial = new Set(['brasil', 'noticia', 'notícias', 'noticias']);
+  return bruto.filter((t) => !stopParcial.has(t));
 }
 
-function textoItemBusca(item) {
-  return `${item.titulo || ''} ${item.resumo || ''} ${item.link || ''} ${item.nicho || ''}`
+function textoConteudoItem(item) {
+  return `${item.titulo || ''} ${item.resumo || ''} ${item.conteudoRede || ''}`
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase();
 }
 
-function itemCombinaPalavraChave(item, palavraChave, { rigoroso = false } = {}) {
+function textoItemBusca(item) {
+  return `${item.titulo || ''} ${item.resumo || ''} ${item.link || ''}`
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+}
+
+function termoComoPalavra(texto, termo) {
+  if (!termo || !texto) return false;
+  const esc = termo.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`(?:^|[\\s.,;:!?¿¡"''"()\\[\\]/@#-])${esc}(?:$|[\\s.,;:!?¿¡"''"()\\[\\]/@#-])`, 'i').test(` ${texto} `);
+}
+
+function temContextoGospel(texto) {
+  return TERMOS_GOSPEL_CONTEXTO.test(texto);
+}
+
+function termoAmbiguo(termo) {
+  return TERMOS_AMBIGUOS_REDE.has(termo.toLowerCase());
+}
+
+function termoParaConsultaRede(palavraChave) {
+  const termo = palavraChave.trim();
+  const norm = termo.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  if (temContextoGospel(norm) || /\bgospel\b/.test(norm)) return termo;
+  if (termoAmbiguo(norm) || norm.length < 12) {
+    return `${termo} gospel brasil`;
+  }
+  return `${termo} gospel igreja`;
+}
+
+function itemCombinaPalavraChave(item, palavraChave, { rigoroso = false, redeSocial = false } = {}) {
   const termos = extrairTermosChaveBusca(palavraChave);
-  const texto = textoItemBusca(item);
-  const contextoGospel = /gospel|evangel|igreja|louvor|pastor|pastora|cantor|cantora|adora|louvou|culto|cristao|cristão|biblia|bíblia|worship|louca|louvores|hino|louvorzao|louvorzão/.test(texto);
+  const texto = redeSocial ? textoConteudoItem(item) : textoItemBusca(item);
+  const contextoGospel = temContextoGospel(texto);
 
   if (!termos.length) {
     return rigoroso ? contextoGospel : true;
   }
 
-  const acertos = termos.filter((t) => texto.includes(t));
-  if (rigoroso) {
-    if (acertos.length >= Math.min(2, termos.length)) return true;
-    if (acertos.length >= 1 && contextoGospel) return true;
-    return acertos.length >= 1 && termos.length === 1;
+  const acertos = termos.filter((t) => termoComoPalavra(texto, t));
+  if (!acertos.length) return false;
+
+  if (redeSocial || rigoroso) {
+    if (!contextoGospel) return false;
+    if (acertos.some((t) => termoAmbiguo(t)) && !temContextoGospel(texto)) return false;
+    return acertos.length >= 1;
   }
 
   return acertos.length >= 1 || contextoGospel;
 }
 
-const RUIDO_REDES_SOCIAIS = [
-  'messi', 'mbappe', 'ronaldo', 'real madrid', 'barcelona', 'fútbol', 'futebol',
-  'premier league', 'champions league', 'nba', 'ufc', 'netflix', 'disney',
-  'derbez', 'hollywood', 'anime', 'naruto', 'crunchyroll', 'btc', 'bitcoin',
-  'criptomoeda', 'horóscopo', 'horoscopo', 'receita de bolo', 'loteria'
-];
-
 function itemRelevanteRedeSocial(item, palavraChave) {
-  if (!itemCombinaPalavraChave(item, palavraChave, { rigoroso: true })) return false;
+  const texto = textoConteudoItem(item);
+  if (!texto || texto.replace(/\s+/g, '').length < 25) return false;
 
-  const texto = textoItemBusca(item);
-  const temRuido = RUIDO_REDES_SOCIAIS.some((r) => texto.includes(r));
-  const contextoGospel = /gospel|evangel|igreja|louvor|pastor|pastora|cantor|cantora|adora|louvou|culto|cristao|cristão|biblia|bíblia|worship|louvor/.test(texto);
+  if (RUIDO_REDES_SOCIAIS.some((r) => texto.includes(r))) return false;
 
-  if (temRuido && !contextoGospel) return false;
+  if (!itemCombinaPalavraChave(item, palavraChave, { rigoroso: true, redeSocial: true })) {
+    return false;
+  }
 
   const termos = extrairTermosChaveBusca(palavraChave);
-  if (termos.length && !termos.some((t) => texto.includes(t))) return false;
+  const contextoGospel = temContextoGospel(texto);
+
+  if (!contextoGospel) return false;
+
+  if (termos.some((t) => t === 'pastor' || t === 'pastora' || t === 'pastores')) {
+    if (/\b(pastor(?:es)?\s+afgano|pastor\s+alemao|pastor\s+alemão|dog|perro|cachorro|raça)\b/i.test(texto)) {
+      return false;
+    }
+  }
+
+  if (termos.includes('louvor') && !/\b(louvor|louvou|louvores|worship|adora|igreja|gospel|hino|culto)\b/i.test(texto)) {
+    return false;
+  }
 
   return true;
 }
 
 function pontuarRelevanciaRede(item, palavraChave) {
-  const texto = textoItemBusca(item);
+  const texto = textoConteudoItem(item);
   const termos = extrairTermosChaveBusca(palavraChave);
   let score = pontuarTopico(item);
 
   for (const t of termos) {
-    if (texto.includes(t)) score += MS_POR_DIA;
+    if (termoComoPalavra(texto, t)) score += MS_POR_DIA;
   }
-  if (/gospel|evangel|louvor|igreja/.test(texto)) score += MS_POR_DIA * 0.5;
+  if (temContextoGospel(texto)) score += MS_POR_DIA * 0.75;
   if (item.redeSocial === 'Instagram') score += MS_POR_HORA * 6;
   if (item.redeSocial === 'Facebook') score += MS_POR_HORA * 5;
-  if (item.redeSocial === 'X (Twitter)') score += MS_POR_HORA * 5;
+  if (item.redeSocial === 'X (Twitter)') score += MS_POR_HORA * 3;
   if (item.link?.includes('instagram.com/reel')) score += MS_POR_HORA * 4;
   if ((item.conteudoRede || '').length > 120) score += MS_POR_HORA * 8;
-  if (RUIDO_REDES_SOCIAIS.some((r) => texto.includes(r))) score -= MS_POR_DIA * 3;
+  if (RUIDO_REDES_SOCIAIS.some((r) => texto.includes(r))) score -= MS_POR_DIA * 5;
 
   return score;
 }
 
 function montarConsultasRedesSociais(palavraChave, dias = 1) {
-  const termo = palavraChave.trim();
+  const termoBase = palavraChave.trim();
+  const termo = termoParaConsultaRede(termoBase);
   const termoAspas = termo.includes(' ') ? `"${termo}"` : termo;
+  const termoGospel = `${termoBase} gospel`;
+  const termoGospelAspas = `"${termoBase}" gospel`;
   const fresh = freshnessBrave(dias);
   const c = (q, rede, limite) => ({ q, rede, limite, fresh });
 
   return [
-    c(`site:instagram.com/p ${termoAspas}`, 'Instagram', 15),
-    c(`site:instagram.com/reel ${termoAspas}`, 'Instagram', 15),
-    c(`site:instagram.com/reel ${termo} gospel louvor`, 'Instagram', 12),
-    c(`site:instagram.com/p ${termo} gospel`, 'Instagram', 12),
-    c(`site:instagram.com ${termo} (cantora OR cantor OR louvor OR igreja)`, 'Instagram', 10),
-    c(`site:instagram.com ${termo} pastor pastora adoração`, 'Instagram', 10),
-    c(`site:instagram.com ${termo} testemunho congresso`, 'Instagram', 8),
-    c(`site:facebook.com ${termoAspas} gospel`, 'Facebook', 12),
-    c(`site:facebook.com/posts ${termo} louvor igreja`, 'Facebook', 12),
-    c(`site:facebook.com/reel ${termo} gospel`, 'Facebook', 10),
-    c(`site:facebook.com/watch ${termo} gospel`, 'Facebook', 10),
-    c(`site:facebook.com/groups ${termo} gospel`, 'Facebook', 8),
-    c(`site:facebook.com ${termo} pastor pastora`, 'Facebook', 8),
-    c(`(site:twitter.com OR site:x.com) ${termoAspas} gospel`, 'X (Twitter)', 12),
-    c(`(site:twitter.com OR site:x.com) ${termo} (louvor OR igreja OR evangélico)`, 'X (Twitter)', 10),
-    c(`(site:twitter.com OR site:x.com) ${termo} pastor pastora`, 'X (Twitter)', 10),
-    c(`(site:twitter.com OR site:x.com) ${termoAspas} testemunho`, 'X (Twitter)', 8),
-    c(`site:threads.net ${termo} gospel`, 'Threads', 8),
-    c(`site:threads.net ${termoAspas} igreja louvor`, 'Threads', 6),
-    c(`site:tiktok.com ${termo} gospel louvor`, 'TikTok', 10),
-    c(`site:tiktok.com ${termoAspas} pastor igreja`, 'TikTok', 8),
-    c(`site:youtube.com/shorts ${termo} gospel`, 'YouTube', 6),
-    c(`site:youtube.com/watch ${termo} gospel louvor`, 'YouTube', 6),
-    c(`site:linkedin.com/posts ${termo} gospel igreja`, 'LinkedIn', 5),
-    c(`site:pinterest.com ${termo} gospel louvor`, 'Pinterest', 5),
-    c(`site:kwai.com ${termo} gospel`, 'Kwai', 5),
-    c(`site:reddit.com ${termo} gospel brasil`, 'Reddit', 5)
+    c(`site:instagram.com/p ${termoGospelAspas}`, 'Instagram', 15),
+    c(`site:instagram.com/reel ${termoGospelAspas}`, 'Instagram', 15),
+    c(`site:instagram.com/reel ${termoGospel} louvor`, 'Instagram', 12),
+    c(`site:instagram.com/p ${termoGospel} igreja`, 'Instagram', 12),
+    c(`site:instagram.com ${termoGospel} (cantora OR cantor OR igreja)`, 'Instagram', 10),
+    c(`site:instagram.com ${termoGospelAspas} adoração`, 'Instagram', 10),
+    c(`site:instagram.com ${termoGospel} testemunho`, 'Instagram', 8),
+    c(`site:facebook.com ${termoGospelAspas}`, 'Facebook', 12),
+    c(`site:facebook.com/posts ${termoGospel} louvor`, 'Facebook', 12),
+    c(`site:facebook.com/reel ${termoGospelAspas}`, 'Facebook', 10),
+    c(`site:facebook.com/watch ${termoGospel} igreja`, 'Facebook', 10),
+    c(`site:facebook.com/groups ${termoGospelAspas}`, 'Facebook', 8),
+    c(`site:facebook.com ${termoGospel} evangélico`, 'Facebook', 8),
+    c(`(site:twitter.com OR site:x.com) ${termoGospelAspas}`, 'X (Twitter)', 12),
+    c(`(site:twitter.com OR site:x.com) ${termoGospel} (louvor OR igreja)`, 'X (Twitter)', 10),
+    c(`(site:twitter.com OR site:x.com) ${termoGospelAspas} brasil`, 'X (Twitter)', 8),
+    c(`site:threads.net ${termoGospelAspas}`, 'Threads', 8),
+    c(`site:threads.net ${termoGospel} igreja`, 'Threads', 6),
+    c(`site:tiktok.com ${termoGospelAspas}`, 'TikTok', 10),
+    c(`site:tiktok.com ${termoGospel} pastor igreja`, 'TikTok', 8),
+    c(`site:youtube.com/shorts ${termoGospelAspas}`, 'YouTube', 8),
+    c(`site:youtube.com/watch ${termoGospel} louvor`, 'YouTube', 8),
+    c(`site:linkedin.com/posts ${termoGospelAspas}`, 'LinkedIn', 5),
+    c(`site:pinterest.com ${termoGospel} louvor`, 'Pinterest', 5),
+    c(`site:kwai.com ${termoGospelAspas}`, 'Kwai', 5),
+    c(`site:reddit.com ${termoGospelAspas} brasil`, 'Reddit', 5)
   ];
 }
 
@@ -377,7 +443,8 @@ async function buscarGoogleNews24h(palavraChave, limite = 4) {
 }
 
 async function buscarGoogleNewsSite(site, palavraChave, limite = 2, dias = 5) {
-  const query = encodeURIComponent(`site:${site} ${palavraChave} gospel when:${dias}d`);
+  const termoGospel = termoParaConsultaRede(palavraChave);
+  const query = encodeURIComponent(`site:${site} ${termoGospel} when:${dias}d`);
   const url = `https://news.google.com/rss/search?q=${query}&hl=pt-BR&gl=BR&ceid=BR:pt-419`;
   try {
     const res = await fetch(url, { headers: { 'User-Agent': USER_AGENT }, signal: AbortSignal.timeout(12000) });
@@ -731,7 +798,10 @@ async function pesquisarNichos(palavrasChave, quantidadePorNicho = 5, opcoes = {
 
   const adicionar = (item, termoOrigem) => {
     if (!item?.titulo) return;
-    if (somenteRedesSociais && !itemRelevanteRedeSocial(item, termoOrigem || item.nicho)) return;
+    const termoRef = termoOrigem || item.nicho;
+    const ehRede = item.tipoFonte === 'rede_social' || item.redeSocial;
+    if (ehRede && !itemRelevanteRedeSocial(item, termoRef)) return;
+    if (somenteRedesSociais && !itemRelevanteRedeSocial(item, termoRef)) return;
     if (!itemQualidadeValida(item)) return;
     if (somenteRecentes && !itemEhRecente(item, periodo)) return;
 
