@@ -2,6 +2,7 @@ const router = require('express').Router();
 const { Post, Category, Setting } = require('../../models');
 const uploadCapaPost = require('../../middlewares/uploadCapaPost');
 const { buscarCandidatosCapaManual, salvarCandidatoComoCapa } = require('../../services/imageFetcher');
+const { braveDisponivel } = require('../../services/braveApi');
 const { obterResumoFila } = require('../../services/iaFilaPublicacao');
 const { obterResumoMonitores } = require('../../services/iaMonitorAutomatico');
 const { notificarPublicacao } = require('../../services/indexacao');
@@ -60,12 +61,20 @@ router.post('/buscar-imagens', async (req, res) => {
       termosBusca: termos || '',
       assuntoImagem: assuntoImagem || ''
     });
+
+    let mensagem;
+    if (!candidatos.length) {
+      mensagem = braveDisponivel()
+        ? 'Nenhuma imagem relevante. Tente o nome da igreja, cidade ou evento (ex.: Aliança em Cristo Santo André).'
+        : 'Nenhuma imagem encontrada. Configure BRAVE_SEARCH_API_KEY no servidor (plano grátis em api-dashboard.search.brave.com) para buscas melhores.';
+    } else {
+      mensagem = `${candidatos.length} imagem(ns) relevante(s). Clique para usar como capa.`;
+    }
+
     res.json({
       ok: true,
       candidatos,
-      mensagem: candidatos.length
-        ? `${candidatos.length} imagem(ns) encontrada(s). Clique para usar como capa.`
-        : 'Nenhuma imagem encontrada. Tente outros termos de busca.'
+      mensagem
     });
   } catch (e) {
     console.error('buscar-imagens:', e);

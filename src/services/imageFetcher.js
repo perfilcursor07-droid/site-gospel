@@ -157,6 +157,105 @@ function extrairEntidades(titulo, resumo, pessoaPrincipal) {
   return [...entidades];
 }
 
+function extrairOrganizacoes(titulo, resumo) {
+  const texto = `${titulo || ''} ${resumo || ''}`;
+  const orgs = new Set();
+
+  const padroes = [
+    /\b((?:Igreja|Ministério|Ministerio|Comunidade|Aliança|Alianca|Projeto|Congregação|Congregacao|Missão|Missao|Aliança)\s+(?:em\s+|de\s+|da\s+|do\s+)?[A-ZÀ-Ú][\wà-ú]+(?:\s+[A-ZÀ-Ú][\wà-ú]+){0,3})/gi,
+    /\b([A-ZÀ-Ú][\wà-ú]+\s+em\s+[A-ZÀ-Ú][\wà-ú]+(?:\s+[A-ZÀ-Ú][\wà-ú]+)?)/g
+  ];
+
+  for (const padrao of padroes) {
+    for (const m of texto.matchAll(padrao)) {
+      const nome = (m[1] || '').trim();
+      if (nome.length > 6 && nome.length < 55) orgs.add(nome);
+    }
+  }
+
+  for (const m of texto.matchAll(/\b([A-ZÀ-Ú][a-zà-ú]{2,}[A-Z][\wà-ú]*)\b/g)) {
+    orgs.add(m[1]);
+  }
+
+  for (const m of texto.matchAll(/\bem\s+([A-ZÀ-Ú][\wà-ú]+(?:\s+[A-ZÀ-Ú][\wà-ú]+)?)\b/g)) {
+    const local = m[1].trim();
+    const primeira = local.split(/\s+/)[0];
+    if (local.length > 4 && !['Cristo', 'Deus', 'Jesus', 'Brasil', 'Gospel'].includes(primeira)) {
+      orgs.add(local);
+    }
+  }
+
+  return [...orgs];
+}
+
+function imagemPareceLixoManual(img) {
+  const url = (img.url || '').toLowerCase();
+  const titulo = normalizarTexto(img.title || img.alt || '');
+  const pagina = normalizarTexto(img.contextLink || img.source || '');
+
+  if (/scontent\.|fbcdn\.net|facebook\.com|instagram\.com/.test(url)) {
+    if (/\d{8,}[_/]\d+/.test(url) || /_\d+_\d+_\d+_n/.test(url)) return true;
+  }
+
+  if (/\b(slider|banner|carousel|carrossel|copiar|widget|thumb|logo|icone|icon|favicon|placeholder|sprite)\b/.test(titulo)) return true;
+  if (/\b(slider|banner|carousel|carrossel|dedicação|dedicacao)\b/.test(pagina) && !titulo) return true;
+  if (/^\d[\d_]+n?$/.test(titulo.replace(/\s/g, ''))) return true;
+  if (titulo.length > 0 && titulo.length < 5 && !/[a-z]{3,}/.test(titulo)) return true;
+
+  return false;
+}
+
+function imagemCombinaMateriaManual(img, ctx) {
+  if (!img?.url || urlImagemProibida(img.url, img.contextLink)) return false;
+
+  if (img.fromNoticia && paginaCombinaMateria(img, ctx.titulo, ctx.resumo, ctx.tituloReferencia)) {
+    return true;
+  }
+
+  if (ctx.entidades.length && imagemCombinaAlgumaEntidade(img, ctx.entidades)) {
+    return true;
+  }
+
+  return imagemCombinaMateria(img, { ...ctx, entidades: [] }, { ignorarOrigem: true });
+}
+
+function passaFiltroManual(img, ctx) {
+  if (!passaFiltroBasico(img)) return false;
+  if (imagemPareceLixoManual(img)) return false;
+  if (imagemPessoaInadequada(img, ctx)) return false;
+  if (imagemUrlGenerica(img.url)) return false;
+
+  if (imagemCombinaMateriaManual(img, ctx)) return true;
+
+  return pontuarImagemStock(img, ctx) <= 5;
+}
+
+function montarConsultasCapaManual({ titulo, resumo, assuntoImagem, entidades, organizacoes }) {
+  const consultas = [];
+  const add = (q) => { if (q && String(q).trim().length > 5) consultas.push(String(q).trim()); };
+
+  if (titulo) {
+    add(`"${titulo.slice(0, 90)}"`);
+    add(`${titulo.slice(0, 70)} foto`);
+  }
+
+  for (const org of (organizacoes || []).slice(0, 3)) {
+    add(`"${org}" igreja gospel foto`);
+    add(`${org} culto evento`);
+  }
+
+  for (const ent of (entidades || []).slice(0, 2)) {
+    add(`${ent} gospel foto`);
+  }
+
+  montarConsultasNoticia({ tituloReferencia: titulo, titulo, resumo, entidades: [...entidades, ...organizacoes] })
+    .forEach(add);
+
+  montarConsultasContextuais(titulo, resumo, assuntoImagem, entidades).forEach(add);
+
+  return [...new Set(consultas)];
+}
+
 function extrairPalavrasChaveRelevancia(titulo, resumo, assuntoImagem, termosImagem) {
   const texto = `${titulo || ''} ${resumo || ''} ${assuntoImagem || ''} ${termosImagem || ''}`;
   const palavras = texto
@@ -1291,7 +1390,7 @@ function formatarCandidatoManual(img) {
 }
 
 /**
- * Busca imagens na web para escolha manual no admin (Brave + fallback Python/DuckDuckGo).
+ * Busca imagens na web para escolha manual no admin (notícias reais + Brave/Bing).
  */
 async function buscarCandidatosCapaManual({
   titulo,
@@ -1300,7 +1399,12 @@ async function buscarCandidatosCapaManual({
   assuntoImagem,
   pessoaPrincipal
 }) {
-  const entidades = extrairEntidades(titulo, resumo, pessoaPrincipal);
+  const organizacoes = extrairOrganizacoes(titulo, resumo);
+  const entidades = [...new Set([
+    ...extrairEntidades(titulo, resumo, pessoaPrincipal),
+    ...organizacoes
+  ])];
+
   const ctx = criarContextoRelevancia({
     titulo,
     resumo,
@@ -1318,37 +1422,62 @@ async function buscarCandidatosCapaManual({
       .map((t) => t.trim())
       .filter((t) => t.length > 3);
   }
-  if (!consultas.length) {
-    consultas = montarConsultasImagem({
+
+  consultas = [...new Set([
+    ...consultas,
+    ...montarConsultasCapaManual({ titulo, resumo, assuntoImagem, entidades, organizacoes }),
+    ...montarConsultasImagem({
       termosImagem: termosBusca,
       assuntoImagem,
       titulo,
       resumo,
       entidades,
       pessoaPrincipal
-    });
-  }
+    })
+  ])];
+
   if (!consultas.length && titulo) consultas.push(titulo.trim());
 
   const vistos = new Set();
-  const candidatos = [];
-  const adicionar = (lista) => {
+  const brutos = [];
+
+  const adicionarBruto = (lista, extras = {}) => {
     for (const img of lista) {
-      const fmt = formatarCandidatoManual(img);
-      if (!fmt || vistos.has(fmt.url)) continue;
-      if (!passaFiltroBasico(img)) continue;
-      vistos.add(fmt.url);
-      candidatos.push(fmt);
+      if (!img?.url || vistos.has(img.url)) continue;
+      if (!passaFiltroManual(img, ctx)) continue;
+      vistos.add(img.url);
+      brutos.push({ ...img, ...extras });
     }
   };
 
-  for (const q of consultas.slice(0, 4)) {
-    if (braveDisponivel()) {
-      adicionar(await buscarBraveImagens(q, ctx, { consultaDireta: true, filtroRigoroso: false }));
+  // 1) Fotos das páginas de notícia (og:image) — mais preciso
+  adicionarBruto(await buscarImagensViaBraveWeb(consultas, ctx));
+
+  // 2) API de imagens Brave (mesma chave do site — plano grátis ~1000 buscas/mês)
+  if (braveDisponivel()) {
+    for (const q of consultas.slice(0, 5)) {
+      const imgs = await buscarBraveImagens(q, ctx, { consultaDireta: true, filtroRigoroso: true });
+      adicionarBruto(imgs);
     }
   }
 
-  if (candidatos.length < 8) {
+  // 3) Bing Imagens (se tiver chave legada)
+  if (process.env.BING_SEARCH_API_KEY) {
+    for (const q of consultas.slice(0, 3)) {
+      adicionarBruto(await buscarBingImagens(q, ctx));
+    }
+  }
+
+  // 4) Fallback leve: Brave sem filtro máximo, mas ainda com relevância
+  if (brutos.length < 6 && braveDisponivel()) {
+    for (const q of consultas.slice(0, 2)) {
+      const imgs = await buscarBraveImagens(q, ctx, { consultaDireta: true, filtroRigoroso: false });
+      adicionarBruto(imgs.filter((img) => imagemCombinaMateriaManual(img, ctx)));
+    }
+  }
+
+  // 5) Python/DuckDuckGo só se ainda faltar — com os mesmos filtros
+  if (brutos.length < 5) {
     try {
       const python = await listarImagensPython({
         titulo,
@@ -1357,18 +1486,25 @@ async function buscarCandidatosCapaManual({
         termos_busca: consultas.slice(0, 5),
         modo: 'listar'
       });
-      if (python?.length) adicionar(python.map((c) => ({
-        url: c.url,
-        thumbnail: c.preview || c.url,
-        title: c.title || '',
-        contextLink: c.source || ''
-      })));
+      if (python?.length) {
+        adicionarBruto(python.map((c) => ({
+          url: c.url,
+          thumbnail: c.preview || c.url,
+          title: c.title || '',
+          contextLink: c.source || ''
+        })));
+      }
     } catch (e) {
       console.warn('listarImagensPython:', e.message);
     }
   }
 
-  return candidatos.slice(0, 30);
+  const ordenados = ordenarCandidatos(brutos, ctx);
+
+  return ordenados
+    .map(formatarCandidatoManual)
+    .filter(Boolean)
+    .slice(0, 24);
 }
 
 async function salvarCandidatoComoCapa({ url, preview, contextLink, titulo, resumo, assuntoImagem, alt }) {
