@@ -5,6 +5,16 @@ const upload = require('../../config/upload');
 const { obterResumo } = require('../../services/sitemap');
 const { gerarChaveIndexNow } = require('../../services/indexacao');
 const { sugerirConfiguracaoSite } = require('../../services/siteConfigAi');
+const {
+  estaConfigurado,
+  obterEmailContaServico,
+  obterQuotaHoje,
+  testarConexao,
+  enviarUrls,
+  QUOTA_DIARIA_PADRAO
+} = require('../../services/googleIndexing');
+const { Post } = require('../../models');
+const { obterUrlBase } = require('../../utils/requestUrl');
 const { extrairClientAdSense } = require('../../utils/amp');
 
 router.use(permitir('administrador'));
@@ -32,7 +42,17 @@ router.get('/', async (req, res, next) => {
         erro: erroSitemap.message
       };
     }
-    res.render('admin/settings/form', { titulo: 'Configurações', config, sitemap });
+    res.render('admin/settings/form', {
+      titulo: 'Configurações',
+      config,
+      sitemap,
+      googleIndexing: {
+        configurado: estaConfigurado(),
+        email: obterEmailContaServico(),
+        quota: await obterQuotaHoje(),
+        quotaMax: QUOTA_DIARIA_PADRAO
+      }
+    });
   } catch (e) { next(e); }
 });
 
@@ -119,11 +139,57 @@ router.post('/', upload.fields([
       await Setting.definir('og_imagem', `/uploads/${req.files.og_imagem[0].filename}`);
     }
 
+    await Setting.definir('google_indexing_ativo', req.body.google_indexing_ativo === 'on' ? 'sim' : 'nao');
+
     req.flash('sucesso', 'Configurações salvas com sucesso.');
   } catch (e) {
     req.flash('erro', 'Erro ao salvar configurações: ' + e.message);
   }
   res.redirect('/admin/configuracoes');
+});
+
+router.post('/google-indexing/testar', async (req, res) => {
+  try {
+    const config = await Setting.obterTodas();
+    const base = obterUrlBase(req, config);
+    const urlTeste = base ? `${base}/sitemap.xml` : null;
+    const resultado = await testarConexao(urlTeste);
+    res.json(resultado);
+  } catch (e) {
+    res.status(500).json({ ok: false, erro: e.message });
+  }
+});
+
+router.post('/google-indexing/enviar', async (req, res) => {
+  try {
+    const config = await Setting.obterTodas();
+    const base = obterUrlBase(req, config);
+    if (!base) {
+      return res.status(400).json({ ok: false, erro: 'Configure a URL canônica do site na aba Sitemap.' });
+    }
+
+    const limite = Math.min(Math.max(parseInt(req.body.limite, 10) || 30, 1), 200);
+    const posts = await Post.findAll({
+      where: { status: 'publicado' },
+      attributes: ['slug'],
+      order: [['publicadoEm', 'DESC']],
+      limit: limite
+    });
+
+    const urls = posts.map((p) => `${base}/post/${p.slug}`);
+    const resultado = await enviarUrls(urls, { limite });
+
+    res.json({
+      ok: true,
+      enviados: resultado.ok.length,
+      erros: resultado.erros,
+      ignorados: resultado.ignorados,
+      quota: resultado.quota,
+      mensagem: `${resultado.ok.length} URL(s) enviada(s) ao Google.${resultado.erros.length ? ` ${resultado.erros.length} com erro.` : ''}`
+    });
+  } catch (e) {
+    res.status(400).json({ ok: false, erro: e.message });
+  }
 });
 
 router.post('/ia-sugerir', async (req, res) => {

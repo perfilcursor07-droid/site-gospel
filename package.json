@@ -9,7 +9,8 @@
     "db:migrate": "sequelize-cli db:migrate",
     "db:migrate:undo": "sequelize-cli db:migrate:undo",
     "seed": "node src/seed.js",
-    "setup:python": "pip install -r scripts/requirements.txt"
+    "setup:python": "pip install -r scripts/requirements.txt",
+    "google:indexar": "node scripts/google-indexing-enviar.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -19,6 +20,7 @@
     "express": "^4.19.2",
     "express-ejs-layouts": "^2.5.1",
     "express-session": "^1.18.0",
+    "google-auth-library": "^10.9.0",
     "multer": "^1.4.5-lts.1",
     "mysql2": "^3.10.0",
     "sequelize": "^6.37.3",

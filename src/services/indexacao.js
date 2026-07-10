@@ -1,4 +1,5 @@
 const { obterUrlBase } = require('../utils/requestUrl');
+const { notificarPost } = require('./googleIndexing');
 
 function hostDaUrl(base) {
   try {
@@ -52,7 +53,8 @@ async function notificarPublicacao(config, slug, req = null) {
 
   await Promise.allSettled([
     pingIndexNow(config, [postUrl, ...sitemaps], req),
-    ...sitemaps.map((u) => pingSitemap(u))
+    ...sitemaps.map((u) => pingSitemap(u)),
+    notificarPost(config, slug, req)
   ]);
 }
 

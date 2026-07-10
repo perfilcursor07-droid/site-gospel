@@ -253,6 +253,36 @@
     <p class="dica">Ao <strong>publicar um post</strong>, o site avisa automaticamente os buscadores (IndexNow + ping do sitemap). O Google ainda pode levar algumas horas para indexar — use <strong>Inspeção de URL</strong> no Search Console para acelerar uma matéria específica.</p>
 
     <fieldset class="sitemap-opcoes">
+      <legend>Google Indexing API (avisar Google em lote)</legend>
+      <% if (typeof googleIndexing !== 'undefined' && googleIndexing.configurado) { %>
+        <p class="dica"><strong>Conta:</strong> <code><%= googleIndexing.email || '—' %></code></p>
+        <p class="dica">Cota hoje: <strong><%= googleIndexing.quota.enviados %></strong> / <%= googleIndexing.quotaMax %> enviados · restam <strong><%= googleIndexing.quota.restantes %></strong></p>
+      <% } else { %>
+        <p class="sitemap-alerta">Coloque o arquivo JSON da conta de serviço em <code>config/google-indexing-key.json</code> (ou defina <code>GOOGLE_INDEXING_KEY_FILE</code> no .env).</p>
+        <p class="dica">Conta esperada: <code>obuxixogospel-indexing@gen-lang-client-0972652469.iam.gserviceaccount.com</code></p>
+        <p class="dica">No Search Console → Configurações → Usuários → adicionar essa conta como <strong>Proprietário</strong>.</p>
+      <% } %>
+      <label class="checkbox">
+        <input type="checkbox" name="google_indexing_ativo" <%= (config.google_indexing_ativo || 'nao') === 'sim' ? 'checked' : '' %>>
+        Enviar automaticamente ao Google quando publicar um post
+      </label>
+      <div class="sitemap-acoes-google" style="margin-top:10px">
+        <label>Posts recentes a enviar
+          <select id="google-indexing-limite">
+            <option value="10">10</option>
+            <option value="30" selected>30</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+            <option value="200">200 (máx. cota/dia)</option>
+          </select>
+        </label>
+        <button type="button" class="btn btn-secundario" id="btn-google-indexing-testar">Testar conexão</button>
+        <button type="button" class="btn btn-primario" id="btn-google-indexing-enviar">Enviar posts ao Google</button>
+      </div>
+      <p id="google-indexing-resultado" class="dica" style="margin-top:8px"></p>
+    </fieldset>
+
+    <fieldset class="sitemap-opcoes">
       <legend>IndexNow (aviso automático ao publicar)</legend>
       <label>Chave IndexNow
         <input type="text" name="indexnow_chave" value="<%= config.indexnow_chave || '' %>" placeholder="Gere uma chave para ativar" readonly>
@@ -376,6 +406,50 @@
   if (window.location.hash === '#sitemap') {
     var abaSitemap = document.querySelector('.aba-btn[data-aba="sitemap"]');
     if (abaSitemap) abaSitemap.click();
+  }
+
+  var btnGiTestar = document.getElementById('btn-google-indexing-testar');
+  var btnGiEnviar = document.getElementById('btn-google-indexing-enviar');
+  var giResultado = document.getElementById('google-indexing-resultado');
+  var giLimite = document.getElementById('google-indexing-limite');
+
+  function giStatus(msg, tipo) {
+    if (!giResultado) return;
+    giResultado.textContent = msg;
+    giResultado.style.color = tipo === 'erro' ? '#b91c1c' : tipo === 'ok' ? '#15803d' : '#6b7280';
+  }
+
+  if (btnGiTestar) {
+    btnGiTestar.addEventListener('click', async function () {
+      btnGiTestar.disabled = true;
+      giStatus('Testando conexão com Google...', 'info');
+      try {
+        var res = await fetch('/admin/configuracoes/google-indexing/testar', { method: 'POST' });
+        var data = await res.json();
+        if (data.ok) giStatus(data.mensagem + ' Cota restante: ' + data.quota.restantes + '.', 'ok');
+        else giStatus(data.erro || 'Falha na conexão.', 'erro');
+      } catch (e) { giStatus(e.message, 'erro'); }
+      finally { btnGiTestar.disabled = false; }
+    });
+  }
+
+  if (btnGiEnviar) {
+    btnGiEnviar.addEventListener('click', async function () {
+      if (!confirm('Enviar os posts mais recentes para a fila de indexação do Google?')) return;
+      btnGiEnviar.disabled = true;
+      giStatus('Enviando URLs... pode levar alguns minutos.', 'info');
+      try {
+        var res = await fetch('/admin/configuracoes/google-indexing/enviar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ limite: giLimite ? giLimite.value : 30 })
+        });
+        var data = await res.json();
+        if (data.ok) giStatus(data.mensagem + ' Cota restante: ' + data.quota.restantes + '.', 'ok');
+        else giStatus(data.erro || 'Erro ao enviar.', 'erro');
+      } catch (e) { giStatus(e.message, 'erro'); }
+      finally { btnGiEnviar.disabled = false; }
+    });
   }
   if (window.location.hash === '#amp') {
     var abaAmp = document.querySelector('.aba-btn[data-aba="amp"]');
