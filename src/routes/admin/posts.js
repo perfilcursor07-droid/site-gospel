@@ -167,19 +167,56 @@ router.post('/:id', ...uploadCapaPost, async (req, res) => {
   }
 });
 
+function redirectPosts(res, status) {
+  const filtro = status && status !== 'todos' ? `?status=${encodeURIComponent(status)}` : '';
+  res.redirect(`/admin/posts${filtro}`);
+}
+
+router.post('/excluir-lote', async (req, res) => {
+  try {
+    const ids = Array.isArray(req.body.ids)
+      ? req.body.ids
+      : (req.body.ids ? [req.body.ids] : []);
+    const numeros = [...new Set(ids.map((id) => parseInt(id, 10)).filter((id) => id > 0))];
+
+    if (!numeros.length) {
+      req.flash('erro', 'Nenhum post selecionado.');
+      return redirectPosts(res, req.body.redirectStatus);
+    }
+
+    const posts = await Post.findAll({ where: { id: numeros } });
+    let excluidos = 0;
+
+    for (const post of posts) {
+      if (!podeEditar(req.session.user, post)) continue;
+      await post.destroy();
+      excluidos++;
+    }
+
+    if (!excluidos) {
+      req.flash('erro', 'Nenhum post pôde ser excluído (sem permissão).');
+    } else {
+      req.flash('sucesso', excluidos === 1 ? '1 post excluído.' : `${excluidos} posts excluídos.`);
+    }
+  } catch (e) {
+    req.flash('erro', 'Erro ao excluir posts: ' + e.message);
+  }
+  redirectPosts(res, req.body.redirectStatus);
+});
+
 router.post('/:id/excluir', async (req, res) => {
   try {
     const post = await Post.findByPk(req.params.id);
     if (!post || !podeEditar(req.session.user, post)) {
       req.flash('erro', 'Post não encontrado ou sem permissão.');
-      return res.redirect('/admin/posts');
+      return redirectPosts(res, req.body.redirectStatus);
     }
     await post.destroy();
     req.flash('sucesso', 'Post excluído.');
   } catch (e) {
     req.flash('erro', 'Erro ao excluir post: ' + e.message);
   }
-  res.redirect('/admin/posts');
+  redirectPosts(res, req.body.redirectStatus);
 });
 
 module.exports = router;

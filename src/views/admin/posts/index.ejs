@@ -56,6 +56,17 @@
   </label>
 </div>
 
+<div class="posts-acoes-lote" id="posts-acoes-lote" hidden>
+  <span id="posts-selecao-contagem">0 selecionado(s)</span>
+  <button type="button" class="btn btn-perigo btn-sm" id="btn-excluir-lote">Excluir selecionados</button>
+  <button type="button" class="btn btn-sec btn-sm" id="btn-limpar-selecao">Limpar seleção</button>
+</div>
+
+<form id="form-excluir-lote" action="/admin/posts/excluir-lote" method="post" hidden>
+  <div id="form-excluir-lote-ids"></div>
+  <input type="hidden" name="redirectStatus" id="form-excluir-lote-status" value="">
+</form>
+
 <% if (!posts.length) { %>
   <div class="posts-vazio">
     <p>Nenhum post encontrado.</p>
@@ -67,6 +78,9 @@
 <% } else { %>
   <div class="posts-lista-simples" id="posts-lista">
     <div class="posts-lista-cabecalho">
+      <span class="post-col-check">
+        <input type="checkbox" id="posts-selecionar-todos" title="Selecionar visíveis" aria-label="Selecionar todos visíveis">
+      </span>
       <span>Título</span>
       <span>Categoria</span>
       <span>Autor</span>
@@ -84,7 +98,10 @@
         : '-';
       const statusLabel = post.status === 'agendado' ? 'Agendado' : post.status;
     %>
-    <div class="post-linha" data-status="<%= post.status %>" data-titulo="<%= post.titulo.toLowerCase() %>">
+    <div class="post-linha" data-status="<%= post.status %>" data-titulo="<%= post.titulo.toLowerCase() %>" data-id="<%= post.id %>">
+      <span class="post-col-check">
+        <input type="checkbox" class="post-check" value="<%= post.id %>" aria-label="Selecionar <%= post.titulo %>">
+      </span>
       <span class="post-linha-titulo">
         <a href="/admin/posts/<%= post.id %>/editar"><%= post.titulo %></a>
         <% if (post.destaque) { %>
@@ -106,7 +123,8 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
           </a>
         <% } %>
-        <form action="/admin/posts/<%= post.id %>/excluir" method="post" onsubmit="return confirm('Excluir este post?')">
+        <form action="/admin/posts/<%= post.id %>/excluir" method="post" class="form-excluir-post" onsubmit="return confirm('Excluir este post?')">
+          <input type="hidden" name="redirectStatus" class="input-redirect-status" value="">
           <button type="submit" class="btn-icone btn-icone-perigo" title="Excluir">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
           </button>
@@ -124,7 +142,58 @@
     var buscaInput = document.getElementById('posts-busca');
     var lista = document.getElementById('posts-lista');
     var contador = document.getElementById('posts-contador');
+    var chkTodos = document.getElementById('posts-selecionar-todos');
+    var barraLote = document.getElementById('posts-acoes-lote');
+    var contagemLote = document.getElementById('posts-selecao-contagem');
+    var btnExcluirLote = document.getElementById('btn-excluir-lote');
+    var btnLimparSelecao = document.getElementById('btn-limpar-selecao');
+    var formExcluirLote = document.getElementById('form-excluir-lote');
+    var containerIdsLote = document.getElementById('form-excluir-lote-ids');
+    var inputStatusLote = document.getElementById('form-excluir-lote-status');
     if (!lista) return;
+
+    function atualizarUrlFiltro() {
+      var params = new URLSearchParams(window.location.search);
+      if (filtroAtual === 'todos') {
+        params.delete('status');
+      } else {
+        params.set('status', filtroAtual);
+      }
+      var qs = params.toString();
+      var url = window.location.pathname + (qs ? '?' + qs : '');
+      history.replaceState(null, '', url);
+    }
+
+    function atualizarRedirects() {
+      document.querySelectorAll('.input-redirect-status').forEach(function (input) {
+        input.value = filtroAtual;
+      });
+      if (inputStatusLote) inputStatusLote.value = filtroAtual;
+    }
+
+    function linhasVisiveis() {
+      return Array.from(lista.querySelectorAll('.post-linha')).filter(function (item) {
+        return !item.hidden;
+      });
+    }
+
+    function selecionados() {
+      return Array.from(lista.querySelectorAll('.post-check:checked'));
+    }
+
+    function atualizarBarraLote() {
+      var qtd = selecionados().length;
+      if (barraLote) barraLote.hidden = qtd === 0;
+      if (contagemLote) contagemLote.textContent = qtd + ' selecionado' + (qtd !== 1 ? 's' : '');
+      if (chkTodos) {
+        var visiveis = linhasVisiveis();
+        var marcadosVisiveis = visiveis.filter(function (linha) {
+          return linha.querySelector('.post-check')?.checked;
+        });
+        chkTodos.checked = visiveis.length > 0 && marcadosVisiveis.length === visiveis.length;
+        chkTodos.indeterminate = marcadosVisiveis.length > 0 && marcadosVisiveis.length < visiveis.length;
+      }
+    }
 
     function aplicarFiltros() {
       var termo = buscaInput ? buscaInput.value.trim().toLowerCase() : '';
@@ -137,23 +206,90 @@
         if (mostrar) visiveis++;
       });
       if (contador) contador.textContent = visiveis + ' post' + (visiveis !== 1 ? 's' : '');
+      atualizarBarraLote();
+    }
+
+    function ativarFiltro(filtro) {
+      filtroAtual = filtro;
+      document.querySelectorAll('.filtro-btn').forEach(function (b) {
+        b.classList.toggle('ativo', b.dataset.filtro === filtro);
+      });
+      atualizarRedirects();
+      atualizarUrlFiltro();
+      aplicarFiltros();
     }
 
     document.querySelectorAll('.filtro-btn').forEach(function (btn) {
       btn.addEventListener('click', function () {
-        document.querySelectorAll('.filtro-btn').forEach(function (b) { b.classList.remove('ativo'); });
-        btn.classList.add('ativo');
-        filtroAtual = btn.dataset.filtro;
-        aplicarFiltros();
+        ativarFiltro(btn.dataset.filtro);
       });
     });
 
     if (buscaInput) buscaInput.addEventListener('input', aplicarFiltros);
 
+    lista.addEventListener('change', function (e) {
+      if (e.target.classList.contains('post-check')) {
+        var linha = e.target.closest('.post-linha');
+        if (linha) linha.classList.toggle('post-linha--selecionada', e.target.checked);
+        atualizarBarraLote();
+      }
+    });
+
+    if (chkTodos) {
+      chkTodos.addEventListener('change', function () {
+        linhasVisiveis().forEach(function (linha) {
+          var chk = linha.querySelector('.post-check');
+          if (chk) chk.checked = chkTodos.checked;
+        });
+        atualizarBarraLote();
+      });
+    }
+
+    if (btnLimparSelecao) {
+      btnLimparSelecao.addEventListener('click', function () {
+        lista.querySelectorAll('.post-check').forEach(function (chk) { chk.checked = false; });
+        atualizarBarraLote();
+      });
+    }
+
+    if (btnExcluirLote && formExcluirLote && containerIdsLote) {
+      btnExcluirLote.addEventListener('click', function () {
+        var ids = selecionados().map(function (chk) { return chk.value; });
+        if (!ids.length) return;
+        var msg = ids.length === 1
+          ? 'Excluir 1 post selecionado?'
+          : 'Excluir ' + ids.length + ' posts selecionados?';
+        if (!confirm(msg)) return;
+        containerIdsLote.innerHTML = '';
+        ids.forEach(function (id) {
+          var input = document.createElement('input');
+          input.type = 'hidden';
+          input.name = 'ids';
+          input.value = id;
+          containerIdsLote.appendChild(input);
+        });
+        if (inputStatusLote) inputStatusLote.value = filtroAtual;
+        formExcluirLote.submit();
+      });
+    }
+
+    document.querySelectorAll('.form-excluir-post').forEach(function (form) {
+      form.addEventListener('submit', function () {
+        var input = form.querySelector('.input-redirect-status');
+        if (input) input.value = filtroAtual;
+      });
+    });
+
     var params = new URLSearchParams(window.location.search);
     if (params.get('fila') === '1') {
-      var btnAgendado = document.querySelector('.filtro-btn[data-filtro="agendado"]');
-      if (btnAgendado) btnAgendado.click();
+      ativarFiltro('agendado');
+    } else if (params.get('status')) {
+      var statusParam = params.get('status');
+      var btnStatus = document.querySelector('.filtro-btn[data-filtro="' + statusParam + '"]');
+      if (btnStatus) ativarFiltro(statusParam);
+    } else {
+      atualizarRedirects();
+      aplicarFiltros();
     }
 
     var banner = document.getElementById('fila-ia-banner');
