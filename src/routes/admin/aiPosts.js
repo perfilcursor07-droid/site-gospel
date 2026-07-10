@@ -109,7 +109,8 @@ router.post('/pesquisar', async (req, res) => {
         somenteRecentes: somenteRecentes !== false,
         diasRecentes: diasRecentes || '24h',
         conteudoInternacional: internacional,
-        incluirGoogleTrends: somenteRedes ? false : trends
+        incluirGoogleTrends: somenteRedes ? false : trends,
+        buscaAmpliada: somenteRedes || incluirRedesSociais !== false
       }
     );
     const topicosUnicos = deduplicarTopicos(topicos);

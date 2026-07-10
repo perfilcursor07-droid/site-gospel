@@ -1207,6 +1207,12 @@
   function renderizarTopicos(topicos) {
     topicosEncontrados = topicos;
     listaTopicos.innerHTML = '';
+    if (!topicos.length) {
+      listaTopicos.innerHTML = '<p class="ia-topico-vazio">Nenhum assunto encontrado nas redes para essas palavras-chave no período. Tente termos como <strong>pastora gospel</strong> ou amplie o período para 3–7 dias. Confirme também se <code>SERPER_API_KEY</code> está no servidor.</p>';
+      mostrarStatus('0 tópicos — refine a busca ou o período.', 'aviso');
+      irPasso(2);
+      return;
+    }
     var novos = 0;
     topicos.forEach(function (t, i) {
       var jaPub = !!t.jaPublicado;

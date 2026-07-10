@@ -145,14 +145,22 @@ function encontrarSimilar(titulo, lista = [], resumo = '') {
   ) || null;
 }
 
-function deduplicarTopicos(topicos = []) {
+function deduplicarTopicos(topicos = [], { modoRedes = false } = {}) {
   const unicos = [];
 
   for (const topico of topicos) {
-    const dupIdx = unicos.findIndex((u) =>
-      fatosSimilares(u.titulo, topico.titulo, u.resumo, topico.resumo)
-      || (u.link && topico.link && u.link === topico.link)
-    );
+    const dupIdx = unicos.findIndex((u) => {
+      const linkA = u.linkOriginal || u.link;
+      const linkB = topico.linkOriginal || topico.link;
+      if (linkA && linkB && linkA === linkB) return true;
+      if (modoRedes) {
+        const na = normalizarTitulo(u.titulo);
+        const nb = normalizarTitulo(topico.titulo);
+        if (na && nb && na === nb) return true;
+        return titulosSimilares(u.titulo, topico.titulo);
+      }
+      return fatosSimilares(u.titulo, topico.titulo, u.resumo, topico.resumo);
+    });
 
     if (dupIdx === -1) {
       unicos.push(topico);
@@ -163,6 +171,9 @@ function deduplicarTopicos(topicos = []) {
     if (topico.emAlta && !existente.emAlta) existente.emAlta = true;
     if ((topico.resumo || '').length > (existente.resumo || '').length) {
       existente.resumo = topico.resumo;
+    }
+    if ((topico.conteudoRede || '').length > (existente.conteudoRede || '').length) {
+      existente.conteudoRede = topico.conteudoRede;
     }
     if (!existente.link && topico.link) existente.link = topico.link;
   }

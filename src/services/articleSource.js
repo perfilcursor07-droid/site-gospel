@@ -41,9 +41,19 @@ function extrairMeta(html, propriedade) {
   return null;
 }
 
+function urlResolvidaValida(url) {
+  if (!url || typeof url !== 'string') return false;
+  const lower = url.toLowerCase();
+  if (lower.includes('googleusercontent.com') || lower.includes('gstatic.com') || lower.includes('ggpht.com')) {
+    return false;
+  }
+  if (lower.includes('news.google.com')) return false;
+  return true;
+}
+
 async function resolverUrlNoticia(url) {
   if (!url) return null;
-  if (!url.includes('news.google.com')) return url;
+  if (!url.includes('news.google.com')) return urlResolvidaValida(url) ? url : null;
 
   try {
     const res = await fetch(url, {
@@ -54,12 +64,12 @@ async function resolverUrlNoticia(url) {
     const html = await res.text();
     const canonical = html.match(/<link[^>]+rel=["']canonical["'][^>]+href=["']([^"']+)["']/i)?.[1]
       || html.match(/<meta[^>]+property=["']og:url["'][^>]+content=["']([^"']+)["']/i)?.[1];
-    if (canonical && !canonical.includes('news.google.com')) return canonical;
-    if (res.url && !res.url.includes('news.google.com')) return res.url;
+    if (urlResolvidaValida(canonical)) return canonical;
+    if (urlResolvidaValida(res.url)) return res.url;
 
     const urlDecodificada = html.match(/href=["'](https?:\/\/[^"']+)["'][^>]*data-n-au=/i)?.[1]
       || html.match(/href=["'](https?:\/\/(?!news\.google)[^"']+)["']/i)?.[1];
-    if (urlDecodificada && !urlDecodificada.includes('google.com')) return urlDecodificada;
+    if (urlResolvidaValida(urlDecodificada)) return urlDecodificada;
   } catch (e) {
     console.warn('resolverUrlNoticia:', e.message);
   }
@@ -187,6 +197,21 @@ async function apurarTopico(topico) {
     };
   }
 
+  const linkOriginal = topico.linkOriginal || topico.link;
+
+  if (ehTopicoRedeSocial(topico) && !urlResolvidaValida(linkOriginal)) {
+    return {
+      ...base,
+      linkOriginal,
+      link: linkOriginal,
+      contextoApuracao: fontesApuracao.length
+        ? montarContextoApuracao(fontesApuracao, base)
+        : undefined,
+      fontesApuracao,
+      dataReferencia: topico.data || new Date().toISOString()
+    };
+  }
+
   const meta = await extrairMetadadosArtigo(topico.link);
 
   if (meta.titulo || meta.descricao || meta.trecho) {
@@ -227,10 +252,12 @@ async function apurarTopico(topico) {
     }
   }
 
+  const linkFinal = urlResolvidaValida(meta.urlReal) ? meta.urlReal : linkOriginal;
+
   return {
     ...base,
-    linkOriginal: topico.link,
-    link: meta.urlReal || topico.link,
+    linkOriginal,
+    link: linkFinal,
     imagemFonte: meta.imagem,
     imagensFonte: meta.imagens || [],
     contextoApuracao: montarContextoApuracao(fontesApuracao, base),

@@ -1,5 +1,5 @@
 const { apurarTopico, decodificarHtml } = require('./articleSource');
-const { fatosSimilares, deduplicarTopicos } = require('../utils/topicMatch');
+const { fatosSimilares, titulosSimilares, deduplicarTopicos } = require('../utils/topicMatch');
 const { marcarRespostaBrave, marcarRespostaBraveOk, braveDisponivel } = require('./braveApi');
 const { buscarNoticias } = require('./braveSearch');
 const { buscarGoogleTrends } = require('./googleTrends');
@@ -100,12 +100,13 @@ function itemEhRecente(item, periodo = DIAS_RECENTES_PADRAO) {
   const limite = cfg.horas
     ? Date.now() - cfg.horas * MS_POR_HORA
     : Date.now() - (cfg.dias || DIAS_RECENTES_PADRAO) * MS_POR_DIA;
-  const ts = item.dataTimestamp || parsearDataPub(item.data) || parsearIdadeBrave(item.idadeBrave);
+  const ts = item.dataTimestamp || parsearDataPub(item.data) || parsearIdadeBrave(item.idadeBrave) || parsearDataRelativa(item.data);
   const ehRede = item.tipoFonte === 'rede_social' || item.redeSocial;
 
   if (!ts) {
     if (ehRede) {
       const janelaCurta = cfg.horas || (cfg.dias || 1) <= 1;
+      if (item.fromSerper && item.recente) return true;
       return !janelaCurta && item.recente === true;
     }
     if (item.recente && ['web', 'portal_gospel', 'noticia'].includes(item.tipoFonte)) return true;
@@ -194,7 +195,7 @@ function pontuarTopico(item) {
   return score;
 }
 
-const TERMOS_GOSPEL_CONTEXTO = /gospel|evangel|igreja|louvor|adora|adoracao|adoracao|worship|cristao|crista|biblia|ministerio|ministerio|pregacao|pregador|pregadora|culto|louvou|hino|louvores|jesus|deus|oracao|fe\b|seminario|congresso gospel|testemunho|redeemer|church|chapel|worship/i;
+const TERMOS_GOSPEL_CONTEXTO = /gospel|evangel|igreja|louvor|adora|adoracao|worship|cristao|crista|biblia|ministerio|pregacao|pregador|pregadora|pastor|pastora|pastores|culto|louvou|hino|louvores|jesus|deus|oracao|fe\b|seminario|testemunho|church|chapel|benção|bencao|fiel|congregacao|congregação|malafaia|quadrangular|evangelho/i;
 
 const TERMOS_AMBIGUOS_REDE = new Set([
   'pastor', 'pastora', 'pastores', 'louvor', 'louvores', 'adoracao', 'adoracao',
@@ -212,7 +213,9 @@ const RUIDO_REDES_SOCIAIS = [
   'afiliad', 'day trade', 'mmonews', 'jogos olimpicos', 'selecao espanola', 'orbán',
   'palestin', 'ucrania', 'ukraine', 'hungria', 'iranian', 'hegseth', 'homeland security',
   'pastores afganos', 'pastor alemao', 'pastor alemão', 'raça pastor', 'dog breed',
-  'philippine', 'filipino man', 'kwai', 'tiktok dance', 'meme', 'shitpost'
+  'philippine', 'filipino man', 'kwai', 'tiktok dance', 'meme', 'shitpost',
+  'divina pastora', 'hermandad', 'primitiva hermandad', 'es la reina de los cielos',
+  'pastoracapu', 'pastorasmarina', 'bata de cola', 'semana santa'
 ];
 
 function extrairTermosChaveBusca(palavraChave) {
@@ -244,14 +247,35 @@ function textoItemBusca(item) {
     .toLowerCase();
 }
 
+function parsearDataRelativa(str) {
+  if (!str) return 0;
+  const lower = String(str).toLowerCase();
+  const num = parseInt(lower, 10);
+  if (Number.isNaN(num)) return 0;
+  if (/hora|hour|\bh\b/.test(lower)) return Date.now() - num * MS_POR_HORA;
+  if (/dia|day|\bd\b/.test(lower)) return Date.now() - num * MS_POR_DIA;
+  if (/semana|week|\bsem\b/.test(lower)) return Date.now() - num * 7 * MS_POR_DIA;
+  if (/mes|month|\bm\b/.test(lower)) return Date.now() - num * 30 * MS_POR_DIA;
+  return 0;
+}
+
 function termoComoPalavra(texto, termo) {
   if (!termo || !texto) return false;
-  const esc = termo.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const t = termo.toLowerCase();
+  if (t === 'pastora' && /\bpastoras?\b/.test(texto)) return true;
+  if (t === 'pastor' && /\bpastores?\b/.test(texto)) return true;
+  if (t === 'louvor' && /\blouvou?res?\b/.test(texto)) return true;
+  const esc = t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   return new RegExp(`(?:^|[\\s.,;:!?¿¡"''"()\\[\\]/@#-])${esc}(?:$|[\\s.,;:!?¿¡"''"()\\[\\]/@#-])`, 'i').test(` ${texto} `);
 }
 
 function temContextoGospel(texto) {
   return TERMOS_GOSPEL_CONTEXTO.test(texto);
+}
+
+function contextoEvangelicoBrasil(texto) {
+  return temContextoGospel(texto)
+    || /\b(brasil|brasileir|evangelic|gospel|igreja|ministerio|ministerio|fiel|congresso|conferencia)\b/i.test(texto);
 }
 
 function termoAmbiguo(termo) {
@@ -281,8 +305,7 @@ function itemCombinaPalavraChave(item, palavraChave, { rigoroso = false, redeSoc
   if (!acertos.length) return false;
 
   if (redeSocial || rigoroso) {
-    if (!contextoGospel) return false;
-    if (acertos.some((t) => termoAmbiguo(t)) && !temContextoGospel(texto)) return false;
+    if (!contextoEvangelicoBrasil(texto)) return false;
     return acertos.length >= 1;
   }
 
@@ -291,7 +314,7 @@ function itemCombinaPalavraChave(item, palavraChave, { rigoroso = false, redeSoc
 
 function itemRelevanteRedeSocial(item, palavraChave) {
   const texto = textoConteudoItem(item);
-  if (!texto || texto.replace(/\s+/g, '').length < 25) return false;
+  if (!texto || texto.replace(/\s+/g, '').length < 18) return false;
 
   if (RUIDO_REDES_SOCIAIS.some((r) => texto.includes(r))) return false;
 
@@ -300,9 +323,8 @@ function itemRelevanteRedeSocial(item, palavraChave) {
   }
 
   const termos = extrairTermosChaveBusca(palavraChave);
-  const contextoGospel = temContextoGospel(texto);
 
-  if (!contextoGospel) return false;
+  if (!contextoEvangelicoBrasil(texto)) return false;
 
   if (termos.some((t) => t === 'pastor' || t === 'pastora' || t === 'pastores')) {
     if (/\b(pastor(?:es)?\s+afgano|pastor\s+alemao|pastor\s+alemão|dog|perro|cachorro|raça)\b/i.test(texto)) {
@@ -310,11 +332,97 @@ function itemRelevanteRedeSocial(item, palavraChave) {
     }
   }
 
-  if (termos.includes('louvor') && !/\b(louvor|louvou|louvores|worship|adora|igreja|gospel|hino|culto)\b/i.test(texto)) {
-    return false;
-  }
-
   return true;
+}
+
+function periodoParaSerperTbs(cfg) {
+  if (cfg.horas || (cfg.dias || 1) <= 1) return 'qdr:d';
+  if ((cfg.dias || 1) <= 7) return 'qdr:w';
+  return 'qdr:m';
+}
+
+function montarConsultasSerperRedes(palavraChave) {
+  const termo = palavraChave.trim();
+  return [
+    { q: `${termo} site:instagram.com`, rede: 'Instagram', limite: 20 },
+    { q: `${termo} evangelica site:instagram.com`, rede: 'Instagram', limite: 15 },
+    { q: `${termo} site:instagram.com/reel`, rede: 'Instagram', limite: 15 },
+    { q: `${termo} site:facebook.com`, rede: 'Facebook', limite: 15 },
+    { q: `${termo} site:facebook.com/posts`, rede: 'Facebook', limite: 12 },
+    { q: `${termo} site:x.com`, rede: 'X (Twitter)', limite: 15 },
+    { q: `${termo} gospel site:x.com`, rede: 'X (Twitter)', limite: 12 },
+    { q: `${termo} site:threads.net`, rede: 'Threads', limite: 10 },
+    { q: `${termo} site:tiktok.com`, rede: 'TikTok', limite: 10 },
+    { q: `${termo} gospel site:youtube.com`, rede: 'YouTube', limite: 10 }
+  ];
+}
+
+async function buscarSerperWeb(query, palavraChave, { tbs, redeLabel, limite = 15 } = {}) {
+  const apiKey = process.env.SERPER_API_KEY;
+  if (!apiKey) return [];
+
+  const body = {
+    q: query,
+    gl: 'br',
+    hl: 'pt-br',
+    num: Math.min(Math.max(limite, 10), 20)
+  };
+  if (tbs) body.tbs = tbs;
+
+  try {
+    const res = await fetch('https://google.serper.dev/search', {
+      method: 'POST',
+      headers: {
+        'X-API-KEY': apiKey,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(14000)
+    });
+    if (!res.ok) {
+      console.warn('Serper Web:', res.status, (await res.text()).slice(0, 200));
+      return [];
+    }
+
+    const data = await res.json();
+    return (data.organic || []).map((item) => {
+      const rede = detectarRedeSocial(item.link, redeLabel) || redeLabel;
+      const dataRel = item.date || '';
+      return {
+        titulo: limparTitulo(item.title || ''),
+        link: item.link,
+        resumo: limparResumo(item.snippet || '', 600),
+        conteudoRede: limparResumo(`${item.title || ''} ${item.snippet || ''}`, 800),
+        data: dataRel,
+        idadeBrave: dataRel,
+        dataTimestamp: parsearDataRelativa(dataRel) || parsearIdadeBrave(dataRel),
+        nicho: palavraChave,
+        fonte: rede || 'Serper',
+        redeSocial: rede,
+        tipoFonte: 'rede_social',
+        recente: true,
+        fromSerper: true
+      };
+    }).filter((item) => item.titulo && item.link && itemQualidadeValida(item));
+  } catch (e) {
+    console.warn('buscarSerperWeb:', e.message);
+    return [];
+  }
+}
+
+async function buscarSerperRedesSociais(palavraChave, periodoCfg, { limitePorConsulta = 15 } = {}) {
+  if (!process.env.SERPER_API_KEY) return [];
+
+  const tbs = periodoParaSerperTbs(periodoCfg);
+  const consultas = montarConsultasSerperRedes(palavraChave);
+  const lotes = await Promise.all(
+    consultas.map((c) => buscarSerperWeb(c.q, palavraChave, {
+      tbs,
+      redeLabel: c.rede,
+      limite: c.limite || limitePorConsulta
+    }))
+  );
+  return lotes.flat();
 }
 
 function pontuarRelevanciaRede(item, palavraChave) {
@@ -330,7 +438,7 @@ function pontuarRelevanciaRede(item, palavraChave) {
   if (item.redeSocial === 'Facebook') score += MS_POR_HORA * 5;
   if (item.redeSocial === 'X (Twitter)') score += MS_POR_HORA * 3;
   if (item.link?.includes('instagram.com/reel')) score += MS_POR_HORA * 4;
-  if ((item.conteudoRede || '').length > 120) score += MS_POR_HORA * 8;
+  if (item.fromSerper) score += MS_POR_HORA * 10;
   if (RUIDO_REDES_SOCIAIS.some((r) => texto.includes(r))) score -= MS_POR_DIA * 5;
 
   return score;
@@ -716,6 +824,15 @@ async function buscarRedesSociais(palavraChave, limite = 6, periodo = 1, { modoA
     { q: `site:facebook.com ${palavraChave} christian church`, rede: 'Facebook', limite: 6, fresh, lang: 'en' }
   ] : [];
 
+  const serperItens = await buscarSerperRedesSociais(palavraChave, cfg, { limitePorConsulta: modoAmpliado ? 18 : 15 });
+  for (const item of serperItens) {
+    if (!item?.link || vistos.has(item.link)) continue;
+    if (!itemRelevanteRedeSocial(item, palavraChave)) continue;
+    if (!itemEhRecente(item, cfg)) continue;
+    vistos.add(item.link);
+    candidatos.push(item);
+  }
+
   const lotesBrave = await Promise.all([
     ...consultas.map((c) =>
       buscarBraveWeb(c.q, palavraChave, c.limite, {
@@ -805,9 +922,15 @@ async function pesquisarNichos(palavrasChave, quantidadePorNicho = 5, opcoes = {
     if (!itemQualidadeValida(item)) return;
     if (somenteRecentes && !itemEhRecente(item, periodo)) return;
 
-    const dup = resultados.find((r) =>
-      fatosSimilares(r.titulo, item.titulo, r.resumo, item.resumo)
-    );
+    const dup = resultados.find((r) => {
+      const linkA = r.linkOriginal || r.link;
+      const linkB = item.linkOriginal || item.link;
+      if (linkA && linkB && linkA === linkB) return true;
+      if (somenteRedesSociais || ehRede) {
+        return titulosSimilares(r.titulo, item.titulo);
+      }
+      return fatosSimilares(r.titulo, item.titulo, r.resumo, item.resumo);
+    });
     if (dup) {
       if (item.emAlta && !dup.emAlta) dup.emAlta = true;
       if ((item.resumo || '').length > (dup.resumo || '').length) dup.resumo = item.resumo;
@@ -815,11 +938,12 @@ async function pesquisarNichos(palavrasChave, quantidadePorNicho = 5, opcoes = {
       if (!dup.redeSocial && item.redeSocial) dup.redeSocial = item.redeSocial;
       return;
     }
-    if (item.link && resultados.some((r) => r.link === item.link)) return;
+    if (item.link && resultados.some((r) => (r.linkOriginal || r.link) === item.link)) return;
 
     resultados.push({
       id: `topic-${resultados.length + 1}`,
       ...item,
+      linkOriginal: item.linkOriginal || item.link,
       recente: somenteRecentes
     });
   };
@@ -880,26 +1004,39 @@ async function pesquisarNichos(palavrasChave, quantidadePorNicho = 5, opcoes = {
   const selecionados = resultados.slice(0, limiteFinal);
 
   if (!selecionados.length) {
-    for (const termo of termos) {
-      adicionar({
-        titulo: `Apuração: o que está em alta sobre ${termo} no meio gospel esta semana`,
-        resumo: `Levantamento de fatos recentes e repercussão sobre ${termo} no cenário evangélico brasileiro.`,
-        link: null,
-        nicho: termo,
-        fonte: 'Pauta editorial',
-        dataTimestamp: Date.now(),
-        recente: true
-      });
+    if (!somenteRedesSociais) {
+      for (const termo of termos) {
+        adicionar({
+          titulo: `Apuração: o que está em alta sobre ${termo} no meio gospel esta semana`,
+          resumo: `Levantamento de fatos recentes e repercussão sobre ${termo} no cenário evangélico brasileiro.`,
+          link: null,
+          nicho: termo,
+          fonte: 'Pauta editorial',
+          dataTimestamp: Date.now(),
+          recente: true
+        });
+      }
+      return deduplicarTopicos(resultados).slice(0, termos.length * quantidadePorNicho);
     }
-    return deduplicarTopicos(resultados).slice(0, termos.length * quantidadePorNicho);
+    return [];
   }
 
-  const limiteApuracao = Math.min(selecionados.length, somenteRedesSociais ? 20 : 14);
+  if (somenteRedesSociais) {
+    return deduplicarTopicos(selecionados, { modoRedes: true })
+      .filter((item) => itemQualidadeValida(item))
+      .filter((item) => itemRelevanteRedeSocial(item, item.nicho))
+      .filter((item) => !somenteRecentes || itemEhRecente(item, periodo))
+      .slice(0, termos.length * quantidadePorNicho * 5);
+  }
+
+  const limiteApuracao = Math.min(selecionados.length, 14);
   const apurados = await Promise.all(
     selecionados.slice(0, limiteApuracao).map((item) => apurarTopico(item))
   );
 
-  const finais = deduplicarTopicos([...apurados, ...selecionados.slice(limiteApuracao)])
+  const finais = deduplicarTopicos([...apurados, ...selecionados.slice(limiteApuracao)], {
+    modoRedes: somenteRedesSociais
+  })
     .filter((item) => itemQualidadeValida(item))
     .filter((item) => !somenteRedesSociais || itemRelevanteRedeSocial(item, item.nicho))
     .filter((item) => !somenteRecentes || itemEhRecente(item, periodo) || item.fonte === 'Pauta editorial');
