@@ -702,24 +702,96 @@ body.sidebar-overlay::before {
   color: #15803d;
 }
 
+.fila-ia-erros-wrap {
+  margin-bottom: 12px;
+}
+
 .fila-ia-erros {
-  margin-bottom: 16px;
-  padding: 14px 16px;
   border: 1px solid #fecaca;
   border-radius: 10px;
   background: #fef2f2;
+  overflow: hidden;
 }
 
-.fila-ia-erros-topo {
+.fila-ia-erros-summary {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 10px;
-  flex-wrap: wrap;
+  padding: 10px 14px;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
 }
 
-.fila-ia-erros-topo strong { color: #991b1b; font-size: .92rem; }
+.fila-ia-erros-summary::-webkit-details-marker { display: none; }
+
+.fila-ia-erros-summary::after {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid #b91c1c;
+  border-bottom: 2px solid #b91c1c;
+  transform: rotate(45deg);
+  transition: transform .2s ease;
+  flex-shrink: 0;
+  margin-left: 8px;
+}
+
+.fila-ia-erros[open] .fila-ia-erros-summary::after {
+  transform: rotate(-135deg);
+  margin-top: 4px;
+}
+
+.fila-ia-erros-summary-texto {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  color: #991b1b;
+  font-size: .9rem;
+}
+
+.fila-ia-erros-icone {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.fila-ia-erros-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5rem;
+  height: 1.35rem;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #fee2e2;
+  color: #b91c1c;
+  font-size: .75rem;
+  font-weight: 800;
+}
+
+.fila-ia-erros-summary-dica {
+  font-size: .78rem;
+  color: #b45309;
+}
+
+.fila-ia-erros-corpo {
+  padding: 0 14px 14px;
+  border-top: 1px solid #fee2e2;
+}
+
+.fila-ia-erros-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 10px 0;
+}
+
+.fila-ia-erros-mostrar {
+  margin-bottom: 12px;
+}
 
 .fila-ia-erros-lista {
   list-style: none;

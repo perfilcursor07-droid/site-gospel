@@ -32,23 +32,36 @@
 <% } %>
 
 <% if (typeof filaIa !== 'undefined' && filaIa && filaIa.erros > 0) { %>
-<div class="fila-ia-erros" id="fila-ia-erros">
-  <div class="fila-ia-erros-topo">
-    <strong>Últimos erros da fila de IA</strong>
-    <div class="fila-ia-erros-acoes">
-      <button type="button" class="btn btn-sec btn-sm" id="btn-limpar-erros-fila">Arquivar erros antigos</button>
+<div class="fila-ia-erros-wrap" id="fila-ia-erros-wrap" data-total-erros="<%= filaIa.erros %>">
+  <details class="fila-ia-erros" id="fila-ia-erros">
+    <summary class="fila-ia-erros-summary">
+      <span class="fila-ia-erros-summary-texto">
+        <svg class="fila-ia-erros-icone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        Erros da fila de IA
+        <span class="fila-ia-erros-badge"><%= filaIa.erros %></span>
+      </span>
+      <span class="fila-ia-erros-summary-dica">Clique para ver detalhes</span>
+    </summary>
+    <div class="fila-ia-erros-corpo">
+      <div class="fila-ia-erros-acoes">
+        <button type="button" class="btn btn-sec btn-sm" id="btn-limpar-erros-fila">Arquivar erros antigos</button>
+        <button type="button" class="btn btn-sec btn-sm" id="btn-ocultar-erros-fila">Ocultar painel</button>
+      </div>
+      <ul class="fila-ia-erros-lista" id="fila-ia-erros-lista">
+        <% (filaErrosRecentes || []).forEach(function (item) { %>
+          <li>
+            <span class="fila-ia-erro-titulo"><%= item.titulo || 'Sem título' %></span>
+            <span class="fila-ia-erro-msg"><%= item.erro %></span>
+          </li>
+        <% }) %>
+      </ul>
+      <p class="dica fila-ia-erros-dica">Causas comuns: assunto duplicado, cota de API ou falha na geração. Sem capa vira rascunho — não conta como erro.</p>
     </div>
-  </div>
-  <ul class="fila-ia-erros-lista" id="fila-ia-erros-lista">
-    <% (filaErrosRecentes || []).forEach(function (item) { %>
-      <li>
-        <span class="fila-ia-erro-titulo"><%= item.titulo || 'Sem título' %></span>
-        <span class="fila-ia-erro-msg"><%= item.erro %></span>
-      </li>
-    <% }) %>
-  </ul>
-  <p class="dica fila-ia-erros-dica">Causas comuns: cota do Brave esgotada, Serper gratuito sem <code>site:</code>, assunto duplicado ou falha na API DeepSeek. Sem capa vira rascunho — não conta como erro.</p>
+  </details>
 </div>
+<button type="button" class="btn btn-sec btn-sm fila-ia-erros-mostrar" id="btn-mostrar-erros-fila" hidden>
+  Erros da fila de IA (<span id="fila-ia-erros-contagem"><%= filaIa.erros %></span>)
+</button>
 <% } %>
 
 <div class="posts-toolbar">
@@ -375,6 +388,36 @@
           alert(e.message);
           btnLimparErros.disabled = false;
         }
+      });
+    }
+
+    var wrapErrosFila = document.getElementById('fila-ia-erros-wrap');
+    var btnMostrarErros = document.getElementById('btn-mostrar-erros-fila');
+    var btnOcultarErros = document.getElementById('btn-ocultar-erros-fila');
+    var CHAVE_OCULTAR_ERROS = 'admin-ocultar-erros-fila-ia';
+
+    function aplicarVisibilidadeErrosFila() {
+      var oculto = localStorage.getItem(CHAVE_OCULTAR_ERROS) === '1';
+      if (wrapErrosFila) wrapErrosFila.hidden = oculto;
+      if (btnMostrarErros) btnMostrarErros.hidden = !oculto;
+    }
+
+    aplicarVisibilidadeErrosFila();
+
+    if (btnOcultarErros) {
+      btnOcultarErros.addEventListener('click', function () {
+        localStorage.setItem(CHAVE_OCULTAR_ERROS, '1');
+        aplicarVisibilidadeErrosFila();
+      });
+    }
+
+    if (btnMostrarErros) {
+      btnMostrarErros.addEventListener('click', function () {
+        localStorage.removeItem(CHAVE_OCULTAR_ERROS);
+        aplicarVisibilidadeErrosFila();
+        var detalhes = document.getElementById('fila-ia-erros');
+        if (detalhes) detalhes.open = true;
+        if (wrapErrosFila) wrapErrosFila.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       });
     }
   })();
