@@ -116,8 +116,46 @@
   </script>
   <%- config.head_custom || '' %>
 </head>
-<body class="bg-white text-gray-800 font-sans antialiased">
-  <header id="site-header" class="site-header bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm" style="--cor-primaria: <%= corPrimaria %>">
+<body class="bg-white text-gray-800 font-sans antialiased<%= usuarioLogado ? ' has-admin-bar' : '' %>">
+  <% if (usuarioLogado) {
+    const postAberto = (typeof post !== 'undefined' && post) ? post : ((typeof artigo !== 'undefined' && artigo) ? artigo : null);
+    const podeEditarPost = postAberto && (
+      ['administrador', 'gestor'].includes(usuarioLogado.papel) ||
+      Number(postAberto.autorId) === Number(usuarioLogado.id)
+    );
+  %>
+  <div class="site-admin-bar" id="site-admin-bar" role="navigation" aria-label="Barra administrativa">
+    <div class="site-admin-bar-inner max-w-6xl mx-auto px-3 sm:px-4">
+      <div class="site-admin-bar-links">
+        <a href="/admin" class="site-admin-bar-brand" title="Painel administrativo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          <span>Painel</span>
+        </a>
+        <% if (podeEditarPost) { %>
+          <a href="/admin/posts/<%= postAberto.id %>/editar" class="site-admin-bar-link site-admin-bar-link--destaque">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
+            <span>Editar post</span>
+          </a>
+        <% } %>
+        <a href="/admin/posts" class="site-admin-bar-link">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <span>Posts</span>
+        </a>
+        <% if (usuarioLogado.papel !== 'usuario') { %>
+          <a href="/admin/posts/novo" class="site-admin-bar-link site-admin-bar-link--hide-mobile">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <span>Novo post</span>
+          </a>
+        <% } %>
+      </div>
+      <div class="site-admin-bar-user">
+        <span class="site-admin-bar-nome"><%= usuarioLogado.nome %></span>
+        <a href="/logout" class="site-admin-bar-link site-admin-bar-link--sair">Sair</a>
+      </div>
+    </div>
+  </div>
+  <% } %>
+  <header id="site-header" class="site-header bg-white border-b border-gray-200 sticky z-50 shadow-sm" style="--cor-primaria: <%= corPrimaria %>">
     <div class="site-header-inner max-w-6xl mx-auto px-4">
       <div class="site-header-top relative flex items-center justify-center">
         <button id="btn-menu" class="lg:hidden absolute left-0 top-1/2 -translate-y-1/2 p-2 text-gray-700" aria-label="Abrir menu" aria-expanded="false">

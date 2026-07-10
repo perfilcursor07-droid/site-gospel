@@ -1,3 +1,129 @@
+/* ── Barra admin (estilo WordPress) ── */
+:root {
+  --admin-bar-h: 34px;
+}
+
+body.has-admin-bar {
+  --site-header-top: var(--admin-bar-h);
+}
+
+.site-admin-bar {
+  position: sticky;
+  top: 0;
+  z-index: 60;
+  height: var(--admin-bar-h);
+  background: linear-gradient(180deg, #1f2937 0%, #111827 100%);
+  color: #f9fafb;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
+  font-size: 0.78rem;
+}
+
+.site-admin-bar-inner {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.site-admin-bar-links,
+.site-admin-bar-user {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+
+.site-admin-bar-user {
+  flex-shrink: 0;
+  gap: 8px;
+}
+
+.site-admin-bar-brand,
+.site-admin-bar-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 6px;
+  color: #e5e7eb;
+  text-decoration: none;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.site-admin-bar-brand svg,
+.site-admin-bar-link svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  opacity: 0.9;
+}
+
+.site-admin-bar-brand:hover,
+.site-admin-bar-link:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.site-admin-bar-link--destaque {
+  color: #fdba74;
+}
+
+.site-admin-bar-link--destaque:hover {
+  background: rgba(249, 115, 22, 0.18);
+  color: #ffedd5;
+}
+
+.site-admin-bar-link--sair:hover {
+  background: rgba(239, 68, 68, 0.18);
+  color: #fecaca;
+}
+
+.site-admin-bar-nome {
+  color: #9ca3af;
+  font-size: 0.72rem;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .site-admin-bar-link span,
+  .site-admin-bar-brand span {
+    display: none;
+  }
+
+  .site-admin-bar-brand,
+  .site-admin-bar-link {
+    width: 30px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .site-admin-bar-link--destaque span {
+    display: inline;
+    font-size: 0.7rem;
+  }
+
+  .site-admin-bar-link--destaque {
+    width: auto;
+    padding: 0 8px;
+  }
+
+  .site-admin-bar-nome {
+    display: none;
+  }
+}
+
+.site-header {
+  top: var(--site-header-top, 0);
+}
+
 /* ── Header: logo | menu | busca ── */
 .site-header {
   --logo-h: 2.75rem;
