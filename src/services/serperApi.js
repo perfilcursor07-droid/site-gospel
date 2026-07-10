@@ -1,7 +1,7 @@
 /**
  * Cliente Serper com detecção do plano gratuito (sem operador site:).
  */
-let bloqueioConsultaAvancada = false;
+let bloqueioConsultaAvancada = process.env.SERPER_PLAN !== 'paid';
 let avisoConsultaAvancada = false;
 
 function serperDisponivel() {
@@ -9,7 +9,7 @@ function serperDisponivel() {
 }
 
 function serperPermiteConsultasAvancadas() {
-  return serperDisponivel() && !bloqueioConsultaAvancada;
+  return serperDisponivel() && process.env.SERPER_PLAN === 'paid' && !bloqueioConsultaAvancada;
 }
 
 function consultaUsaOperadorAvancado(query) {
@@ -19,12 +19,19 @@ function consultaUsaOperadorAvancado(query) {
 function registrarRespostaSerper(res, corpoTexto = '') {
   const texto = String(corpoTexto || '');
   if (res?.status === 400 && /query pattern not allowed/i.test(texto)) {
+    if (process.env.SERPER_PLAN === 'paid') {
+      if (!avisoConsultaAvancada) {
+        avisoConsultaAvancada = true;
+        console.warn('Serper: uma consulta foi rejeitada (verifique o plano pago em serper.dev).');
+      }
+      return true;
+    }
     bloqueioConsultaAvancada = true;
     if (!avisoConsultaAvancada) {
       avisoConsultaAvancada = true;
       console.warn(
         'Serper (plano gratuito): consultas com site: não são permitidas. '
-        + 'Usando buscas simplificadas. Para site:instagram.com etc., faça upgrade em serper.dev.'
+        + 'Usando buscas simplificadas. Para site:instagram.com etc., defina SERPER_PLAN=paid no .env.'
       );
     }
     return true;

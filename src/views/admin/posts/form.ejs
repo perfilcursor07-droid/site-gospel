@@ -1491,10 +1491,17 @@
 
     var msg = cancelarPublicacao
       ? 'Publicação cancelada. ' + criados.length + ' matéria(s) gerada(s) antes do cancelamento.'
-      : criados.length + ' matéria(s) criada(s)' +
+      : criados.length + ' matéria(s) gerada(s)' +
         (ignorados ? ', ' + ignorados + ' ignorada(s)' : '') +
         (rascunhosSemImagem ? ', ' + rascunhosSemImagem + ' salva(s) como rascunho por falta de imagem' : '') +
         (erros.length ? ', ' + erros.length + ' com erro' : '') + '.';
+
+    if (erros.length) {
+      var detalhes = erros.slice(0, 3).map(function (e) {
+        return (e.titulo ? e.titulo.slice(0, 50) + ': ' : '') + (e.erro || 'erro');
+      }).join(' | ');
+      msg += ' Detalhes: ' + detalhes;
+    }
 
     mostrarStatus(msg, erros.length || cancelarPublicacao ? 'aviso' : 'sucesso');
 

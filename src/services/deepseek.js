@@ -124,14 +124,25 @@ Com base no texto COMPLETO (não invente pessoas que não aparecem), retorne JSO
     { json: true, temperature: 0.25, maxTokens: 900 }
   );
 
-  const raw = typeof resposta === 'string' ? parsearJson(resposta) : resposta;
-  return {
-    pessoa_principal: raw.pessoa_principal || pessoaPrincipal || null,
-    assunto_imagem: raw.assunto_imagem || '',
-    termos_busca: Array.isArray(raw.termos_busca) ? raw.termos_busca.filter(Boolean) : [],
-    elementos_obrigatorios: Array.isArray(raw.elementos_obrigatorios) ? raw.elementos_obrigatorios.filter(Boolean) : [],
-    evitar: Array.isArray(raw.evitar) ? raw.evitar.filter(Boolean) : []
-  };
+  try {
+    const raw = typeof resposta === 'string' ? parsearJson(resposta) : resposta;
+    return {
+      pessoa_principal: raw.pessoa_principal || pessoaPrincipal || null,
+      assunto_imagem: raw.assunto_imagem || '',
+      termos_busca: Array.isArray(raw.termos_busca) ? raw.termos_busca.filter(Boolean) : [],
+      elementos_obrigatorios: Array.isArray(raw.elementos_obrigatorios) ? raw.elementos_obrigatorios.filter(Boolean) : [],
+      evitar: Array.isArray(raw.evitar) ? raw.evitar.filter(Boolean) : []
+    };
+  } catch (e) {
+    console.warn('identificarCapaArtigo parse:', e.message);
+    return {
+      pessoa_principal: pessoaPrincipal || null,
+      assunto_imagem: '',
+      termos_busca: [],
+      elementos_obrigatorios: [],
+      evitar: []
+    };
+  }
 }
 
 async function validarImagemParaArtigo(
@@ -252,7 +263,8 @@ JSON: {"indice": N, "motivo": "breve explicação"}`;
     return { candidato: ok ? candidato : null, rejeitouTodas: !ok };
   } catch (e) {
     console.warn('selecionarMelhorImagem:', e.message);
-    return { candidato: null, rejeitouTodas: true };
+    const fallback = candidatos.find((c) => c.fromFonte || c.fromNoticia) || candidatos[0];
+    return { candidato: fallback || null, rejeitouTodas: !fallback };
   }
 }
 
@@ -392,14 +404,27 @@ Retorne JSON completo enxuto.`;
 }
 
 function parsearJson(texto) {
-  const limpo = texto.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
-  try {
-    return JSON.parse(limpo);
-  } catch {
-    const match = limpo.match(/\{[\s\S]*\}/);
-    if (match) return JSON.parse(match[0]);
-    throw new Error('A IA retornou um formato inválido. Tente novamente.');
+  if (!texto) throw new Error('A IA retornou um formato inválido. Tente novamente.');
+  if (typeof texto === 'object') return texto;
+
+  let limpo = String(texto).replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
+
+  const tentativas = [
+    limpo,
+    limpo.replace(/,\s*([}\]])/g, '$1'),
+    limpo.match(/\{[\s\S]*\}/)?.[0],
+    limpo.match(/\[[\s\S]*\]/)?.[0]
+  ].filter(Boolean);
+
+  for (const candidato of tentativas) {
+    try {
+      return JSON.parse(candidato);
+    } catch {
+      /* próxima tentativa */
+    }
   }
+
+  throw new Error('A IA retornou um formato inválido. Tente novamente.');
 }
 
 module.exports = {

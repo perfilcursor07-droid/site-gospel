@@ -186,6 +186,7 @@ router.post('/gerar-lote', async (req, res) => {
     const nomeSite = res.locals.config?.site_nome || 'Site Gospel';
     const criados = [];
     const erros = [];
+    let ignoradosDuplicata = 0;
     let rascunhosSemImagem = 0;
     let textosCurtos = 0;
     let textosLongos = 0;
@@ -196,10 +197,7 @@ router.post('/gerar-lote', async (req, res) => {
       try {
         const duplicadoTopico = encontrarSimilar(topico.titulo, cacheTitulos, topico.resumo);
         if (duplicadoTopico) {
-          erros.push({
-            titulo: topico.titulo,
-            erro: `Assunto similar já existe: "${duplicadoTopico.titulo}"`
-          });
+          ignoradosDuplicata += 1;
           continue;
         }
 
@@ -209,15 +207,11 @@ router.post('/gerar-lote', async (req, res) => {
 
         const duplicadoGerado = encontrarSimilar(artigo.titulo, cacheTitulos, artigo.resumo);
         if (duplicadoGerado) {
-          erros.push({
-            titulo: topico.titulo,
-            erro: `Matéria gerada similar a: "${duplicadoGerado.titulo}"`
-          });
+          ignoradosDuplicata += 1;
           continue;
         }
 
         const statusFinal = statusComImagem(status, imagem);
-        if (status === 'publicado' && !imagem) rascunhosSemImagem += 1;
         if (!artigo._qualidadeOk) {
           const q = avaliarComprimento(artigo.conteudo || '');
           if (q.curto) textosCurtos += 1;
@@ -238,6 +232,8 @@ router.post('/gerar-lote', async (req, res) => {
           imagemAlt: imagemAlt || null
         });
 
+        if (status === 'publicado' && !imagem) rascunhosSemImagem += 1;
+
         criados.push({
           id: post.id,
           titulo: post.titulo,
@@ -254,15 +250,17 @@ router.post('/gerar-lote', async (req, res) => {
       }
     }
 
+    const totalIgnorados = ignorados + ignoradosDuplicata;
+
     responderJson(res, 200, {
       ok: true,
       criados,
       erros,
-      ignorados,
+      ignorados: totalIgnorados,
       rascunhosSemImagem,
       textosCurtos,
       textosLongos,
-      mensagem: `${criados.length} matéria(s) criada(s)${ignorados ? `, ${ignorados} ignorada(s) por já publicadas` : ''}${rascunhosSemImagem ? `, ${rascunhosSemImagem} salva(s) como rascunho por falta de imagem` : ''}${textosCurtos ? `, ${textosCurtos} com texto curto (<${MIN_PALAVRAS_ARTIGO} palavras)` : ''}${textosLongos ? `, ${textosLongos} com texto longo (>${MAX_PALAVRAS_ARTIGO} palavras)` : ''}${erros.length ? `, ${erros.length} com erro` : ''}.`
+      mensagem: `${criados.length} matéria(s) gerada(s)${totalIgnorados ? `, ${totalIgnorados} ignorada(s) (duplicada ou já publicada)` : ''}${rascunhosSemImagem ? `, ${rascunhosSemImagem} salva(s) como rascunho por falta de imagem` : ''}${textosCurtos ? `, ${textosCurtos} com texto curto (<${MIN_PALAVRAS_ARTIGO} palavras)` : ''}${textosLongos ? `, ${textosLongos} com texto longo (>${MAX_PALAVRAS_ARTIGO} palavras)` : ''}${erros.length ? `, ${erros.length} com erro` : ''}.`
     });
   } catch (e) {
     console.error('Erro gerar-lote:', e);

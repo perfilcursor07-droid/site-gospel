@@ -1391,6 +1391,18 @@ async function escolherEBaixarImagem(candidatos, ctx, artigoBrief, opcoes = {}) 
     if (salva) return { imagem: salva, candidato: img };
   }
 
+  // Fallback: sem validação IA (APIs de imagem indisponíveis ou IA retornou JSON inválido)
+  for (const img of ordenados.slice(0, 5)) {
+    if (!passaFiltroBasico(img)) continue;
+    if (imagemUrlGenerica(img.url) || urlImagemProibida(img.url, img.contextLink)) continue;
+    if (!imagemCombinaMateria(img, ctx)) continue;
+    const salva = await baixarImagem(img.url, img.contextLink);
+    if (salva) {
+      console.warn('Capa via fallback sem validação IA:', (img.title || img.url || '').slice(0, 80));
+      return { imagem: salva, candidato: img };
+    }
+  }
+
   return null;
 }
 
