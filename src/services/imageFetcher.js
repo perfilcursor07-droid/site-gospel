@@ -871,6 +871,36 @@ async function buscarSerperImagens(termos, ctx, { consultaDireta = false, filtro
   }
 }
 
+async function coletarCandidatosBuscaImagem(consultas, ctx, { focoPessoa = [], maxConsultas = 6 } = {}) {
+  const vistos = new Set();
+  const candidatos = [];
+
+  const adicionar = (lista) => {
+    for (const img of lista) {
+      if (!img?.url || vistos.has(img.url)) continue;
+      if (!passaFiltroBasico(img)) continue;
+      if (imagemPessoaInadequada(img, ctx)) continue;
+      if (focoPessoa.length && !imagemMencionaPessoa(img, focoPessoa)) continue;
+      vistos.add(img.url);
+      candidatos.push(img);
+    }
+  };
+
+  for (const q of [...new Set(consultas)].filter(Boolean).slice(0, maxConsultas)) {
+    if (serperDisponivel()) {
+      adicionar(await buscarSerperImagens(q, ctx, { consultaDireta: true, filtroRigoroso: false, num: 25 }));
+    }
+    if (braveDisponivel()) {
+      adicionar(await buscarBraveImagens(q, ctx, {
+        consultaDireta: true,
+        filtroRigoroso: !focoPessoa.length
+      }));
+    }
+  }
+
+  return ordenarCandidatos(candidatos, ctx);
+}
+
 async function buscarBraveImagens(termos, ctx, { consultaDireta = false, filtroRigoroso = true } = {}) {
   if (!braveDisponivel()) return [];
 
@@ -1396,13 +1426,16 @@ async function obterImagemParaArtigo({
 
   const pessoaFinal = briefing?.pessoa_principal || pessoaPrincipal;
   const entidades = extrairEntidades(titulo, resumo, pessoaFinal);
+  const pessoasArtigo = [...new Set(entidades.filter((e) => pareceNomeProprio(e)))];
+  const focoPessoa = pessoasArtigo.length ? pessoasArtigo : [];
+
   const ctx = criarContextoRelevancia({
-    titulo,
+    titulo: focoPessoa.length ? focoPessoa.join(' ') : titulo,
     resumo,
     assuntoImagem: briefing?.assunto_imagem || assuntoImagem,
     termosImagem,
     pessoaPrincipal: pessoaFinal,
-    entidades,
+    entidades: focoPessoa.length ? focoPessoa : entidades,
     briefing,
     tituloReferencia
   });
@@ -1438,9 +1471,16 @@ async function obterImagemParaArtigo({
       resumo,
       nicho,
       pessoaPrincipal: pessoaFinal,
-      entidades
+      entidades: focoPessoa.length ? focoPessoa : entidades
     })
   ];
+
+  if (focoPessoa.length) {
+    focoPessoa.forEach((nome) => montarConsultasPessoaFoco(nome).forEach((q) => consultasImagem.unshift(q)));
+    if (ctx.assuntoImagem) consultasImagem.unshift(ctx.assuntoImagem);
+  }
+
+  const consultasImagemUnicas = [...new Set(consultasImagem.filter(Boolean))];
 
   const consultasNoticia = montarConsultasNoticia({
     tituloReferencia: tituloReferencia || titulo,
@@ -1470,15 +1510,28 @@ async function obterImagemParaArtigo({
   });
   if (capa) return capa;
 
-  const candidatosNoticia = await buscarImagensViaBraveWeb(consultasNoticia, ctx);
-  capa = await tentarCapa(candidatosNoticia, {
-    priorizarFonte: true,
-    candidatosDaNoticia: true
-  });
+  // Fase 2: Serper (Google Imagens) + Brave Imagens — prioridade para capa correta
+  const candidatosApis = await coletarCandidatosBuscaImagem(
+    consultasImagemUnicas,
+    ctx,
+    { focoPessoa, maxConsultas: focoPessoa.length ? 8 : 6 }
+  );
+  capa = await tentarCapa(candidatosApis, {});
   if (capa) return capa;
 
+  // Fase 3: og:image de notícias (evitar quando o foco é uma pessoa — traz capas erradas)
+  let candidatosNoticia = [];
+  if (!focoPessoa.length) {
+    candidatosNoticia = await buscarImagensViaBraveWeb(consultasNoticia, ctx);
+    capa = await tentarCapa(candidatosNoticia, {
+      priorizarFonte: true,
+      candidatosDaNoticia: true
+    });
+    if (capa) return capa;
+  }
+
   const candidatosWeb = await coletarCandidatosWeb(
-    [...new Set(consultasImagem)],
+    consultasImagemUnicas,
     ctx,
     { consultaDireta: true, filtroRigoroso: true }
   );
@@ -1488,7 +1541,9 @@ async function obterImagemParaArtigo({
   );
   if (capa) return capa;
 
-  const candidatosNoticia2 = await buscarImagensViaBraveWeb(consultasExpandidas, ctx);
+  const candidatosNoticia2 = focoPessoa.length
+    ? []
+    : await buscarImagensViaBraveWeb(consultasExpandidas, ctx);
   const candidatosWeb2 = await coletarCandidatosWeb(
     consultasExpandidas,
     ctx,
@@ -1757,6 +1812,9 @@ module.exports = {
   avisoFalhaImagem() {
     if (braveQuotaExcedida()) {
       return 'API Brave temporariamente pausada (limite atingido). Se você já aumentou o limite no painel, aguarde ~1 min ou reinicie o servidor e tente de novo. Enquanto isso, envie a capa manualmente.';
+    }
+    if (!process.env.SERPER_API_KEY && !braveDisponivel()) {
+      return 'Configure SERPER_API_KEY (serper.dev — Google Imagens, 2500 buscas grátis) ou BRAVE_SEARCH_API_KEY para buscar capas automaticamente.';
     }
     return 'Não foi possível baixar imagem automaticamente. Use "Buscar imagem na web" na barra lateral ou envie uma capa manualmente.';
   }

@@ -302,6 +302,31 @@ def brave_images(query: str, api_key: str, count: int = 15) -> list[dict]:
         return []
 
 
+def serper_images(query: str, api_key: str, num: int = 25) -> list[dict]:
+    try:
+        r = requests.post(
+            "https://google.serper.dev/images",
+            headers={"X-API-KEY": api_key, "Content-Type": "application/json"},
+            json={"q": query, "gl": "br", "hl": "pt-br", "num": min(max(num, 10), 40)},
+            timeout=12,
+        )
+        if not r.ok:
+            return []
+        out = []
+        for item in r.json().get("images", []):
+            u = item.get("imageUrl") or item.get("thumbnailUrl")
+            if u:
+                out.append({
+                    "url": u,
+                    "title": item.get("title") or "",
+                    "source": item.get("link") or "",
+                    "from_serper": True,
+                })
+        return out
+    except requests.RequestException:
+        return []
+
+
 def duckduckgo_images(query: str, max_results: int = 12) -> list[dict]:
     if not DDGS:
         return []
@@ -394,6 +419,7 @@ def coletar_candidatos(payload: dict) -> list[dict]:
     termos_extra = payload.get("termos_busca") or []
 
     termos = list(dict.fromkeys(extrair_termos(titulo, resumo, titulo_ref, conteudo) + termos_extra))
+    serper_key = os.environ.get("SERPER_API_KEY", "")
     brave_key = os.environ.get("BRAVE_SEARCH_API_KEY", "")
 
     candidatos: list[dict] = []
@@ -424,10 +450,14 @@ def coletar_candidatos(payload: dict) -> list[dict]:
     else:
         consultas = [q for q in consultas if q and len(q.strip()) > 4]
 
+    if serper_key:
+        for q in consultas[:6]:
+            add_lista(serper_images(q, serper_key, num=25))
+
     if brave_key:
         for q in consultas[:5]:
             add_lista(brave_web(q, brave_key))
-        for q in consultas[:3]:
+        for q in consultas[:4]:
             add_lista(brave_images(q, brave_key, count=20))
 
     for q in consultas[:3]:
