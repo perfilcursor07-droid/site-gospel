@@ -5,6 +5,7 @@ const { identificarCapaArtigo, selecionarMelhorImagem, gerarAltImagem, validarIm
 const { salvarComoWebp } = require('../utils/imageProcessor');
 const { buscarImagemPython, listarImagensPython, baixarImagemUrlPython } = require('./pythonImageSearch');
 const { marcarRespostaBrave, marcarRespostaBraveOk, braveDisponivel, braveQuotaExcedida } = require('./braveApi');
+const { serperPost, serperDisponivel, serperPermiteConsultasAvancadas } = require('./serperApi');
 
 const UPLOADS_DIR = path.join(__dirname, '..', '..', 'uploads');
 const USER_AGENT = 'Mozilla/5.0 (compatible; SiteGospelBot/1.0)';
@@ -289,7 +290,7 @@ function extrairPessoaDosTermos(termos, titulo) {
 
 function montarConsultasPessoaFoco(nome) {
   const aspas = `"${nome}"`;
-  return [
+  const consultas = [
     `${aspas} cantora gospel foto`,
     `${aspas} cantora evangelica`,
     `${nome} gospel louvor foto`,
@@ -301,6 +302,10 @@ function montarConsultasPessoaFoco(nome) {
     `site:youtube.com ${nome} cantora gospel`,
     `${nome} show culto igreja`
   ];
+  if (!serperPermiteConsultasAvancadas()) {
+    return consultas.filter((q) => !/\bsite:/i.test(q));
+  }
+  return consultas;
 }
 
 function imagemMencionaPessoa(img, pessoas) {
@@ -769,7 +774,7 @@ function montarConsultasNoticia({ tituloReferencia, titulo, resumo, urlFonte, en
   }
 
   const dominio = extrairDominio(urlFonte);
-  if (dominio && tituloReferencia) {
+  if (dominio && tituloReferencia && serperPermiteConsultasAvancadas()) {
     const palavras = tituloReferencia.split(/\s+/).slice(0, 6).join(' ');
     add(`site:${dominio} ${palavras}`);
   }
@@ -815,39 +820,30 @@ function mesclarCandidatos(listas) {
   return todos;
 }
 
-function serperDisponivel() {
-  return !!process.env.SERPER_API_KEY;
+function serperImagensAtivo() {
+  return serperDisponivel();
 }
 
 async function buscarSerperImagens(termos, ctx, { consultaDireta = false, filtroRigoroso = true, num = 20 } = {}) {
-  const apiKey = process.env.SERPER_API_KEY;
-  if (!apiKey) return [];
+  if (!serperImagensAtivo()) return [];
 
   const consulta = consultaDireta ? termos : montarConsultaWeb(termos, ctx);
+  if (/\bsite:/i.test(consulta) && !serperPermiteConsultasAvancadas()) return [];
+
+  const { ok, data, bloqueado, ignorado, texto, status } = await serperPost('images', {
+    q: consulta,
+    gl: 'br',
+    hl: 'pt-br',
+    num: Math.min(Math.max(num, 10), 40)
+  }, { timeoutMs: 12000 });
+
+  if (ignorado) return [];
+  if (!ok) {
+    if (!bloqueado) console.warn('Serper Imagens API:', status, (texto || '').slice(0, 250));
+    return [];
+  }
 
   try {
-    const res = await fetch('https://google.serper.dev/images', {
-      method: 'POST',
-      headers: {
-        'X-API-KEY': apiKey,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        q: consulta,
-        gl: 'br',
-        hl: 'pt-br',
-        num: Math.min(Math.max(num, 10), 40)
-      }),
-      signal: AbortSignal.timeout(12000)
-    });
-
-    if (!res.ok) {
-      const erro = await res.text();
-      console.warn('Serper Imagens API:', res.status, erro.slice(0, 250));
-      return [];
-    }
-
-    const data = await res.json();
     return (data.images || [])
       .map((item) => ({
         url: item.imageUrl || item.thumbnailUrl,

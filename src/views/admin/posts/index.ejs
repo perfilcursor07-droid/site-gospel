@@ -24,10 +24,30 @@
 <div class="fila-ia-banner" id="fila-ia-banner">
   <div class="fila-ia-banner-texto">
     <strong>Fila de IA ativa</strong>
-    <span id="fila-ia-detalhe"><%= filaIa.pendentes %> pendente(s) · <%= filaIa.concluidos %> concluída(s)<% if (filaIa.erros) { %> · <%= filaIa.erros %> erro(s)<% } %></span>
+    <span id="fila-ia-detalhe"><%= filaIa.pendentes %> pendente(s) · <%= filaIa.concluidos %> concluída(s)<% if (filaIa.erros) { %> · <%= filaIa.erros %> erro(s)<% } %><% if (filaIa.cancelados) { %> · <%= filaIa.cancelados %> ignorado(s)<% } %><% if (filaIa.processando) { %> · gerando agora<% } %></span>
     <span class="dica">O servidor gera e publica automaticamente — não precisa manter a página aberta.</span>
   </div>
   <button type="button" class="btn btn-sec" id="btn-cancelar-fila">Cancelar pendentes</button>
+</div>
+<% } %>
+
+<% if (typeof filaIa !== 'undefined' && filaIa && filaIa.erros > 0) { %>
+<div class="fila-ia-erros" id="fila-ia-erros">
+  <div class="fila-ia-erros-topo">
+    <strong>Últimos erros da fila de IA</strong>
+    <div class="fila-ia-erros-acoes">
+      <button type="button" class="btn btn-sec btn-sm" id="btn-limpar-erros-fila">Arquivar erros antigos</button>
+    </div>
+  </div>
+  <ul class="fila-ia-erros-lista" id="fila-ia-erros-lista">
+    <% (filaErrosRecentes || []).forEach(function (item) { %>
+      <li>
+        <span class="fila-ia-erro-titulo"><%= item.titulo || 'Sem título' %></span>
+        <span class="fila-ia-erro-msg"><%= item.erro %></span>
+      </li>
+    <% }) %>
+  </ul>
+  <p class="dica fila-ia-erros-dica">Causas comuns: cota do Brave esgotada, Serper gratuito sem <code>site:</code>, assunto duplicado ou falha na API DeepSeek. Sem capa vira rascunho — não conta como erro.</p>
 </div>
 <% } %>
 
@@ -300,6 +320,7 @@
       if (!detalhe) return;
       var txt = data.pendentes + ' pendente(s) · ' + data.concluidos + ' concluída(s)';
       if (data.erros) txt += ' · ' + data.erros + ' erro(s)';
+      if (data.cancelados) txt += ' · ' + data.cancelados + ' ignorado(s)';
       if (data.processando) txt += ' · gerando agora';
       detalhe.textContent = txt;
       if (!data.ativo && banner) {
@@ -335,6 +356,24 @@
         } catch (e) {
           alert(e.message);
           btnCancelarFila.disabled = false;
+        }
+      });
+    }
+
+    var btnLimparErros = document.getElementById('btn-limpar-erros-fila');
+    if (btnLimparErros) {
+      btnLimparErros.addEventListener('click', async function () {
+        if (!confirm('Arquivar erros da fila com mais de 7 dias?')) return;
+        btnLimparErros.disabled = true;
+        try {
+          var res = await fetch('/admin/posts/ia/fila-limpar-erros', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+          var data = await res.json();
+          if (!data.ok) throw new Error(data.erro || 'Erro ao limpar');
+          alert(data.mensagem || 'Concluído.');
+          window.location.reload();
+        } catch (e) {
+          alert(e.message);
+          btnLimparErros.disabled = false;
         }
       });
     }

@@ -702,6 +702,62 @@ body.sidebar-overlay::before {
   color: #15803d;
 }
 
+.fila-ia-erros {
+  margin-bottom: 16px;
+  padding: 14px 16px;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  background: #fef2f2;
+}
+
+.fila-ia-erros-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.fila-ia-erros-topo strong { color: #991b1b; font-size: .92rem; }
+
+.fila-ia-erros-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fila-ia-erros-lista li {
+  background: #fff;
+  border: 1px solid #fee2e2;
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.fila-ia-erro-titulo {
+  display: block;
+  font-weight: 700;
+  color: #111827;
+  font-size: .85rem;
+  margin-bottom: 2px;
+}
+
+.fila-ia-erro-msg {
+  display: block;
+  color: #b91c1c;
+  font-size: .8rem;
+  line-height: 1.35;
+}
+
+.fila-ia-erros-dica {
+  margin: 10px 0 0;
+  font-size: .78rem;
+  color: #7f1d1d;
+}
+
 /* ===== Listagem de posts ===== */
 .posts-toolbar {
   display: flex;

@@ -5,7 +5,7 @@ const { gerarArtigo } = require('../../services/deepseek');
 const { pesquisarNichos, apurarTopico } = require('../../services/newsResearch');
 const { obterImagemParaArtigo, avisoFalhaImagem } = require('../../services/imageFetcher');
 const { marcarTopicosPublicados, deduplicarTopicos, encontrarSimilar } = require('../../utils/topicMatch');
-const { agendarTopicos, prepararTopicosParaFila, obterResumoFila, cancelarFilaPendente, obterProximoSlotFila } = require('../../services/iaFilaPublicacao');
+const { agendarTopicos, prepararTopicosParaFila, obterResumoFila, listarErrosRecentesFila, limparErrosAntigosFila, cancelarFilaPendente, obterProximoSlotFila } = require('../../services/iaFilaPublicacao');
 const {
   criarMonitor,
   listarMonitores,
@@ -340,8 +340,30 @@ router.get('/fila-proximo-slot', async (req, res) => {
 
 router.get('/fila-status', async (req, res) => {
   try {
-    const resumo = await obterResumoFila(req.session.user.id);
-    responderJson(res, 200, { ok: true, ...resumo });
+    const autorId = req.session.user.papel === 'usuario' ? req.session.user.id : null;
+    const resumo = await obterResumoFila(autorId);
+    const errosRecentes = resumo.erros ? await listarErrosRecentesFila(autorId, 6) : [];
+    responderJson(res, 200, { ok: true, ...resumo, errosRecentes });
+  } catch (e) {
+    responderJson(res, 500, { ok: false, erro: e.message });
+  }
+});
+
+router.get('/fila-erros', async (req, res) => {
+  try {
+    const autorId = req.session.user.papel === 'usuario' ? req.session.user.id : null;
+    const erros = await listarErrosRecentesFila(autorId, 15);
+    responderJson(res, 200, { ok: true, erros });
+  } catch (e) {
+    responderJson(res, 500, { ok: false, erro: e.message });
+  }
+});
+
+router.post('/fila-limpar-erros', async (req, res) => {
+  try {
+    const autorId = req.session.user.papel === 'usuario' ? req.session.user.id : null;
+    const qtd = await limparErrosAntigosFila(autorId, 7);
+    responderJson(res, 200, { ok: true, limpos: qtd, mensagem: qtd ? `${qtd} erro(s) antigo(s) arquivado(s).` : 'Nenhum erro antigo para limpar.' });
   } catch (e) {
     responderJson(res, 500, { ok: false, erro: e.message });
   }

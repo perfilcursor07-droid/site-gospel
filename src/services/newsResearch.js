@@ -3,6 +3,7 @@ const { fatosSimilares, titulosSimilares, deduplicarTopicos } = require('../util
 const { marcarRespostaBrave, marcarRespostaBraveOk, braveDisponivel } = require('./braveApi');
 const { buscarNoticias } = require('./braveSearch');
 const { buscarGoogleTrends } = require('./googleTrends');
+const { serperPost, serperDisponivel, serperPermiteConsultasAvancadas, montarConsultasSerperRedesGratis } = require('./serperApi');
 
 const USER_AGENT = 'SiteGospelBot/1.0 (+https://gitlab.com/perfilcursor07-group/obuxixo)';
 const DIAS_RECENTES_PADRAO = 1;
@@ -203,7 +204,7 @@ const TERMOS_AMBIGUOS_REDE = new Set([
 ]);
 
 const RUIDO_REDES_SOCIAIS = [
-  'messi', 'mbappe', 'ronaldo', 'real madrid', 'barcelona', 'fútbol', 'futebol',
+  'messi', 'mbappe', 'ronaldo', 'real madrid', 'barcelona', 'fútbol', 'futebol', 'fifa',
   'premier league', 'champions league', 'nba', 'ufc', 'netflix', 'disney', 'crunchyroll',
   'derbez', 'hollywood', 'anime', 'naruto', 'btc', 'bitcoin', 'criptomoeda',
   'horóscopo', 'horoscopo', 'receita de bolo', 'loteria', 'wimbledon', 'mbappe',
@@ -212,6 +213,7 @@ const RUIDO_REDES_SOCIAIS = [
   'stardewvalley', 'futbol', 'soccer', 'tennis', 'wrestling', 'ufc', 'magalu', 'cupom',
   'afiliad', 'day trade', 'mmonews', 'jogos olimpicos', 'selecao espanola', 'orbán',
   'palestin', 'ucrania', 'ukraine', 'hungria', 'iranian', 'hegseth', 'homeland security',
+  'presidente da fifa', 'argentina x', 'copa america', 'mundial',
   'pastores afganos', 'pastor alemao', 'pastor alemão', 'raça pastor', 'dog breed',
   'philippine', 'filipino man', 'kwai', 'tiktok dance', 'meme', 'shitpost',
   'divina pastora', 'hermandad', 'primitiva hermandad', 'es la reina de los cielos',
@@ -342,6 +344,9 @@ function periodoParaSerperTbs(cfg) {
 }
 
 function montarConsultasSerperRedes(palavraChave) {
+  if (!serperPermiteConsultasAvancadas()) {
+    return montarConsultasSerperRedesGratis(palavraChave);
+  }
   const termo = palavraChave.trim();
   return [
     { q: `${termo} site:instagram.com`, rede: 'Instagram', limite: 20 },
@@ -358,8 +363,7 @@ function montarConsultasSerperRedes(palavraChave) {
 }
 
 async function buscarSerperWeb(query, palavraChave, { tbs, redeLabel, limite = 15 } = {}) {
-  const apiKey = process.env.SERPER_API_KEY;
-  if (!apiKey) return [];
+  if (!serperDisponivel()) return [];
 
   const body = {
     q: query,
@@ -369,22 +373,14 @@ async function buscarSerperWeb(query, palavraChave, { tbs, redeLabel, limite = 1
   };
   if (tbs) body.tbs = tbs;
 
-  try {
-    const res = await fetch('https://google.serper.dev/search', {
-      method: 'POST',
-      headers: {
-        'X-API-KEY': apiKey,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(14000)
-    });
-    if (!res.ok) {
-      console.warn('Serper Web:', res.status, (await res.text()).slice(0, 200));
-      return [];
-    }
+  const { ok, data, bloqueado, ignorado, texto, status } = await serperPost('search', body);
+  if (ignorado) return [];
+  if (!ok) {
+    if (!bloqueado) console.warn('Serper Web:', status, (texto || '').slice(0, 200));
+    return [];
+  }
 
-    const data = await res.json();
+  try {
     return (data.organic || []).map((item) => {
       const rede = detectarRedeSocial(item.link, redeLabel) || redeLabel;
       const dataRel = item.date || '';
@@ -411,7 +407,7 @@ async function buscarSerperWeb(query, palavraChave, { tbs, redeLabel, limite = 1
 }
 
 async function buscarSerperRedesSociais(palavraChave, periodoCfg, { limitePorConsulta = 15 } = {}) {
-  if (!process.env.SERPER_API_KEY) return [];
+  if (!serperDisponivel()) return [];
 
   const tbs = periodoParaSerperTbs(periodoCfg);
   const consultas = montarConsultasSerperRedes(palavraChave);

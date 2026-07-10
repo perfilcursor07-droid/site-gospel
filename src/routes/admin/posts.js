@@ -3,7 +3,7 @@ const { Post, Category, Setting } = require('../../models');
 const uploadCapaPost = require('../../middlewares/uploadCapaPost');
 const { buscarCandidatosCapaManual, salvarCandidatoComoCapa } = require('../../services/imageFetcher');
 const { braveDisponivel } = require('../../services/braveApi');
-const { obterResumoFila } = require('../../services/iaFilaPublicacao');
+const { obterResumoFila, listarErrosRecentesFila } = require('../../services/iaFilaPublicacao');
 const { obterResumoMonitores } = require('../../services/iaMonitorAutomatico');
 const { notificarPublicacao } = require('../../services/indexacao');
 
@@ -33,12 +33,13 @@ async function avisarGoogleSePublicado(post, req, eraPublicado = false) {
 router.get('/', async (req, res, next) => {
   try {
     const where = req.session.user.papel === 'usuario' ? { autorId: req.session.user.id } : {};
-    const [posts, filaIa, monitorIa] = await Promise.all([
+    const [posts, filaIa, monitorIa, filaErrosRecentes] = await Promise.all([
       Post.findAll({ where, include: ['categoria', 'autor'], order: [['createdAt', 'DESC']] }),
       obterResumoFila(req.session.user.papel === 'usuario' ? req.session.user.id : null),
-      obterResumoMonitores(req.session.user.id)
+      obterResumoMonitores(req.session.user.id),
+      listarErrosRecentesFila(req.session.user.papel === 'usuario' ? req.session.user.id : null, 5)
     ]);
-    res.render('admin/posts/index', { titulo: 'Posts', posts, filaIa, monitorIa });
+    res.render('admin/posts/index', { titulo: 'Posts', posts, filaIa, monitorIa, filaErrosRecentes });
   } catch (e) { next(e); }
 });
 

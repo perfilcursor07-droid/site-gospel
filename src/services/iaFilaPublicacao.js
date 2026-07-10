@@ -238,10 +238,10 @@ async function processarProximoJob(nomeSite = 'Site Gospel') {
     const duplicado = encontrarSimilar(topico.titulo, existentes, topico.resumo);
     if (duplicado) {
       await job.update({
-        status: 'erro',
+        status: 'cancelado',
         erro: `Assunto similar já existe: "${duplicado.titulo}"`
       });
-      return { job, erro: job.erro };
+      return { job, ignorado: true, motivo: job.erro };
     }
 
     const { post } = await gerarPostDoTopico(topico, {
@@ -257,10 +257,10 @@ async function processarProximoJob(nomeSite = 'Site Gospel') {
     if (duplicadoGerado) {
       await post.destroy();
       await job.update({
-        status: 'erro',
+        status: 'cancelado',
         erro: `Matéria gerada similar a: "${duplicadoGerado.titulo}"`
       });
-      return { job, erro: job.erro };
+      return { job, ignorado: true, motivo: job.erro };
     }
 
     await job.update({ status: 'concluido', postId: post.id });
@@ -278,13 +278,60 @@ async function processarProximoJob(nomeSite = 'Site Gospel') {
 
 async function obterResumoFila(autorId = null) {
   const where = autorId ? { autorId } : {};
-  const [pendentes, processandoQtd, concluidos, erros] = await Promise.all([
+  const [pendentes, processandoQtd, concluidos, erros, cancelados] = await Promise.all([
     IaFilaJob.count({ where: { ...where, status: 'pendente' } }),
     IaFilaJob.count({ where: { ...where, status: 'processando' } }),
     IaFilaJob.count({ where: { ...where, status: 'concluido' } }),
-    IaFilaJob.count({ where: { ...where, status: 'erro' } })
+    IaFilaJob.count({ where: { ...where, status: 'erro' } }),
+    IaFilaJob.count({ where: { ...where, status: 'cancelado' } })
   ]);
-  return { pendentes, processando: processandoQtd, concluidos, erros, ativo: pendentes > 0 || processandoQtd > 0 };
+  return {
+    pendentes,
+    processando: processandoQtd,
+    concluidos,
+    erros,
+    cancelados,
+    ativo: pendentes > 0 || processandoQtd > 0
+  };
+}
+
+async function listarErrosRecentesFila(autorId = null, limite = 8) {
+  const where = { status: 'erro' };
+  if (autorId) where.autorId = autorId;
+
+  const jobs = await IaFilaJob.findAll({
+    where,
+    order: [['updatedAt', 'DESC']],
+    limit: Math.min(Math.max(limite, 1), 20),
+    attributes: ['id', 'erro', 'updatedAt', 'topico']
+  });
+
+  return jobs.map((job) => {
+    let tituloTopico = '';
+    try {
+      const topico = JSON.parse(job.topico);
+      tituloTopico = topico?.titulo || '';
+    } catch {
+      tituloTopico = '';
+    }
+    return {
+      id: job.id,
+      erro: job.erro,
+      titulo: tituloTopico,
+      quando: job.updatedAt
+    };
+  });
+}
+
+async function limparErrosAntigosFila(autorId = null, dias = 30) {
+  const limite = new Date(Date.now() - dias * 24 * 60 * 60 * 1000);
+  const where = {
+    status: 'erro',
+    updatedAt: { [Op.lt]: limite }
+  };
+  if (autorId) where.autorId = autorId;
+  const [qtd] = await IaFilaJob.update({ status: 'cancelado', erro: null }, { where });
+  return qtd;
 }
 
 async function cancelarFilaPendente(autorId) {
@@ -312,6 +359,8 @@ module.exports = {
   processarProximoJob,
   publicarPostsAgendados,
   obterResumoFila,
+  listarErrosRecentesFila,
+  limparErrosAntigosFila,
   cancelarFilaPendente,
   tickFila,
   calcularInicioAgendamento,
