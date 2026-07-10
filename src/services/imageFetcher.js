@@ -796,8 +796,8 @@ function montarConsultasExpandidas({ titulo, tituloReferencia, resumo, assuntoIm
 
 function ordenarCandidatos(candidatos, ctx) {
   return [...candidatos].sort((a, b) => {
-    const bonusA = (a.fromFonte ? 30 : 0) + (a.fromNoticia ? 20 : 0);
-    const bonusB = (b.fromFonte ? 30 : 0) + (b.fromNoticia ? 20 : 0);
+    const bonusA = (a.fromFonte ? 30 : 0) + (a.fromNoticia ? 20 : 0) + (a.fromSerper ? 15 : 0);
+    const bonusB = (b.fromFonte ? 30 : 0) + (b.fromNoticia ? 20 : 0) + (b.fromSerper ? 15 : 0);
     return (pontuarImagemStock(a, ctx) - bonusA) - (pontuarImagemStock(b, ctx) - bonusB);
   });
 }
@@ -813,6 +813,62 @@ function mesclarCandidatos(listas) {
     }
   }
   return todos;
+}
+
+function serperDisponivel() {
+  return !!process.env.SERPER_API_KEY;
+}
+
+async function buscarSerperImagens(termos, ctx, { consultaDireta = false, filtroRigoroso = true, num = 20 } = {}) {
+  const apiKey = process.env.SERPER_API_KEY;
+  if (!apiKey) return [];
+
+  const consulta = consultaDireta ? termos : montarConsultaWeb(termos, ctx);
+
+  try {
+    const res = await fetch('https://google.serper.dev/images', {
+      method: 'POST',
+      headers: {
+        'X-API-KEY': apiKey,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        q: consulta,
+        gl: 'br',
+        hl: 'pt-br',
+        num: Math.min(Math.max(num, 10), 40)
+      }),
+      signal: AbortSignal.timeout(12000)
+    });
+
+    if (!res.ok) {
+      const erro = await res.text();
+      console.warn('Serper Imagens API:', res.status, erro.slice(0, 250));
+      return [];
+    }
+
+    const data = await res.json();
+    return (data.images || [])
+      .map((item) => ({
+        url: item.imageUrl || item.thumbnailUrl,
+        thumbnail: item.thumbnailUrl || item.imageUrl || '',
+        title: item.title || '',
+        alt: item.title || '',
+        contextLink: item.link || item.source || '',
+        width: item.imageWidth || 0,
+        height: item.imageHeight || 0,
+        fromSerper: true
+      }))
+      .filter((img) => {
+        if (!img.url) return false;
+        if (!filtroRigoroso) return passaFiltroBasico(img) && !imagemUrlGenerica(img.url);
+        return passaFiltroImagem(img, ctx);
+      })
+      .sort((a, b) => pontuarImagemStock(a, ctx) - pontuarImagemStock(b, ctx));
+  } catch (e) {
+    console.warn('buscarSerperImagens:', e.message);
+    return [];
+  }
 }
 
 async function buscarBraveImagens(termos, ctx, { consultaDireta = false, filtroRigoroso = true } = {}) {
@@ -1079,6 +1135,9 @@ async function coletarCandidatosWeb(consultas, ctx, { consultaDireta = false, fi
   };
 
   for (const termos of consultas) {
+    if (serperDisponivel()) {
+      adicionar(await buscarSerperImagens(termos, ctx, { consultaDireta, filtroRigoroso }));
+    }
     if (braveDisponivel()) {
       adicionar(await buscarBraveImagens(termos, ctx, { consultaDireta, filtroRigoroso }));
     }
@@ -1580,12 +1639,22 @@ async function buscarCandidatosCapaManual({
     }
   };
 
-  // Modo pessoa: busca direta por nome; filtro de relevância fica no passaFiltroManual
-  if (focoPessoa.length && braveDisponivel()) {
-    for (const q of consultas.slice(0, 8)) {
-      adicionarBruto(await buscarBraveImagens(q, ctx, { consultaDireta: true, filtroRigoroso: false }));
+  // Modo pessoa: Serper (Google Imagens) primeiro, depois Brave
+  if (focoPessoa.length) {
+    for (const q of consultas.slice(0, 6)) {
+      if (serperDisponivel()) {
+        adicionarBruto(await buscarSerperImagens(q, ctx, { consultaDireta: true, filtroRigoroso: false, num: 25 }));
+      }
+      if (braveDisponivel()) {
+        adicionarBruto(await buscarBraveImagens(q, ctx, { consultaDireta: true, filtroRigoroso: false }));
+      }
     }
   } else {
+    if (serperDisponivel()) {
+      for (const q of consultas.slice(0, 4)) {
+        adicionarBruto(await buscarSerperImagens(q, ctx, { consultaDireta: true, filtroRigoroso: false, num: 20 }));
+      }
+    }
     adicionarBruto(await buscarImagensViaBraveWeb(consultas, ctx));
     if (braveDisponivel()) {
       for (const q of consultas.slice(0, 5)) {
