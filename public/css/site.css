@@ -71,12 +71,36 @@
   font-size: 0.8rem;
 }
 
-/* ── Busca: overlay com animação (não empurra o menu) ── */
-.site-header-search-wrap {
+/* ── Busca + admin: overlay com animação (não empurra o menu) ── */
+.site-header-actions {
   position: absolute;
   right: 0;
   top: 0;
   height: 3.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.1rem;
+  z-index: 30;
+  flex-shrink: 0;
+}
+
+.site-header.header--compact .site-header-actions {
+  height: 3rem;
+}
+
+.site-header-admin-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: color 0.15s ease, opacity 0.2s ease, visibility 0.2s ease;
+}
+
+.site-header-search-wrap {
+  position: relative;
+  right: auto;
+  top: auto;
+  height: 2.5rem;
   width: 2.5rem;
   display: flex;
   align-items: center;
@@ -86,7 +110,7 @@
 }
 
 .site-header.header--compact .site-header-search-wrap {
-  height: 3rem;
+  height: 2.5rem;
 }
 
 .site-header-search-toggle {
@@ -174,6 +198,10 @@
 
 /* Mobile: busca ocupa a faixa do topo sem cobrir a logo */
 @media (max-width: 1023px) {
+  .site-header-top {
+    padding-right: 5.25rem;
+  }
+
   .site-header.search-open .site-header-logo {
     opacity: 0;
     visibility: hidden;
@@ -181,10 +209,22 @@
     transition: opacity 0.2s ease, visibility 0.2s ease;
   }
 
-  .site-header-search-wrap.is-open {
+  .site-header.search-open .site-header-admin-link {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  .site-header-actions:has(.site-header-search-wrap.is-open) {
     left: 2.75rem;
     right: 0;
     width: auto;
+  }
+
+  .site-header-search-wrap.is-open {
+    flex: 1;
+    width: auto;
+    height: 3.5rem;
   }
 
   .site-header-search-wrap.is-open .site-header-search {
@@ -212,7 +252,7 @@
   .site-header-inner {
     display: grid;
     grid-template-columns: auto 1fr auto;
-    grid-template-areas: "logo nav search";
+    grid-template-areas: "logo nav actions";
     align-items: center;
     column-gap: 1.5rem;
     padding-top: 0.85rem;
@@ -254,8 +294,16 @@
     padding: 0.5rem 0.65rem;
   }
 
+  .site-header-actions {
+    grid-area: actions;
+    position: relative;
+    right: auto;
+    top: auto;
+    height: auto;
+    justify-self: end;
+  }
+
   .site-header-search-wrap {
-    grid-area: search;
     position: relative;
     right: auto;
     top: auto;
