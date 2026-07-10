@@ -1,3 +1,4 @@
+const { Op } = require('sequelize');
 const { Post, Page, Category } = require('../models');
 const { obterUrlBase } = require('../utils/requestUrl');
 
@@ -5,8 +6,14 @@ const LIMITE_URLS = 50000;
 const LIMITE_NEWS_HORAS = 48;
 const LIMITE_NEWS_URLS = 1000;
 
+function sanitizarXml(valor) {
+  return String(valor ?? '')
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\uFFFE\uFFFF]/g, '')
+    .trim();
+}
+
 function escapeXml(valor) {
-  return String(valor)
+  return sanitizarXml(valor)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
@@ -41,11 +48,34 @@ function montarEntrada({ loc, lastmod, changefreq, prioridade }) {
 
 async function carregarDados() {
   const [posts, paginas, categorias] = await Promise.all([
-    Post.findAll({ where: { status: 'publicado' }, order: [['publicadoEm', 'DESC']] }),
-    Page.findAll({ where: { status: 'publicado' } }),
-    Category.findAll({ order: [['ordem', 'ASC'], ['nome', 'ASC']] })
+    Post.findAll({
+      where: { status: 'publicado' },
+      attributes: ['slug', 'titulo', 'publicadoEm', 'updatedAt'],
+      order: [['publicadoEm', 'DESC']]
+    }),
+    Page.findAll({
+      where: { status: 'publicado' },
+      attributes: ['slug', 'updatedAt']
+    }),
+    Category.findAll({
+      attributes: ['slug', 'updatedAt'],
+      order: [['ordem', 'ASC'], ['nome', 'ASC']]
+    })
   ]);
   return { posts, paginas, categorias };
+}
+
+async function carregarPostsNews() {
+  const limite = new Date(Date.now() - LIMITE_NEWS_HORAS * 60 * 60 * 1000);
+  return Post.findAll({
+    where: {
+      status: 'publicado',
+      publicadoEm: { [Op.gte]: limite }
+    },
+    attributes: ['slug', 'titulo', 'publicadoEm'],
+    order: [['publicadoEm', 'DESC']],
+    limit: LIMITE_NEWS_URLS
+  });
 }
 
 function montarUrls(config, base, dados) {
@@ -124,34 +154,36 @@ function renderizarUrlset(urls) {
 function montarUrlsNews(config, base, posts) {
   if (!sim(config, 'sitemap_news_ativo', false)) return [];
 
-  const limite = new Date(Date.now() - LIMITE_NEWS_HORAS * 60 * 60 * 1000);
-  const nomePublicacao = (config.site_nome || 'Site Gospel').trim();
+  const nomePublicacao = sanitizarXml((config.site_nome || 'Site Gospel').trim()) || 'Site Gospel';
 
   return posts
-    .filter((post) => post.publicadoEm && new Date(post.publicadoEm) >= limite)
-    .slice(0, LIMITE_NEWS_URLS)
+    .filter((post) => post.titulo && post.slug && post.publicadoEm)
     .map((post) => ({
       loc: `${base}/post/${post.slug}`,
-      titulo: post.titulo,
+      titulo: sanitizarXml(post.titulo),
       publicadoEm: post.publicadoEm,
       nomePublicacao
     }));
 }
 
 function renderizarNewsSitemap(urlsNews) {
-  const linhas = urlsNews.map((item) =>
-    '  <url>\n' +
-    `    <loc>${escapeXml(item.loc)}</loc>\n` +
-    '    <news:news>\n' +
-    '      <news:publication>\n' +
-    `        <news:name>${escapeXml(item.nomePublicacao)}</news:name>\n` +
-    '        <news:language>pt</news:language>\n' +
-    '      </news:publication>\n' +
-    `      <news:publication_date>${escapeXml(formatarLastmod(item.publicadoEm))}</news:publication_date>\n` +
-    `      <news:title>${escapeXml(item.titulo)}</news:title>\n` +
-    '    </news:news>\n' +
-    '  </url>'
-  );
+  const linhas = urlsNews.map((item) => {
+    const dataPub = formatarLastmod(item.publicadoEm);
+    if (!dataPub || !item.titulo) return '';
+    return (
+      '  <url>\n' +
+      `    <loc>${escapeXml(item.loc)}</loc>\n` +
+      '    <news:news>\n' +
+      '      <news:publication>\n' +
+      `        <news:name>${escapeXml(item.nomePublicacao)}</news:name>\n` +
+      '        <news:language>pt</news:language>\n' +
+      '      </news:publication>\n' +
+      `      <news:publication_date>${escapeXml(dataPub)}</news:publication_date>\n` +
+      `      <news:title>${escapeXml(item.titulo)}</news:title>\n` +
+      '    </news:news>\n' +
+      '  </url>'
+    );
+  }).filter(Boolean);
 
   return (
     '<?xml version="1.0" encoding="UTF-8"?>\n' +
@@ -173,8 +205,9 @@ function listarSitemaps(config, base) {
 async function obterResumo(config, req) {
   const base = obterBaseUrl(config, req);
   const dados = await carregarDados();
+  const postsNews = await carregarPostsNews();
   const urls = montarUrls(config, base, dados);
-  const urlsNews = montarUrlsNews(config, base, dados.posts);
+  const urlsNews = montarUrlsNews(config, base, postsNews);
 
   const contagem = {
     home: sim(config, 'sitemap_incluir_home', true) ? 1 : 0,
@@ -194,6 +227,8 @@ async function obterResumo(config, req) {
     robotsUrl: `${base}/robots.txt`,
     googleSearchConsoleUrl: 'https://search.google.com/search-console',
     googleSitemapPingUrl: base ? `https://www.google.com/ping?sitemap=${encodeURIComponent(`${base}/sitemap.xml`)}` : null,
+    googleNewsPingUrl: base ? `https://www.google.com/ping?sitemap=${encodeURIComponent(`${base}/sitemap-news.xml`)}` : null,
+    indexnowAtivo: !!(config.indexnow_chave || '').trim(),
     indexar: sim(config, 'seo_indexar', true),
     amostra: urls.slice(0, 12).map((u) => u.loc)
   };
@@ -208,8 +243,8 @@ async function gerarSitemapPrincipal(config, req) {
 
 async function gerarSitemapNews(config, req) {
   const base = obterBaseUrl(config, req);
-  const dados = await carregarDados();
-  const urlsNews = montarUrlsNews(config, base, dados.posts);
+  const postsNews = await carregarPostsNews();
+  const urlsNews = montarUrlsNews(config, base, postsNews);
   return renderizarNewsSitemap(urlsNews);
 }
 

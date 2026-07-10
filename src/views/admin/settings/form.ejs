@@ -244,10 +244,26 @@
     <div class="sitemap-acoes-google">
       <a href="<%= sitemap.googleSearchConsoleUrl %>" target="_blank" rel="noopener" class="btn btn-primario">Abrir Google Search Console</a>
       <% if (sitemap.googleSitemapPingUrl) { %>
-        <a href="<%= sitemap.googleSitemapPingUrl %>" target="_blank" rel="noopener" class="btn btn-secundario">Notificar Google (ping)</a>
+        <a href="<%= sitemap.googleSitemapPingUrl %>" target="_blank" rel="noopener" class="btn btn-secundario">Ping sitemap.xml</a>
+      <% } %>
+      <% if (sitemap.googleNewsPingUrl) { %>
+        <a href="<%= sitemap.googleNewsPingUrl %>" target="_blank" rel="noopener" class="btn btn-secundario">Ping sitemap-news.xml</a>
       <% } %>
     </div>
-    <p class="dica">No Search Console: <strong>Sitemaps</strong> → adicione <code>sitemap.xml</code>. O Google também descobre pelo <code>robots.txt</code>.</p>
+    <p class="dica">Ao <strong>publicar um post</strong>, o site avisa automaticamente os buscadores (IndexNow + ping do sitemap). O Google ainda pode levar algumas horas para indexar — use <strong>Inspeção de URL</strong> no Search Console para acelerar uma matéria específica.</p>
+
+    <fieldset class="sitemap-opcoes">
+      <legend>IndexNow (aviso automático ao publicar)</legend>
+      <label>Chave IndexNow
+        <input type="text" name="indexnow_chave" value="<%= config.indexnow_chave || '' %>" placeholder="Gere uma chave para ativar" readonly>
+      </label>
+      <button type="submit" class="btn btn-secundario" name="gerar_indexnow" value="1">Gerar nova chave</button>
+      <% if (config.indexnow_chave && sitemap.base) { %>
+        <p class="dica">Arquivo de verificação: <code><%= sitemap.base %>/<%= config.indexnow_chave %>.txt</code>
+          <% if (sitemap.indexnowAtivo) { %> — <strong>ativo</strong><% } %>
+        </p>
+      <% } %>
+    </fieldset>
 
     <fieldset class="sitemap-opcoes">
       <legend>Conteúdo incluído no sitemap</legend>

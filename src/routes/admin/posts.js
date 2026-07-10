@@ -1,9 +1,10 @@
 const router = require('express').Router();
-const { Post, Category } = require('../../models');
+const { Post, Category, Setting } = require('../../models');
 const uploadCapaPost = require('../../middlewares/uploadCapaPost');
 const { buscarCandidatosCapaManual, salvarCandidatoComoCapa } = require('../../services/imageFetcher');
 const { obterResumoFila } = require('../../services/iaFilaPublicacao');
 const { obterResumoMonitores } = require('../../services/iaMonitorAutomatico');
+const { notificarPublicacao } = require('../../services/indexacao');
 
 router.use('/ia', require('./aiPosts'));
 
@@ -16,6 +17,16 @@ function podeEditar(user, post) {
 function redirectPosts(res, status) {
   const filtro = status && status !== 'todos' ? `?status=${encodeURIComponent(status)}` : '';
   res.redirect(`/admin/posts${filtro}`);
+}
+
+async function avisarGoogleSePublicado(post, req, eraPublicado = false) {
+  if (!post || post.status !== 'publicado' || eraPublicado) return;
+  try {
+    const config = await Setting.obterTodas();
+    await notificarPublicacao(config, post.slug, req);
+  } catch (e) {
+    console.warn('avisarGoogleSePublicado:', e.message);
+  }
 }
 
 router.get('/', async (req, res, next) => {
@@ -99,7 +110,7 @@ router.post('/', ...uploadCapaPost, async (req, res) => {
     }
     let status = ehUsuario ? 'rascunho' : (req.body.status || 'rascunho');
     if (status === 'publicado' && !imagem) status = 'rascunho';
-    await Post.create({
+    const post = await Post.create({
       titulo: req.body.titulo,
       slug: (req.body.slug || '').trim(),
       resumo: req.body.resumo,
@@ -113,6 +124,7 @@ router.post('/', ...uploadCapaPost, async (req, res) => {
       imagem,
       imagemAlt: (req.body.imagem_alt || '').trim() || null
     });
+    await avisarGoogleSePublicado(post, req);
     req.flash('sucesso', (!ehUsuario && req.body.status === 'publicado' && !imagem)
       ? 'Post salvo como rascunho (sem imagem de capa).'
       : 'Post criado com sucesso.');
@@ -193,6 +205,7 @@ router.post('/:id', ...uploadCapaPost, async (req, res) => {
       return res.redirect('/admin/posts');
     }
     const ehUsuario = req.session.user.papel === 'usuario';
+    const eraPublicado = post.status === 'publicado';
     post.titulo = req.body.titulo;
     post.slug = (req.body.slug || '').trim();
     post.resumo = req.body.resumo;
@@ -214,6 +227,7 @@ router.post('/:id', ...uploadCapaPost, async (req, res) => {
       post.destaque = req.body.destaque === 'on';
     }
     await post.save();
+    await avisarGoogleSePublicado(post, req, eraPublicado);
     req.flash('sucesso', (!ehUsuario && req.body.status === 'publicado' && !post.imagem)
       ? 'Post salvo como rascunho (sem imagem de capa).'
       : 'Post atualizado com sucesso.');

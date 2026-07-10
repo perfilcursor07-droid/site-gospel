@@ -1,8 +1,14 @@
 const { Post } = require('../models');
 const { obterUrlBase } = require('../utils/requestUrl');
 
+function sanitizarXml(valor) {
+  return String(valor ?? '')
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\uFFFE\uFFFF]/g, '')
+    .trim();
+}
+
 function escapeXml(valor) {
-  return String(valor)
+  return sanitizarXml(valor)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')

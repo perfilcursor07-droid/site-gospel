@@ -337,8 +337,12 @@ router.get('/feed.xml', async (req, res, next) => {
       return res.status(404).type('text/plain').send('Feed indisponível');
     }
     const xml = await gerarFeedRss(config, req);
+    res.set('Cache-Control', 'public, max-age=300, must-revalidate');
     res.type('application/rss+xml; charset=utf-8').send(xml);
-  } catch (e) { next(e); }
+  } catch (e) {
+    console.error('feed.xml:', e.message);
+    next(e);
+  }
 });
 
 router.get('/sitemap.xml', async (req, res, next) => {
@@ -348,8 +352,12 @@ router.get('/sitemap.xml', async (req, res, next) => {
       return res.status(404).type('text/plain').send('Sitemap indisponível');
     }
     const xml = await gerarSitemapPrincipal(config, req);
+    res.set('Cache-Control', 'public, max-age=300, must-revalidate');
     res.type('application/xml; charset=utf-8').send(xml);
-  } catch (e) { next(e); }
+  } catch (e) {
+    console.error('sitemap.xml:', e.message);
+    next(e);
+  }
 });
 
 router.get('/sitemap-news.xml', async (req, res, next) => {
@@ -359,8 +367,19 @@ router.get('/sitemap-news.xml', async (req, res, next) => {
       return res.status(404).type('text/plain').send('Sitemap News indisponível');
     }
     const xml = await gerarSitemapNews(config, req);
+    res.set('Cache-Control', 'public, max-age=60, must-revalidate');
     res.type('application/xml; charset=utf-8').send(xml);
-  } catch (e) { next(e); }
+  } catch (e) {
+    console.error('sitemap-news.xml:', e.message);
+    next(e);
+  }
+});
+
+router.get('/:indexnowKey.txt', (req, res, next) => {
+  const config = res.locals.config || {};
+  const chave = (config.indexnow_chave || '').trim();
+  if (!chave || req.params.indexnowKey !== chave) return next();
+  res.type('text/plain').send(chave);
 });
 
 router.get('/robots.txt', (req, res) => {

@@ -3,6 +3,7 @@ const { Setting } = require('../../models');
 const { permitir } = require('../../middlewares/auth');
 const upload = require('../../config/upload');
 const { obterResumo } = require('../../services/sitemap');
+const { gerarChaveIndexNow } = require('../../services/indexacao');
 const { sugerirConfiguracaoSite } = require('../../services/siteConfigAi');
 const { extrairClientAdSense } = require('../../utils/amp');
 
@@ -83,6 +84,12 @@ router.post('/', upload.fields([
     await Setting.definir('sitemap_incluir_categorias', req.body.sitemap_incluir_categorias === 'on' ? 'sim' : 'nao');
     await Setting.definir('sitemap_incluir_paginas', req.body.sitemap_incluir_paginas === 'on' ? 'sim' : 'nao');
     await Setting.definir('sitemap_news_ativo', req.body.sitemap_news_ativo === 'on' ? 'sim' : 'nao');
+
+    if (req.body.gerar_indexnow === '1') {
+      await Setting.definir('indexnow_chave', gerarChaveIndexNow());
+    } else if ('indexnow_chave' in req.body) {
+      await Setting.definir('indexnow_chave', (req.body.indexnow_chave || '').trim());
+    }
 
     await Setting.definir('amp_habilitado', req.body.amp_habilitado === 'on' ? 'sim' : 'nao');
     await Setting.definir('amp_adsense', req.body.amp_adsense === 'on' ? 'sim' : 'nao');

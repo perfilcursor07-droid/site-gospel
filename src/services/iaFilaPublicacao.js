@@ -1,9 +1,10 @@
 const { Op } = require('sequelize');
-const { Post, IaFilaJob } = require('../models');
+const { Post, IaFilaJob, Setting } = require('../models');
 const { gerarArtigo } = require('./deepseek');
 const { apurarTopico } = require('./articleSource');
 const { obterImagemParaArtigo } = require('./imageFetcher');
 const { encontrarSimilar, marcarTopicosPublicados, deduplicarTopicos } = require('../utils/topicMatch');
+const { notificarPublicacao } = require('./indexacao');
 
 let processando = false;
 
@@ -64,6 +65,16 @@ async function gerarPostDoTopico(topico, { autorId, categoriaId, statusDesejado,
   });
 
   return { post, artigo, semImagem: !imagem };
+}
+
+async function avisarIndexacaoPost(post) {
+  if (!post || post.status !== 'publicado') return;
+  try {
+    const config = await Setting.obterTodas();
+    await notificarPublicacao(config, post.slug);
+  } catch (e) {
+    console.warn('avisarIndexacaoPost:', e.message);
+  }
 }
 
 async function agendarTopicos({
@@ -178,17 +189,27 @@ async function recuperarJobsTravados() {
 
 async function publicarPostsAgendados() {
   const agora = new Date();
-  const [qtd] = await Post.update(
+  const prontos = await Post.findAll({
+    where: {
+      status: 'agendado',
+      publicadoEm: { [Op.lte]: agora },
+      imagem: { [Op.ne]: null }
+    },
+    attributes: ['id', 'slug']
+  });
+
+  if (!prontos.length) return 0;
+
+  await Post.update(
     { status: 'publicado' },
-    {
-      where: {
-        status: 'agendado',
-        publicadoEm: { [Op.lte]: agora },
-        imagem: { [Op.ne]: null }
-      }
-    }
+    { where: { id: prontos.map((p) => p.id) } }
   );
-  return qtd;
+
+  for (const post of prontos) {
+    await avisarIndexacaoPost({ slug: post.slug, status: 'publicado' });
+  }
+
+  return prontos.length;
 }
 
 async function processarProximoJob(nomeSite = 'Site Gospel') {
@@ -243,6 +264,7 @@ async function processarProximoJob(nomeSite = 'Site Gospel') {
     }
 
     await job.update({ status: 'concluido', postId: post.id });
+    if (post.status === 'publicado') await avisarIndexacaoPost(post);
     await publicarPostsAgendados();
     return { job, post };
   } catch (e) {
