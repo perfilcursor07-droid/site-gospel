@@ -3,4 +3,5 @@ node_modules/
 uploads/*
 !uploads/.gitkeep
 config/google-indexing-key.json
+config/gen-lang-client-*.json
 **/google-indexing-key.json
