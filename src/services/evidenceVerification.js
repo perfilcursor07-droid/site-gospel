@@ -107,6 +107,10 @@ function trechoRelevante(trecho, url) {
   const t = String(trecho || '');
   if (RX_LIXO_TECNICO.test(t)) return false;
   if (t.length < 25) return false;
+  if (/segundo\s+casamento|casou\s+novamente|reformou\s+(?:seu\s+)?lar|nova\s+uni[aã]o/i.test(t)
+    && !/divorci|separou|separa(?:ção|cao)|fim\s+do\s+casamento|casamento\s+acabou|chegou\s+ao\s+fim|pediu\s+div[oó]rcio/i.test(t)) {
+    return false;
+  }
   if (!sentencaConfirmaDivorcio(t)) return false;
   if (/catholic news agency|vaticano|papa le[aã]o|amoris laetitia/i.test(t) && !/pastor|pastora|cantor|gospel|evangel/i.test(t)) {
     return false;
@@ -371,30 +375,55 @@ function listarH2Invalidos(artigo, evidencias) {
   return h2s.filter((h) => h2PareceNomePessoa(h) && !nomePermitidoNoH2(h, permitidos));
 }
 
-async function obterEvidenciasVerificadas(apurados, tema) {
+function selecionarEvidenciasParaLista(brutas, tema, formato) {
+  const listagem = brutas.filter((e) => e.origem === 'listagem');
+  if (listagem.length >= 2) return consolidarEvidencias(listagem);
+
+  const temaLista = formato === 'listagem_nomes'
+    || /lista|pastores|quem|nao sabia|não sabia|voce nao|você não|divorci/i.test(normalizar(tema));
+
+  if (temaLista && listagem.length === 0 && brutas.length <= 1) {
+    return [];
+  }
+
+  if (temaLista && brutas.length >= 2) {
+    return consolidarEvidencias(brutas);
+  }
+
+  return consolidarEvidencias(brutas);
+}
+
+async function obterEvidenciasVerificadas(apurados, tema, opcoes = {}) {
+  const { formato = 'reportagem' } = opcoes;
   const brutas = consolidarEvidencias(extrairEvidenciasDocumentais(apurados));
   if (!brutas.length) return [];
 
   const listagem = brutas.filter((e) => e.origem === 'listagem');
-  const altaConfianca = brutas.filter((e) => e.confiavel && e.origem === 'listagem');
+  const altaConfianca = listagem.filter((e) => e.confiavel);
 
   if (altaConfianca.length >= 2) {
-    return consolidarEvidencias(altaConfianca);
+    return selecionarEvidenciasParaLista(altaConfianca, tema, formato);
   }
 
   if (listagem.length >= 2) {
-    return consolidarEvidencias(listagem);
+    return selecionarEvidenciasParaLista(listagem, tema, formato);
+  }
+
+  if (formato === 'listagem_nomes' && listagem.length === 0 && brutas.length <= 1) {
+    return [];
   }
 
   try {
-    const confirmadas = consolidarEvidencias(await filtrarEvidenciasInvestigativas(brutas, tema));
+    const candidatas = brutas.slice(0, 12);
+    const confirmadas = consolidarEvidencias(await filtrarEvidenciasInvestigativas(candidatas, tema));
     const validas = confirmadas.filter((e) => nomeValido(e.nome) && trechoRelevante(e.trecho, e.url));
-    if (validas.length) return validas;
+    if (validas.length >= 2) return selecionarEvidenciasParaLista(validas, tema, formato);
+    if (validas.length && formato !== 'listagem_nomes') return validas;
   } catch (e) {
     console.warn('obterEvidenciasVerificadas IA:', e.message);
   }
 
-  return brutas;
+  return selecionarEvidenciasParaLista(brutas, tema, formato);
 }
 
 function montarBlocoEvidencias(evidencias) {

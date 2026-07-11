@@ -328,6 +328,7 @@ FORMATO LISTAGEM ("quem são eles") — SOMENTE COM PROVA DOCUMENTAL:
 - PROIBIDO inferir divórcio de "primeira esposa" ou biografia genérica.
 - Pode usar UM <h2>Contexto</h2> no final (seção genérica, sem nome de pessoa).
 - Se só houver 1–2 casos confirmados, diga isso claramente — não encha a lista.
+- Título: se houver ${evidenciasLista.length} nomes, manchete sobre A LISTA (ex.: "${evidenciasLista.length} líderes gospel com divórcio documentado") — NUNCA manchete focada em um único nome quando há vários confirmados.
 ${evidenciasLista.length
   ? `PESSOAS COM PROVA (${evidenciasLista.length}) — use estes nomes nos <h2>: ${evidenciasLista.map((e) => e.nome).join('; ')}`
   : 'NENHUMA PESSOA CONFIRMADA — escreva matéria explicando que a apuração não encontrou casos documentados com divórcio explícito em matérias lidas.'}

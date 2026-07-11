@@ -629,10 +629,13 @@ router.post('/investigativa/gerar', async (req, res) => {
     }
 
     const duplicadoGerado = posts.find((p) => titulosSimilares(p.titulo, artigo.titulo));
-    if (duplicadoGerado) {
+    const listaMultipla = pauta.formatoInvestigativa === 'listagem_nomes' && evidenciasConsolidadas.length >= 2;
+    const rascunhoUnicoAntigo = duplicadoGerado && /único|unico|somente um|apenas um|só um|so um/i.test(duplicadoGerado.titulo || '');
+
+    if (duplicadoGerado && !(listaMultipla && rascunhoUnicoAntigo)) {
       return responderJson(res, 400, {
         ok: false,
-        erro: `Já existe matéria com manchete parecida: "${duplicadoGerado.titulo}". Edite o rascunho existente ou refine as palavras-chave.`
+        erro: `Já existe matéria com manchete parecida: "${duplicadoGerado.titulo}". ${rascunhoUnicoAntigo ? 'Apague esse rascunho antigo e tente de novo.' : 'Edite o rascunho existente ou refine as palavras-chave.'}`
       });
     }
 
