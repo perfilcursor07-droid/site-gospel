@@ -102,7 +102,21 @@ async function extrairMetadadosArtigo(url) {
       if (!trecho && texto.length > 80) trecho = texto.slice(0, 500);
     }
 
-    const corpo = textosParagrafos.join('\n\n').slice(0, 14000);
+    const blocosOrdenados = [];
+    const reBloco = /<(p|h[1-4]|h5|h6|li)[^>]*>([\s\S]*?)<\/\1>/gi;
+    let blocoMatch;
+    while ((blocoMatch = reBloco.exec(html)) !== null) {
+      const tag = blocoMatch[1].toLowerCase();
+      const texto = decodificarHtml(blocoMatch[2]);
+      if (!texto || texto.length < 2) continue;
+      if (tag.startsWith('h')) {
+        blocosOrdenados.push(`## ${texto.replace(/\*\*/g, '').trim()}`);
+      } else if (texto.length > 15) {
+        blocosOrdenados.push(texto);
+      }
+    }
+
+    const corpo = (blocosOrdenados.length ? blocosOrdenados.join('\n\n') : textosParagrafos.join('\n\n')).slice(0, 16000);
 
     return { urlReal, imagem, imagens, descricao, titulo, trecho, corpo };
   } catch (e) {

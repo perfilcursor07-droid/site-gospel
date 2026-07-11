@@ -26,7 +26,7 @@ const MIN_FONTES_IDEAIS = 8;
 const MIN_NOMES_LISTAGEM = 1;
 
 const PORTAIS_APURACAO = [
-  'guiame.com.br', 'gospelprime.com.br', 'portaldogospel.com.br', 'folhagospel.com',
+  'fuxicogospel.com.br', 'guiame.com.br', 'gospelprime.com.br', 'portaldogospel.com.br', 'folhagospel.com',
   'panorama.com.br', 'pleno.news', 'agenciaelos.com.br', 'supergospelsp.com.br',
   'verdadegospel.com.br', 'gospelcenter.com.br', 'adoradores.com.br', 'g1.globo.com'
 ];
@@ -266,7 +266,13 @@ function montarConsultasInvestigativa(palavrasChave, formato) {
       'Lanna Holder divorcio Ronaldo',
       'Alan Pereira divorcio lagoinha',
       'pastor evangélico término casamento',
-      'pastores renomados divorciados brasil'
+      'pastores renomados divorciados brasil',
+      'famosos gospel divorciaram lista',
+      'site:fuxicogospel.com.br divorciaram',
+      'site:fuxicogospel.com.br separação pastor',
+      'Vanilda Bordieri divorcio',
+      'David Lacerda separação',
+      'Alexandre Mendes divorcio pastor'
     );
     for (const site of PORTAIS_APURACAO) {
       consultas.push(`site:${site} pastor divorciou`);
@@ -345,9 +351,13 @@ async function buscarFontesInvestigativa(palavrasChave, opcoes = {}) {
     ]
     : onda === 3
       ? [
+        'site:fuxicogospel.com.br divorciaram',
+        'famosos gospel divorciaram lista',
         'Lanna Holder divorcio',
         'Ronaldo Holder divorcio',
         'Alan Pereira divorcio pastor',
+        'Vanilda Bordieri divorcio',
+        'David Lacerda separação',
         'pastor lagoinha divorciou',
         'pastor universal divorciou',
         'pastor batista divorciou brasil'

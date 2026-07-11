@@ -28,7 +28,8 @@ const PORTAIS_GOSPEL = [
   'padrenosso.com.br',
   'gospelvida.com.br',
   'mensagemdepaz.org',
-  'adoradores.com.br'
+  'adoradores.com.br',
+  'fuxicogospel.com.br'
 ];
 function limparResumo(texto, max = 400) {
   return decodificarHtml(texto || '')
