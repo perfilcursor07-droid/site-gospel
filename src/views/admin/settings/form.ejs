@@ -1,385 +1,419 @@
-<h1>Configurações</h1>
-
-<div class="painel-ia painel-ia-config" id="painel-ia-config">
-  <div class="painel-ia-intro">
+<div class="config-page">
+  <header class="config-header">
     <div>
-      <h2>Preencher com IA (DeepSeek)</h2>
-      <p class="dica">Descreva o seu portal gospel e a IA sugere textos para Identidade, SEO e Rodapé. Revise antes de salvar.</p>
+      <h1>Configurações</h1>
+      <p class="config-header-desc">Identidade do site, SEO, integrações Google e indexação.</p>
     </div>
-  </div>
+  </header>
 
-  <label class="ia-bloco-titulo" for="ia-config-descricao">Sobre o seu site</label>
-  <textarea id="ia-config-descricao" class="ia-input-grande" rows="3" placeholder="Ex.: Trata-se de um site gospel com notícias sobre o mundo gospel, polêmicas, louvor e igrejas no Brasil. Público jovem e adulto evangelico."></textarea>
-
-  <div class="ia-passo-acoes ia-passo-acoes-inicio">
-    <button type="button" class="btn btn-primario btn-ia-principal" id="btn-ia-config-todas">Preencher tudo com IA</button>
-    <button type="button" class="btn btn-sec" id="btn-ia-config-identidade">Só Identidade</button>
-    <button type="button" class="btn btn-sec" id="btn-ia-config-seo">Só SEO</button>
-    <button type="button" class="btn btn-sec" id="btn-ia-config-rodape">Só Rodapé</button>
-  </div>
-  <p class="ia-status-msg ia-status-info" id="ia-config-status" hidden></p>
-</div>
-
-<div class="abas" id="abas">
-  <button type="button" class="aba-btn ativa" data-aba="identidade">Identidade</button>
-  <button type="button" class="aba-btn" data-aba="seo">SEO</button>
-  <button type="button" class="aba-btn" data-aba="redes">Redes sociais</button>
-  <button type="button" class="aba-btn" data-aba="google">Integrações Google</button>
-  <button type="button" class="aba-btn" data-aba="amp">AMP</button>
-  <button type="button" class="aba-btn" data-aba="sitemap">Sitemap</button>
-  <button type="button" class="aba-btn" data-aba="rodape">Rodapé</button>
-</div>
-
-<form action="/admin/configuracoes" method="post" enctype="multipart/form-data" class="form form-largo">
-
-  <div class="aba-conteudo" data-aba="identidade">
-    <div class="aba-ia-acao">
-      <button type="button" class="btn btn-sec btn-ia-aba" data-ia-secao="identidade">✨ Preencher esta aba com IA</button>
-    </div>
-    <label>Nome do site
-      <input type="text" name="site_nome" value="<%= config.site_nome || '' %>" placeholder="Site Gospel">
-    </label>
-    <label>Slogan / tagline
-      <input type="text" name="site_slogan" value="<%= config.site_slogan || '' %>" placeholder="Notícias, louvor e edificação">
-    </label>
-    <label>Descrição do site
-      <textarea name="site_descricao" rows="2" placeholder="Breve descrição do site"><%= config.site_descricao || '' %></textarea>
-    </label>
-    <div class="campo-upload">
-      <label>Logomarca
-        <input type="file" name="logo" accept="image/*">
-      </label>
-      <% if (config.logo) { %>
-        <img src="<%= config.logo %>" alt="Logomarca atual" class="preview-img preview-logo">
-        <label class="checkbox"><input type="checkbox" name="remover_logo"> Remover logomarca atual</label>
-      <% } %>
-    </div>
-    <div class="campo-upload">
-      <label>Favicon
-        <input type="file" name="favicon" accept="image/*">
-      </label>
-      <% if (config.favicon) { %>
-        <img src="<%= config.favicon %>" alt="Favicon atual" class="preview-img preview-favicon">
-        <label class="checkbox"><input type="checkbox" name="remover_favicon"> Remover favicon atual</label>
-      <% } %>
-      <p class="dica">Recomendado: imagem quadrada (32x32 ou 64x64).</p>
-    </div>
-    <label>Cor primária do site
-      <input type="color" name="cor_primaria" value="<%= config.cor_primaria || '#ea580c' %>" class="input-cor">
-    </label>
-  </div>
-
-  <div class="aba-conteudo" data-aba="seo" hidden>
-    <div class="aba-ia-acao">
-      <button type="button" class="btn btn-sec btn-ia-aba" data-ia-secao="seo">✨ Preencher esta aba com IA</button>
-    </div>
-    <label>Título SEO da home
-      <input type="text" name="seo_titulo" maxlength="60" value="<%= config.seo_titulo || '' %>" data-contador="cont-titulo" data-snippet="snippet-titulo" placeholder="Ex.: Site Gospel — Notícias, louvor e edificação">
-    </label>
-    <p class="dica"><span id="cont-titulo">0</span>/60 caracteres</p>
-    <label>Meta descrição
-      <textarea name="seo_descricao" rows="3" maxlength="160" data-contador="cont-desc" data-snippet="snippet-desc" placeholder="Descrição que aparece nos resultados do Google"><%= config.seo_descricao || '' %></textarea>
-    </label>
-    <p class="dica"><span id="cont-desc">0</span>/160 caracteres</p>
-    <label>Palavras-chave
-      <input type="text" name="seo_palavras_chave" value="<%= config.seo_palavras_chave || '' %>" placeholder="gospel, louvor, estudos bíblicos, devocionais">
-    </label>
-    <div class="campo-upload">
-      <label>Imagem padrão de compartilhamento (Open Graph)
-        <input type="file" name="og_imagem" accept="image/*">
-      </label>
-      <% if (config.og_imagem) { %><img src="<%= config.og_imagem %>" alt="Imagem OG atual" class="preview-img preview-og"><% } %>
-      <p class="dica">Usada quando o site é compartilhado em redes sociais. Recomendado: 1200x630px.</p>
-    </div>
-    <label class="checkbox">
-      <input type="checkbox" name="seo_indexar" <%= (config.seo_indexar || 'sim') !== 'nao' ? 'checked' : '' %>> Permitir indexação no Google
-    </label>
-    <p class="dica">Quando desligado, o site aplica noindex e bloqueia robôs no robots.txt.</p>
-
-    <div class="snippet-google">
-      <p class="dica" style="margin-bottom: 8px;">Prévia no Google:</p>
-      <p class="snippet-url"><%= urlBase %></p>
-      <p class="snippet-titulo" id="snippet-titulo"><%= config.seo_titulo || config.site_nome || 'Site Gospel' %></p>
-      <p class="snippet-desc" id="snippet-desc"><%= config.seo_descricao || 'A meta descrição do site aparecerá aqui.' %></p>
-    </div>
-  </div>
-
-  <div class="aba-conteudo" data-aba="redes" hidden>
-    <label>Facebook (URL)
-      <input type="url" name="social_facebook" value="<%= config.social_facebook || '' %>" placeholder="https://facebook.com/seusite">
-    </label>
-    <label>Instagram (URL)
-      <input type="url" name="social_instagram" value="<%= config.social_instagram || '' %>" placeholder="https://instagram.com/seusite">
-    </label>
-    <label>YouTube (URL)
-      <input type="url" name="social_youtube" value="<%= config.social_youtube || '' %>" placeholder="https://youtube.com/@seusite">
-    </label>
-    <label>WhatsApp (URL)
-      <input type="url" name="social_whatsapp" value="<%= config.social_whatsapp || '' %>" placeholder="https://wa.me/5511999999999">
-    </label>
-    <p class="dica">Os ícones das redes preenchidas aparecem no rodapé do site.</p>
-  </div>
-
-  <div class="aba-conteudo" data-aba="google" hidden>
-    <label>Google Search Console (meta verification)
-      <input type="text" name="google_site_verification" value="<%= config.google_site_verification || '' %>" placeholder="Conteúdo da meta tag google-site-verification">
-    </label>
-    <label>Google Analytics
-      <input type="text" name="google_analytics" value="<%= config.google_analytics || '' %>" placeholder="G-XXXXXXXXXX">
-    </label>
-
-    <fieldset class="integracao-box">
-      <legend>Google AdSense</legend>
-      <label>Código do AdSense (cole o script completo)
-        <textarea name="google_adsense" rows="6" placeholder="&lt;script async src=&quot;https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXX&quot; crossorigin=&quot;anonymous&quot;&gt;&lt;/script&gt;"><%= config.google_adsense || '' %></textarea>
-      </label>
-      <label>ID do cliente AdSense (ca-pub-…)
-        <input type="text" name="google_adsense_client" value="<%= config.google_adsense_client || '' %>" placeholder="ca-pub-XXXXXXXXXXXXXXXX">
-      </label>
-      <p class="dica">O script é inserido no <code>&lt;head&gt;</code> de todas as páginas do site. O ID <code>ca-pub</code> é detectado automaticamente do script e usado nas páginas AMP.</p>
-    </fieldset>
-
-    <label>Código customizado no &lt;head&gt;
-      <textarea name="head_custom" rows="5" placeholder="Scripts ou tags extras inseridos no <head> do site"><%= config.head_custom || '' %></textarea>
-    </label>
-    <p class="dica">Atenção: o conteúdo é inserido sem filtro no site público.</p>
-  </div>
-
-  <div class="aba-conteudo" data-aba="amp" hidden>
-    <p class="dica">AMP gera versões aceleradas para mobile dos posts, com link <code>rel="amphtml"</code> na página normal e URL canônica na versão AMP — conforme exigências do Google.</p>
-
-    <label class="checkbox">
-      <input type="checkbox" name="amp_habilitado" <%= config.amp_habilitado === 'sim' ? 'checked' : '' %>> Habilitar páginas AMP para posts publicados
-    </label>
-
-    <label class="checkbox">
-      <input type="checkbox" name="amp_adsense" <%= (config.amp_adsense || 'sim') !== 'nao' ? 'checked' : '' %>> Exibir Google AdSense nas páginas AMP (requer ID ca-pub na aba Integrações Google)
-    </label>
-
-    <fieldset class="integracao-box">
-      <legend>Logomarca no header AMP</legend>
-      <div class="amp-logo-config-grid">
-        <label>Largura da logo (px)
-          <input type="number" name="amp_logo_largura" min="60" max="320" value="<%= config.amp_logo_largura || '140' %>">
-        </label>
-        <label>Altura da logo (px)
-          <input type="number" name="amp_logo_altura" min="20" max="120" value="<%= config.amp_logo_altura || '42' %>">
-        </label>
-        <label>Tamanho do texto (sem logo)
-          <input type="number" name="amp_logo_texto_tamanho" min="0.85" max="2" step="0.05" value="<%= config.amp_logo_texto_tamanho || '1.1' %>">
-        </label>
+  <details class="config-ia-fold">
+    <summary>Preencher campos com IA (DeepSeek)</summary>
+    <div class="config-ia-corpo">
+      <p class="dica">Descreva seu portal gospel e a IA sugere textos para Identidade, SEO e Rodapé. Revise antes de salvar.</p>
+      <label class="config-label" for="ia-config-descricao">Sobre o seu site</label>
+      <textarea id="ia-config-descricao" class="ia-input-grande" rows="2" placeholder="Ex.: Site gospel com notícias, louvor e igrejas no Brasil. Público evangélico jovem e adulto."></textarea>
+      <div class="config-ia-botoes">
+        <button type="button" class="btn btn-primario btn-sm" id="btn-ia-config-todas">Preencher tudo</button>
+        <button type="button" class="btn btn-sec btn-sm" id="btn-ia-config-identidade">Identidade</button>
+        <button type="button" class="btn btn-sec btn-sm" id="btn-ia-config-seo">SEO</button>
+        <button type="button" class="btn btn-sec btn-sm" id="btn-ia-config-rodape">Rodapé</button>
       </div>
-      <p class="dica">Padrão recomendado: 140×42 px. Valores em rem para o nome do site quando não houver logomarca.</p>
-      <% if (config.logo) { %>
-        <div class="amp-logo-preview">
-          <span>Prévia:</span>
-          <img src="<%= config.logo %>" alt="Prévia logo AMP" style="max-width: <%= config.amp_logo_largura || 140 %>px; max-height: <%= config.amp_logo_altura || 42 %>px; width: auto; height: auto;">
+      <p class="ia-status-msg ia-status-info" id="ia-config-status" hidden></p>
+    </div>
+  </details>
+
+  <form action="/admin/configuracoes" method="post" enctype="multipart/form-data" class="config-layout form form-largo" id="form-config">
+
+    <nav class="config-nav" id="config-nav" aria-label="Seções de configuração">
+      <p class="config-nav-grupo">Site</p>
+      <button type="button" class="config-nav-btn ativa" data-aba="identidade">Identidade</button>
+      <button type="button" class="config-nav-btn" data-aba="redes">Redes sociais</button>
+      <button type="button" class="config-nav-btn" data-aba="rodape">Rodapé</button>
+
+      <p class="config-nav-grupo">Busca</p>
+      <button type="button" class="config-nav-btn" data-aba="seo">SEO</button>
+      <button type="button" class="config-nav-btn" data-aba="sitemap">Sitemap & indexação</button>
+
+      <p class="config-nav-grupo">Integrações</p>
+      <button type="button" class="config-nav-btn" data-aba="google">Google & anúncios</button>
+      <button type="button" class="config-nav-btn" data-aba="amp">AMP (mobile)</button>
+    </nav>
+
+    <div class="config-corpo">
+
+      <!-- IDENTIDADE -->
+      <div class="config-painel" data-aba="identidade">
+        <div class="config-painel-topo">
+          <div>
+            <h2>Identidade</h2>
+            <p class="dica">Nome, visual e cores exibidos em todo o site.</p>
+          </div>
+          <button type="button" class="btn btn-sec btn-sm btn-ia-aba" data-ia-secao="identidade">✨ IA</button>
         </div>
-      <% } %>
-    </fieldset>
 
-    <div class="integracao-box integracao-box--info">
-      <h3>Como funciona</h3>
-      <ul class="integracao-lista">
-        <li>Página normal: <code>/post/slug-da-materia</code></li>
-        <li>Versão AMP: <code>/post/slug-da-materia/amp</code></li>
-        <li>A página normal inclui <code>&lt;link rel="amphtml"&gt;</code> apontando para a AMP</li>
-        <li>A página AMP inclui <code>&lt;link rel="canonical"&gt;</code> para a versão completa</li>
-        <li>Imagens convertidas para <code>amp-img</code>, sem JavaScript customizado</li>
-      </ul>
-    </div>
-
-    <div class="integracao-box">
-      <h3>Validar no Google</h3>
-      <p class="dica">Após publicar um post, teste a URL AMP em:</p>
-      <a href="https://search.google.com/test/amp" target="_blank" rel="noopener" class="btn btn-primario">Teste de AMP (Google)</a>
-      <% if (config.amp_habilitado === 'sim') { %>
-        <p class="dica" style="margin-top:10px">Exemplo: <code><%= urlBase %>/post/SEU-SLUG/amp</code></p>
-      <% } %>
-    </div>
-  </div>
-
-  <div class="aba-conteudo" data-aba="sitemap" hidden>
-    <div class="sitemap-intro">
-      <p>O sitemap é gerado automaticamente com as páginas publicadas do site. Use a URL canônica de produção para que o Google indexe os links corretos.</p>
-      <% if (!sitemap.indexar) { %>
-        <p class="sitemap-alerta">A indexação está desligada na aba SEO. O sitemap fica indisponível até você ativar “Permitir indexação no Google”.</p>
-      <% } %>
-      <% if (sitemap.erro) { %>
-        <p class="sitemap-alerta">Não foi possível carregar o resumo do sitemap: <%= sitemap.erro %>. Verifique o banco de dados e rode <code>npm run db:migrate</code>.</p>
-      <% } %>
-    </div>
-
-    <label>URL canônica do site (produção)
-      <input type="url" name="sitemap_url_canonica" value="<%= config.sitemap_url_canonica || '' %>" placeholder="https://www.seusite.com.br">
-    </label>
-    <p class="dica">Deixe em branco para usar o domínio atual. Em produção, informe a URL final com <strong>https://</strong>.</p>
-
-    <div class="sitemap-links">
-      <h3>Links para o Google</h3>
-      <% sitemap.sitemaps.forEach(function (item) { %>
-        <div class="sitemap-link-item">
-          <span class="sitemap-link-tipo"><%= item.tipo === 'google-news' ? 'Google News' : 'Principal' %></span>
-          <input type="text" class="sitemap-link-campo" value="<%= item.loc %>" readonly data-copiar>
-          <button type="button" class="btn btn-secundario btn-copiar" data-copiar-alvo="<%= item.loc %>">Copiar</button>
-          <a href="<%= item.loc %>" target="_blank" rel="noopener" class="btn btn-secundario">Abrir</a>
+        <div class="config-card">
+          <h3 class="config-card-titulo">Informações básicas</h3>
+          <div class="config-campos">
+            <label>Nome do site
+              <input type="text" name="site_nome" value="<%= config.site_nome || '' %>" placeholder="Site Gospel">
+            </label>
+            <label>Slogan / tagline
+              <input type="text" name="site_slogan" value="<%= config.site_slogan || '' %>" placeholder="Notícias, louvor e edificação">
+            </label>
+            <label>Descrição do site
+              <textarea name="site_descricao" rows="2" placeholder="Breve descrição do site"><%= config.site_descricao || '' %></textarea>
+            </label>
+          </div>
         </div>
-      <% }) %>
-      <div class="sitemap-link-item">
-        <span class="sitemap-link-tipo">robots.txt</span>
-        <input type="text" class="sitemap-link-campo" value="<%= sitemap.robotsUrl %>" readonly>
-        <button type="button" class="btn btn-secundario btn-copiar" data-copiar-alvo="<%= sitemap.robotsUrl %>">Copiar</button>
-        <a href="<%= sitemap.robotsUrl %>" target="_blank" rel="noopener" class="btn btn-secundario">Abrir</a>
+
+        <div class="config-card">
+          <h3 class="config-card-titulo">Visual</h3>
+          <div class="config-grid-2">
+            <div class="campo-upload">
+              <label>Logomarca<input type="file" name="logo" accept="image/*"></label>
+              <% if (config.logo) { %>
+                <img src="<%= config.logo %>" alt="Logomarca" class="preview-img preview-logo">
+                <label class="checkbox"><input type="checkbox" name="remover_logo"> Remover logo</label>
+              <% } %>
+            </div>
+            <div class="campo-upload">
+              <label>Favicon<input type="file" name="favicon" accept="image/*"></label>
+              <% if (config.favicon) { %>
+                <img src="<%= config.favicon %>" alt="Favicon" class="preview-img preview-favicon">
+                <label class="checkbox"><input type="checkbox" name="remover_favicon"> Remover favicon</label>
+              <% } %>
+              <p class="dica">Quadrado, 32×32 ou 64×64 px.</p>
+            </div>
+          </div>
+          <label>Cor primária
+            <input type="color" name="cor_primaria" value="<%= config.cor_primaria || '#ea580c' %>" class="input-cor">
+          </label>
+        </div>
+      </div>
+
+      <!-- REDES -->
+      <div class="config-painel" data-aba="redes" hidden>
+        <div class="config-painel-topo">
+          <div>
+            <h2>Redes sociais</h2>
+            <p class="dica">Links exibidos no rodapé do site. Deixe em branco para ocultar.</p>
+          </div>
+        </div>
+        <div class="config-card">
+          <div class="config-campos">
+            <label>Facebook<input type="url" name="social_facebook" value="<%= config.social_facebook || '' %>" placeholder="https://facebook.com/seusite"></label>
+            <label>Instagram<input type="url" name="social_instagram" value="<%= config.social_instagram || '' %>" placeholder="https://instagram.com/seusite"></label>
+            <label>YouTube<input type="url" name="social_youtube" value="<%= config.social_youtube || '' %>" placeholder="https://youtube.com/@seusite"></label>
+            <label>WhatsApp<input type="url" name="social_whatsapp" value="<%= config.social_whatsapp || '' %>" placeholder="https://wa.me/5511999999999"></label>
+          </div>
+        </div>
+      </div>
+
+      <!-- RODAPÉ -->
+      <div class="config-painel" data-aba="rodape" hidden>
+        <div class="config-painel-topo">
+          <div>
+            <h2>Rodapé</h2>
+            <p class="dica">Copyright e links extras. Páginas do admin aparecem automaticamente.</p>
+          </div>
+          <button type="button" class="btn btn-sec btn-sm btn-ia-aba" data-ia-secao="rodape">✨ IA</button>
+        </div>
+        <div class="config-card">
+          <div class="config-campos">
+            <label>Texto do copyright
+              <input type="text" name="footer_copyright" value="<%= config.footer_copyright || '' %>" placeholder="© 2026 Site Gospel. Todos os direitos reservados.">
+            </label>
+            <label>Links extras (um por linha: Texto|URL)
+              <textarea name="footer_links" rows="4" placeholder="Busca|/busca"><%= config.footer_links || '' %></textarea>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- SEO -->
+      <div class="config-painel" data-aba="seo" hidden>
+        <div class="config-painel-topo">
+          <div>
+            <h2>SEO</h2>
+            <p class="dica">Como o site aparece no Google e ao compartilhar links.</p>
+          </div>
+          <button type="button" class="btn btn-sec btn-sm btn-ia-aba" data-ia-secao="seo">✨ IA</button>
+        </div>
+
+        <div class="config-card">
+          <h3 class="config-card-titulo">Meta tags</h3>
+          <div class="config-campos">
+            <label>Título SEO da home
+              <input type="text" name="seo_titulo" maxlength="60" value="<%= config.seo_titulo || '' %>" data-contador="cont-titulo" data-snippet="snippet-titulo" placeholder="Site Gospel — Notícias e louvor">
+            </label>
+            <p class="dica"><span id="cont-titulo">0</span>/60 caracteres</p>
+            <label>Meta descrição
+              <textarea name="seo_descricao" rows="2" maxlength="160" data-contador="cont-desc" data-snippet="snippet-desc" placeholder="Descrição nos resultados do Google"><%= config.seo_descricao || '' %></textarea>
+            </label>
+            <p class="dica"><span id="cont-desc">0</span>/160 caracteres</p>
+            <label>Palavras-chave
+              <input type="text" name="seo_palavras_chave" value="<%= config.seo_palavras_chave || '' %>" placeholder="gospel, louvor, estudos bíblicos">
+            </label>
+          </div>
+        </div>
+
+        <div class="config-card">
+          <h3 class="config-card-titulo">Compartilhamento & indexação</h3>
+          <div class="campo-upload">
+            <label>Imagem Open Graph (redes sociais)<input type="file" name="og_imagem" accept="image/*"></label>
+            <% if (config.og_imagem) { %><img src="<%= config.og_imagem %>" alt="OG" class="preview-img preview-og"><% } %>
+            <p class="dica">Recomendado: 1200×630 px.</p>
+          </div>
+          <label class="checkbox">
+            <input type="checkbox" name="seo_indexar" <%= (config.seo_indexar || 'sim') !== 'nao' ? 'checked' : '' %>>
+            Permitir indexação no Google
+          </label>
+          <p class="dica">Desligado = noindex + bloqueio no robots.txt.</p>
+        </div>
+
+        <div class="config-card config-card--preview">
+          <h3 class="config-card-titulo">Prévia no Google</h3>
+          <div class="snippet-google">
+            <p class="snippet-url"><%= urlBase %></p>
+            <p class="snippet-titulo" id="snippet-titulo"><%= config.seo_titulo || config.site_nome || 'Site Gospel' %></p>
+            <p class="snippet-desc" id="snippet-desc"><%= config.seo_descricao || 'A meta descrição aparecerá aqui.' %></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- GOOGLE -->
+      <div class="config-painel" data-aba="google" hidden>
+        <div class="config-painel-topo">
+          <div>
+            <h2>Google & anúncios</h2>
+            <p class="dica">Search Console, Analytics, AdSense e scripts no head.</p>
+          </div>
+        </div>
+
+        <div class="config-card">
+          <h3 class="config-card-titulo">Ferramentas Google</h3>
+          <div class="config-campos">
+            <label>Search Console (meta verification)
+              <input type="text" name="google_site_verification" value="<%= config.google_site_verification || '' %>" placeholder="Conteúdo da meta google-site-verification">
+            </label>
+            <label>Google Analytics
+              <input type="text" name="google_analytics" value="<%= config.google_analytics || '' %>" placeholder="G-XXXXXXXXXX">
+            </label>
+          </div>
+        </div>
+
+        <div class="config-card">
+          <h3 class="config-card-titulo">Google AdSense</h3>
+          <label>Script do AdSense
+            <textarea name="google_adsense" rows="4" placeholder="&lt;script async src=&quot;...adsbygoogle.js?client=ca-pub-XXXX&quot;...&gt;"><%= config.google_adsense || '' %></textarea>
+          </label>
+          <label>ID do cliente (ca-pub-…)
+            <input type="text" name="google_adsense_client" value="<%= config.google_adsense_client || '' %>" placeholder="ca-pub-XXXXXXXXXXXXXXXX">
+          </label>
+          <p class="dica">Inserido no &lt;head&gt; de todas as páginas. O ID também alimenta páginas AMP.</p>
+        </div>
+
+        <div class="config-card">
+          <h3 class="config-card-titulo">Scripts extras</h3>
+          <label>Código customizado no &lt;head&gt;
+            <textarea name="head_custom" rows="4" placeholder="Tags ou scripts adicionais"><%= config.head_custom || '' %></textarea>
+          </label>
+          <p class="dica config-alerta">Inserido sem filtro no site público — use com cuidado.</p>
+        </div>
+      </div>
+
+      <!-- AMP -->
+      <div class="config-painel" data-aba="amp" hidden>
+        <div class="config-painel-topo">
+          <div>
+            <h2>AMP (mobile)</h2>
+            <p class="dica">Versões aceleradas dos posts para celular.</p>
+          </div>
+        </div>
+
+        <div class="config-card">
+          <label class="checkbox">
+            <input type="checkbox" name="amp_habilitado" <%= config.amp_habilitado === 'sim' ? 'checked' : '' %>>
+            Habilitar AMP para posts publicados
+          </label>
+          <label class="checkbox">
+            <input type="checkbox" name="amp_adsense" <%= (config.amp_adsense || 'sim') !== 'nao' ? 'checked' : '' %>>
+            Exibir AdSense nas páginas AMP
+          </label>
+          <p class="dica">URL: <code>/post/slug/amp</code> · Canônica aponta para a versão completa.</p>
+        </div>
+
+        <div class="config-card">
+          <h3 class="config-card-titulo">Logo no header AMP</h3>
+          <div class="amp-logo-config-grid">
+            <label>Largura (px)<input type="number" name="amp_logo_largura" min="60" max="320" value="<%= config.amp_logo_largura || '140' %>"></label>
+            <label>Altura (px)<input type="number" name="amp_logo_altura" min="20" max="120" value="<%= config.amp_logo_altura || '42' %>"></label>
+            <label>Texto sem logo (rem)<input type="number" name="amp_logo_texto_tamanho" min="0.85" max="2" step="0.05" value="<%= config.amp_logo_texto_tamanho || '1.1' %>"></label>
+          </div>
+          <% if (config.logo) { %>
+            <div class="amp-logo-preview">
+              <span>Prévia</span>
+              <img src="<%= config.logo %>" alt="Logo AMP" style="max-width:<%= config.amp_logo_largura || 140 %>px;max-height:<%= config.amp_logo_altura || 42 %>px">
+            </div>
+          <% } %>
+        </div>
+
+        <div class="config-card config-card--info">
+          <a href="https://search.google.com/test/amp" target="_blank" rel="noopener" class="btn btn-sec btn-sm">Validar AMP no Google</a>
+        </div>
+      </div>
+
+      <!-- SITEMAP -->
+      <div class="config-painel" data-aba="sitemap" hidden>
+        <div class="config-painel-topo">
+          <div>
+            <h2>Sitemap & indexação</h2>
+            <p class="dica">URLs para o Google, avisos automáticos e IndexNow.</p>
+          </div>
+        </div>
+
+        <% if (!sitemap.indexar) { %>
+          <p class="sitemap-alerta">Indexação desligada na aba SEO. Ative “Permitir indexação no Google”.</p>
+        <% } %>
+        <% if (sitemap.erro) { %>
+          <p class="sitemap-alerta">Erro ao carregar sitemap: <%= sitemap.erro %></p>
+        <% } %>
+
+        <div class="config-card">
+          <h3 class="config-card-titulo">Resumo</h3>
+          <div class="sitemap-stats">
+            <div class="sitemap-stat"><strong><%= sitemap.contagem.total %></strong><span>URLs</span></div>
+            <div class="sitemap-stat"><strong><%= sitemap.contagem.posts %></strong><span>Posts</span></div>
+            <div class="sitemap-stat"><strong><%= sitemap.contagem.categorias %></strong><span>Categorias</span></div>
+            <div class="sitemap-stat"><strong><%= sitemap.contagem.paginas %></strong><span>Páginas</span></div>
+            <div class="sitemap-stat"><strong><%= sitemap.contagem.news %></strong><span>News 48h</span></div>
+          </div>
+          <label style="margin-top:14px">URL canônica (produção)
+            <input type="url" name="sitemap_url_canonica" value="<%= config.sitemap_url_canonica || '' %>" placeholder="https://www.seusite.com.br">
+          </label>
+          <p class="dica">Em branco = domínio atual. Use HTTPS em produção.</p>
+        </div>
+
+        <div class="config-card">
+          <h3 class="config-card-titulo">Links do sitemap</h3>
+          <% sitemap.sitemaps.forEach(function (item) { %>
+            <div class="sitemap-link-item">
+              <span class="sitemap-link-tipo"><%= item.tipo === 'google-news' ? 'News' : 'Principal' %></span>
+              <input type="text" class="sitemap-link-campo" value="<%= item.loc %>" readonly>
+              <button type="button" class="btn btn-sec btn-sm btn-copiar" data-copiar-alvo="<%= item.loc %>">Copiar</button>
+              <a href="<%= item.loc %>" target="_blank" rel="noopener" class="btn btn-sec btn-sm">Abrir</a>
+            </div>
+          <% }) %>
+          <div class="sitemap-link-item">
+            <span class="sitemap-link-tipo">robots</span>
+            <input type="text" class="sitemap-link-campo" value="<%= sitemap.robotsUrl %>" readonly>
+            <button type="button" class="btn btn-sec btn-sm btn-copiar" data-copiar-alvo="<%= sitemap.robotsUrl %>">Copiar</button>
+            <a href="<%= sitemap.robotsUrl %>" target="_blank" rel="noopener" class="btn btn-sec btn-sm">Abrir</a>
+          </div>
+          <div class="sitemap-acoes-google" style="margin-top:12px">
+            <a href="<%= sitemap.googleSearchConsoleUrl %>" target="_blank" rel="noopener" class="btn btn-primario btn-sm">Search Console</a>
+            <% if (sitemap.googleSitemapPingUrl) { %>
+              <a href="<%= sitemap.googleSitemapPingUrl %>" target="_blank" rel="noopener" class="btn btn-sec btn-sm">Ping sitemap</a>
+            <% } %>
+          </div>
+        </div>
+
+        <details class="config-fold">
+          <summary>Google Indexing API</summary>
+          <div class="config-fold-corpo">
+            <% if (typeof googleIndexing !== 'undefined' && googleIndexing.configurado) { %>
+              <p class="dica"><strong>Conta:</strong> <code><%= googleIndexing.email || '—' %></code></p>
+              <p class="dica">Cota hoje: <strong><%= googleIndexing.quota.enviados %></strong>/<%= googleIndexing.quotaMax %> · restam <strong><%= googleIndexing.quota.restantes %></strong></p>
+            <% } else { %>
+              <p class="sitemap-alerta">Coloque <code>config/google-indexing-key.json</code> e adicione a conta como Proprietário no Search Console.</p>
+            <% } %>
+            <label class="checkbox">
+              <input type="checkbox" name="google_indexing_ativo" <%= (config.google_indexing_ativo || 'nao') === 'sim' ? 'checked' : '' %>>
+              Enviar ao Google automaticamente ao publicar post
+            </label>
+            <div class="config-ia-botoes" style="margin-top:10px">
+              <label>Posts a enviar
+                <select id="google-indexing-limite">
+                  <option value="10">10</option>
+                  <option value="30" selected>30</option>
+                  <option value="50">50</option>
+                  <option value="100">100</option>
+                  <option value="200">200</option>
+                </select>
+              </label>
+              <button type="button" class="btn btn-sec btn-sm" id="btn-google-indexing-testar">Testar</button>
+              <button type="button" class="btn btn-primario btn-sm" id="btn-google-indexing-enviar">Enviar lote</button>
+            </div>
+            <p id="google-indexing-resultado" class="dica" style="margin-top:8px"></p>
+          </div>
+        </details>
+
+        <details class="config-fold">
+          <summary>IndexNow</summary>
+          <div class="config-fold-corpo">
+            <label>Chave IndexNow
+              <input type="text" name="indexnow_chave" value="<%= config.indexnow_chave || '' %>" readonly>
+            </label>
+            <button type="submit" class="btn btn-sec btn-sm" name="gerar_indexnow" value="1">Gerar nova chave</button>
+            <% if (config.indexnow_chave && sitemap.base) { %>
+              <p class="dica"><code><%= sitemap.base %>/<%= config.indexnow_chave %>.txt</code><% if (sitemap.indexnowAtivo) { %> — ativo<% } %></p>
+            <% } %>
+          </div>
+        </details>
+
+        <details class="config-fold">
+          <summary>Opções do sitemap</summary>
+          <div class="config-fold-corpo">
+            <label class="checkbox"><input type="checkbox" name="sitemap_incluir_home" <%= (config.sitemap_incluir_home || 'sim') !== 'nao' ? 'checked' : '' %>> Página inicial</label>
+            <label class="checkbox"><input type="checkbox" name="sitemap_incluir_posts" <%= (config.sitemap_incluir_posts || 'sim') !== 'nao' ? 'checked' : '' %>> Posts publicados</label>
+            <label class="checkbox"><input type="checkbox" name="sitemap_incluir_categorias" <%= (config.sitemap_incluir_categorias || 'sim') !== 'nao' ? 'checked' : '' %>> Categorias</label>
+            <label class="checkbox"><input type="checkbox" name="sitemap_incluir_paginas" <%= (config.sitemap_incluir_paginas || 'sim') !== 'nao' ? 'checked' : '' %>> Páginas institucionais</label>
+            <label class="checkbox"><input type="checkbox" name="sitemap_news_ativo" <%= config.sitemap_news_ativo === 'sim' ? 'checked' : '' %>> Google News (posts 48h)</label>
+            <div class="sitemap-frequencias" style="margin-top:12px">
+              <label>Freq. home<select name="sitemap_changefreq_home"><% ['daily','weekly','monthly'].forEach(function (op) { %><option value="<%= op %>" <%= (config.sitemap_changefreq_home || 'daily') === op ? 'selected' : '' %>><%= op %></option><% }) %></select></label>
+              <label>Freq. posts<select name="sitemap_changefreq_posts"><% ['daily','weekly','monthly'].forEach(function (op) { %><option value="<%= op %>" <%= (config.sitemap_changefreq_posts || 'daily') === op ? 'selected' : '' %>><%= op %></option><% }) %></select></label>
+              <label>Freq. categorias<select name="sitemap_changefreq_categorias"><% ['daily','weekly','monthly'].forEach(function (op) { %><option value="<%= op %>" <%= (config.sitemap_changefreq_categorias || 'weekly') === op ? 'selected' : '' %>><%= op %></option><% }) %></select></label>
+              <label>Freq. páginas<select name="sitemap_changefreq_paginas"><% ['weekly','monthly','yearly'].forEach(function (op) { %><option value="<%= op %>" <%= (config.sitemap_changefreq_paginas || 'monthly') === op ? 'selected' : '' %>><%= op %></option><% }) %></select></label>
+            </div>
+          </div>
+        </details>
+
+        <% if (sitemap.amostra.length) { %>
+          <details class="config-fold">
+            <summary>Prévia de URLs (<%= sitemap.amostra.length %>)</summary>
+            <div class="config-fold-corpo sitemap-amostra">
+              <ul><% sitemap.amostra.forEach(function (url) { %><li><code><%= url %></code></li><% }) %></ul>
+            </div>
+          </details>
+        <% } %>
+      </div>
+
+      <div class="config-acoes">
+        <button type="submit" class="btn btn-primario">Salvar configurações</button>
       </div>
     </div>
-
-    <div class="sitemap-stats">
-      <div class="sitemap-stat"><strong><%= sitemap.contagem.total %></strong><span>URLs no sitemap</span></div>
-      <div class="sitemap-stat"><strong><%= sitemap.contagem.posts %></strong><span>Posts</span></div>
-      <div class="sitemap-stat"><strong><%= sitemap.contagem.categorias %></strong><span>Categorias</span></div>
-      <div class="sitemap-stat"><strong><%= sitemap.contagem.paginas %></strong><span>Páginas</span></div>
-      <div class="sitemap-stat"><strong><%= sitemap.contagem.news %></strong><span>News (48h)</span></div>
-    </div>
-
-    <div class="sitemap-acoes-google">
-      <a href="<%= sitemap.googleSearchConsoleUrl %>" target="_blank" rel="noopener" class="btn btn-primario">Abrir Google Search Console</a>
-      <% if (sitemap.googleSitemapPingUrl) { %>
-        <a href="<%= sitemap.googleSitemapPingUrl %>" target="_blank" rel="noopener" class="btn btn-secundario">Ping sitemap.xml</a>
-      <% } %>
-      <% if (sitemap.googleNewsPingUrl) { %>
-        <a href="<%= sitemap.googleNewsPingUrl %>" target="_blank" rel="noopener" class="btn btn-secundario">Ping sitemap-news.xml</a>
-      <% } %>
-    </div>
-    <p class="dica">Ao <strong>publicar um post</strong>, o site avisa automaticamente os buscadores (IndexNow + ping do sitemap). O Google ainda pode levar algumas horas para indexar — use <strong>Inspeção de URL</strong> no Search Console para acelerar uma matéria específica.</p>
-
-    <fieldset class="sitemap-opcoes">
-      <legend>Google Indexing API (avisar Google em lote)</legend>
-      <% if (typeof googleIndexing !== 'undefined' && googleIndexing.configurado) { %>
-        <p class="dica"><strong>Conta:</strong> <code><%= googleIndexing.email || '—' %></code></p>
-        <p class="dica">Cota hoje: <strong><%= googleIndexing.quota.enviados %></strong> / <%= googleIndexing.quotaMax %> enviados · restam <strong><%= googleIndexing.quota.restantes %></strong></p>
-      <% } else { %>
-        <p class="sitemap-alerta">Coloque o arquivo JSON da conta de serviço em <code>config/google-indexing-key.json</code> (ou defina <code>GOOGLE_INDEXING_KEY_FILE</code> no .env).</p>
-        <p class="dica">Conta esperada: <code>obuxixogospel-indexing@gen-lang-client-0972652469.iam.gserviceaccount.com</code></p>
-        <p class="dica">No Search Console → Configurações → Usuários → adicionar essa conta como <strong>Proprietário</strong>.</p>
-      <% } %>
-      <label class="checkbox">
-        <input type="checkbox" name="google_indexing_ativo" <%= (config.google_indexing_ativo || 'nao') === 'sim' ? 'checked' : '' %>>
-        Enviar automaticamente ao Google quando publicar um post
-      </label>
-      <div class="sitemap-acoes-google" style="margin-top:10px">
-        <label>Posts recentes a enviar
-          <select id="google-indexing-limite">
-            <option value="10">10</option>
-            <option value="30" selected>30</option>
-            <option value="50">50</option>
-            <option value="100">100</option>
-            <option value="200">200 (máx. cota/dia)</option>
-          </select>
-        </label>
-        <button type="button" class="btn btn-secundario" id="btn-google-indexing-testar">Testar conexão</button>
-        <button type="button" class="btn btn-primario" id="btn-google-indexing-enviar">Enviar posts ao Google</button>
-      </div>
-      <p id="google-indexing-resultado" class="dica" style="margin-top:8px"></p>
-    </fieldset>
-
-    <fieldset class="sitemap-opcoes">
-      <legend>IndexNow (aviso automático ao publicar)</legend>
-      <label>Chave IndexNow
-        <input type="text" name="indexnow_chave" value="<%= config.indexnow_chave || '' %>" placeholder="Gere uma chave para ativar" readonly>
-      </label>
-      <button type="submit" class="btn btn-secundario" name="gerar_indexnow" value="1">Gerar nova chave</button>
-      <% if (config.indexnow_chave && sitemap.base) { %>
-        <p class="dica">Arquivo de verificação: <code><%= sitemap.base %>/<%= config.indexnow_chave %>.txt</code>
-          <% if (sitemap.indexnowAtivo) { %> — <strong>ativo</strong><% } %>
-        </p>
-      <% } %>
-    </fieldset>
-
-    <fieldset class="sitemap-opcoes">
-      <legend>Conteúdo incluído no sitemap</legend>
-      <label class="checkbox"><input type="checkbox" name="sitemap_incluir_home" <%= (config.sitemap_incluir_home || 'sim') !== 'nao' ? 'checked' : '' %>> Página inicial</label>
-      <label class="checkbox"><input type="checkbox" name="sitemap_incluir_posts" <%= (config.sitemap_incluir_posts || 'sim') !== 'nao' ? 'checked' : '' %>> Posts publicados</label>
-      <label class="checkbox"><input type="checkbox" name="sitemap_incluir_categorias" <%= (config.sitemap_incluir_categorias || 'sim') !== 'nao' ? 'checked' : '' %>> Categorias</label>
-      <label class="checkbox"><input type="checkbox" name="sitemap_incluir_paginas" <%= (config.sitemap_incluir_paginas || 'sim') !== 'nao' ? 'checked' : '' %>> Páginas institucionais</label>
-      <label class="checkbox"><input type="checkbox" name="sitemap_news_ativo" <%= config.sitemap_news_ativo === 'sim' ? 'checked' : '' %>> Sitemap Google News (<code>sitemap-news.xml</code> — posts das últimas 48h)</label>
-    </fieldset>
-
-    <div class="sitemap-frequencias">
-      <label>Frequência da home
-        <select name="sitemap_changefreq_home">
-          <% ['daily', 'weekly', 'monthly'].forEach(function (op) { %>
-            <option value="<%= op %>" <%= (config.sitemap_changefreq_home || 'daily') === op ? 'selected' : '' %>><%= op %></option>
-          <% }) %>
-        </select>
-      </label>
-      <label>Frequência dos posts
-        <select name="sitemap_changefreq_posts">
-          <% ['daily', 'weekly', 'monthly'].forEach(function (op) { %>
-            <option value="<%= op %>" <%= (config.sitemap_changefreq_posts || 'daily') === op ? 'selected' : '' %>><%= op %></option>
-          <% }) %>
-        </select>
-      </label>
-      <label>Frequência das categorias
-        <select name="sitemap_changefreq_categorias">
-          <% ['daily', 'weekly', 'monthly'].forEach(function (op) { %>
-            <option value="<%= op %>" <%= (config.sitemap_changefreq_categorias || 'weekly') === op ? 'selected' : '' %>><%= op %></option>
-          <% }) %>
-        </select>
-      </label>
-      <label>Frequência das páginas
-        <select name="sitemap_changefreq_paginas">
-          <% ['weekly', 'monthly', 'yearly'].forEach(function (op) { %>
-            <option value="<%= op %>" <%= (config.sitemap_changefreq_paginas || 'monthly') === op ? 'selected' : '' %>><%= op %></option>
-          <% }) %>
-        </select>
-      </label>
-    </div>
-
-    <% if (sitemap.amostra.length) { %>
-      <div class="sitemap-amostra">
-        <h3>Prévia de URLs (amostra)</h3>
-        <ul>
-          <% sitemap.amostra.forEach(function (url) { %>
-            <li><code><%= url %></code></li>
-          <% }) %>
-        </ul>
-      </div>
-    <% } %>
-
-    <p class="dica">Critérios Google: URLs absolutas em HTTPS, <code>lastmod</code> em ISO 8601, até 50.000 URLs por arquivo, UTF-8, apenas conteúdo publicado e indexável. Busca e admin não entram no sitemap.</p>
-  </div>
-
-  <div class="aba-conteudo" data-aba="rodape" hidden>
-    <div class="aba-ia-acao">
-      <button type="button" class="btn btn-sec btn-ia-aba" data-ia-secao="rodape">✨ Preencher esta aba com IA</button>
-    </div>
-    <label>Texto do copyright
-      <input type="text" name="footer_copyright" value="<%= config.footer_copyright || '' %>" placeholder="© 2026 Site Gospel. Todos os direitos reservados.">
-    </label>
-    <label>Links extras do rodapé (um por linha, formato: Texto|URL)
-      <textarea name="footer_links" rows="5" placeholder="Busca|/busca&#10;Contato|https://wa.me/5511999999999"><%= config.footer_links || '' %></textarea>
-    </label>
-    <p class="dica">As páginas publicadas em <strong>Admin → Páginas</strong> aparecem automaticamente em Links úteis. Use este campo só para links extras (busca, redes, URLs externas).</p>
-  </div>
-
-  <div class="form-acoes">
-    <button class="btn btn-primario">Salvar configurações</button>
-  </div>
-</form>
+  </form>
+</div>
 
 <script>
-  // Abas
-  document.querySelectorAll('.aba-btn').forEach(function (btn) {
-    btn.addEventListener('click', function () {
-      document.querySelectorAll('.aba-btn').forEach(function (b) { b.classList.remove('ativa'); });
-      btn.classList.add('ativa');
-      document.querySelectorAll('.aba-conteudo').forEach(function (sec) {
-        sec.hidden = sec.dataset.aba !== btn.dataset.aba;
-      });
-    });
+(function () {
+  var navBtns = document.querySelectorAll('.config-nav-btn');
+  var paineis = document.querySelectorAll('.config-painel');
+
+  function irAba(id) {
+    navBtns.forEach(function (b) { b.classList.toggle('ativa', b.dataset.aba === id); });
+    paineis.forEach(function (p) { p.hidden = p.dataset.aba !== id; });
+    try { history.replaceState(null, '', '#'+id); } catch (e) {}
+  }
+
+  navBtns.forEach(function (btn) {
+    btn.addEventListener('click', function () { irAba(btn.dataset.aba); });
   });
 
-  // Contadores de caracteres + prévia do snippet Google
+  var hash = (location.hash || '').replace('#', '');
+  if (hash === 'google') hash = 'google';
+  if (hash && document.querySelector('.config-nav-btn[data-aba="'+hash+'"]')) irAba(hash);
+
   document.querySelectorAll('[data-contador]').forEach(function (campo) {
     var contador = document.getElementById(campo.dataset.contador);
     var snippet = campo.dataset.snippet ? document.getElementById(campo.dataset.snippet) : null;
@@ -396,17 +430,12 @@
       var texto = btn.dataset.copiarAlvo || '';
       if (!texto) return;
       navigator.clipboard.writeText(texto).then(function () {
-        var antigo = btn.textContent;
+        var ant = btn.textContent;
         btn.textContent = 'Copiado!';
-        window.setTimeout(function () { btn.textContent = antigo; }, 1500);
+        setTimeout(function () { btn.textContent = ant; }, 1500);
       });
     });
   });
-
-  if (window.location.hash === '#sitemap') {
-    var abaSitemap = document.querySelector('.aba-btn[data-aba="sitemap"]');
-    if (abaSitemap) abaSitemap.click();
-  }
 
   var btnGiTestar = document.getElementById('btn-google-indexing-testar');
   var btnGiEnviar = document.getElementById('btn-google-indexing-enviar');
@@ -422,12 +451,11 @@
   if (btnGiTestar) {
     btnGiTestar.addEventListener('click', async function () {
       btnGiTestar.disabled = true;
-      giStatus('Testando conexão com Google...', 'info');
+      giStatus('Testando...', 'info');
       try {
         var res = await fetch('/admin/configuracoes/google-indexing/testar', { method: 'POST' });
         var data = await res.json();
-        if (data.ok) giStatus(data.mensagem + ' Cota restante: ' + data.quota.restantes + '.', 'ok');
-        else giStatus(data.erro || 'Falha na conexão.', 'erro');
+        giStatus(data.ok ? data.mensagem + ' Restam: ' + data.quota.restantes : (data.erro || 'Falha'), data.ok ? 'ok' : 'erro');
       } catch (e) { giStatus(e.message, 'erro'); }
       finally { btnGiTestar.disabled = false; }
     });
@@ -435,9 +463,9 @@
 
   if (btnGiEnviar) {
     btnGiEnviar.addEventListener('click', async function () {
-      if (!confirm('Enviar os posts mais recentes para a fila de indexação do Google?')) return;
+      if (!confirm('Enviar posts recentes ao Google?')) return;
       btnGiEnviar.disabled = true;
-      giStatus('Enviando URLs... pode levar alguns minutos.', 'info');
+      giStatus('Enviando...', 'info');
       try {
         var res = await fetch('/admin/configuracoes/google-indexing/enviar', {
           method: 'POST',
@@ -445,25 +473,15 @@
           body: JSON.stringify({ limite: giLimite ? giLimite.value : 30 })
         });
         var data = await res.json();
-        if (data.ok) giStatus(data.mensagem + ' Cota restante: ' + data.quota.restantes + '.', 'ok');
-        else giStatus(data.erro || 'Erro ao enviar.', 'erro');
+        giStatus(data.ok ? data.mensagem : (data.erro || 'Erro'), data.ok ? 'ok' : 'erro');
       } catch (e) { giStatus(e.message, 'erro'); }
       finally { btnGiEnviar.disabled = false; }
     });
   }
-  if (window.location.hash === '#amp') {
-    var abaAmp = document.querySelector('.aba-btn[data-aba="amp"]');
-    if (abaAmp) abaAmp.click();
-  }
 
   var iaDescricao = document.getElementById('ia-config-descricao');
   var iaStatus = document.getElementById('ia-config-status');
-  var iaBotoes = [
-    document.getElementById('btn-ia-config-todas'),
-    document.getElementById('btn-ia-config-identidade'),
-    document.getElementById('btn-ia-config-seo'),
-    document.getElementById('btn-ia-config-rodape')
-  ];
+  var iaBotoes = ['btn-ia-config-todas','btn-ia-config-identidade','btn-ia-config-seo','btn-ia-config-rodape'].map(function (id) { return document.getElementById(id); });
 
   function mostrarStatusIa(texto, tipo) {
     if (!iaStatus) return;
@@ -478,14 +496,10 @@
     if (!el) return;
     el.value = valor;
     el.dispatchEvent(new Event('input', { bubbles: true }));
-    el.dispatchEvent(new Event('change', { bubbles: true }));
   }
 
-  function aplicarSugestoes(sugestoes) {
-    var id = sugestoes.identidade || {};
-    var seo = sugestoes.seo || {};
-    var rodape = sugestoes.rodape || {};
-
+  function aplicarSugestoes(s) {
+    var id = s.identidade || {}, seo = s.seo || {}, rod = s.rodape || {};
     preencherCampo('site_nome', id.site_nome);
     preencherCampo('site_slogan', id.site_slogan);
     preencherCampo('site_descricao', id.site_descricao);
@@ -493,27 +507,25 @@
     preencherCampo('seo_titulo', seo.seo_titulo);
     preencherCampo('seo_descricao', seo.seo_descricao);
     preencherCampo('seo_palavras_chave', seo.seo_palavras_chave);
-    preencherCampo('footer_copyright', rodape.footer_copyright);
-    preencherCampo('footer_links', rodape.footer_links);
+    preencherCampo('footer_copyright', rod.footer_copyright);
+    preencherCampo('footer_links', rod.footer_links);
   }
 
   function setCarregandoIa(ativo) {
-    iaBotoes.forEach(function (btn) { if (btn) btn.disabled = ativo; });
-    document.querySelectorAll('.btn-ia-aba').forEach(function (btn) { btn.disabled = ativo; });
+    iaBotoes.forEach(function (b) { if (b) b.disabled = ativo; });
+    document.querySelectorAll('.btn-ia-aba').forEach(function (b) { b.disabled = ativo; });
     if (iaDescricao) iaDescricao.disabled = ativo;
   }
 
   async function solicitarSugestaoIa(secao) {
     var descricao = (iaDescricao && iaDescricao.value || '').trim();
     if (descricao.length < 10) {
-      mostrarStatusIa('Descreva o site com pelo menos 10 caracteres no campo acima.', 'aviso');
+      mostrarStatusIa('Descreva o site com pelo menos 10 caracteres.', 'aviso');
       if (iaDescricao) iaDescricao.focus();
       return;
     }
-
     setCarregandoIa(true);
-    mostrarStatusIa('A IA está gerando sugestões...', 'info');
-
+    mostrarStatusIa('Gerando sugestões...', 'info');
     try {
       var res = await fetch('/admin/configuracoes/ia-sugerir', {
         method: 'POST',
@@ -521,23 +533,19 @@
         body: JSON.stringify({ descricao: descricao, secao: secao || 'todas' })
       });
       var data = await res.json();
-      if (!res.ok || !data.ok) throw new Error(data.erro || 'Não foi possível gerar sugestões.');
-
+      if (!res.ok || !data.ok) throw new Error(data.erro || 'Erro ao gerar.');
       aplicarSugestoes(data.sugestoes);
-      mostrarStatusIa('Campos preenchidos com sucesso! Revise e clique em Salvar configurações.', 'sucesso');
-
-      if (secao === 'identidade') document.querySelector('.aba-btn[data-aba="identidade"]')?.click();
-      if (secao === 'seo') document.querySelector('.aba-btn[data-aba="seo"]')?.click();
-      if (secao === 'rodape') document.querySelector('.aba-btn[data-aba="rodape"]')?.click();
-    } catch (e) {
-      mostrarStatusIa(e.message, 'erro');
-    } finally {
-      setCarregandoIa(false);
-    }
+      mostrarStatusIa('Campos preenchidos! Revise e salve.', 'sucesso');
+      if (secao === 'identidade') irAba('identidade');
+      if (secao === 'seo') irAba('seo');
+      if (secao === 'rodape') irAba('rodape');
+    } catch (e) { mostrarStatusIa(e.message, 'erro'); }
+    finally { setCarregandoIa(false); }
   }
 
-  if (document.getElementById('btn-ia-config-todas')) {
-    document.getElementById('btn-ia-config-todas').addEventListener('click', function () { solicitarSugestaoIa('todas'); });
+  var btnTodas = document.getElementById('btn-ia-config-todas');
+  if (btnTodas) {
+    btnTodas.addEventListener('click', function () { solicitarSugestaoIa('todas'); });
     document.getElementById('btn-ia-config-identidade').addEventListener('click', function () { solicitarSugestaoIa('identidade'); });
     document.getElementById('btn-ia-config-seo').addEventListener('click', function () { solicitarSugestaoIa('seo'); });
     document.getElementById('btn-ia-config-rodape').addEventListener('click', function () { solicitarSugestaoIa('rodape'); });
@@ -545,4 +553,5 @@
       btn.addEventListener('click', function () { solicitarSugestaoIa(btn.dataset.iaSecao); });
     });
   }
+})();
 </script>

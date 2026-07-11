@@ -611,7 +611,158 @@ body.sidebar-overlay::before {
 .preview-favicon { width: 48px; height: 48px; padding: 6px; }
 .preview-og { max-width: 360px; aspect-ratio: 1200 / 630; object-fit: cover; }
 
-/* Abas das configurações */
+/* ── Página de configurações ── */
+.config-page { max-width: 1100px; }
+.config-header { margin-bottom: 1.25rem; }
+.config-header h1 { margin: 0 0 4px; font-size: 1.5rem; }
+.config-header-desc { margin: 0; color: #6b7280; font-size: .88rem; }
+
+.config-ia-fold {
+  margin-bottom: 1.25rem;
+  border: 1px solid #fed7aa;
+  border-radius: 10px;
+  background: #fffbeb;
+  overflow: hidden;
+}
+.config-ia-fold summary {
+  padding: 12px 16px;
+  font-weight: 700;
+  font-size: .88rem;
+  color: #9a3412;
+  cursor: pointer;
+  list-style: none;
+}
+.config-ia-fold summary::-webkit-details-marker { display: none; }
+.config-ia-fold summary::before { content: '▸ '; }
+.config-ia-fold[open] summary::before { content: '▾ '; }
+.config-ia-corpo { padding: 0 16px 14px; }
+.config-ia-botoes { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; margin-top: 10px; }
+.config-label { display: block; font-weight: 700; font-size: .82rem; margin-bottom: 6px; color: #374151; }
+
+.config-layout {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 0;
+  align-items: start;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #fff;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,.04);
+}
+
+.config-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 10px;
+  background: #f9fafb;
+  border-right: 1px solid #e5e7eb;
+  position: sticky;
+  top: 16px;
+  align-self: start;
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+}
+.config-nav-grupo {
+  margin: 14px 0 6px 8px;
+  font-size: .68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: #9ca3af;
+}
+.config-nav-grupo:first-child { margin-top: 4px; }
+.config-nav-btn {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 9px 12px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  font-size: .84rem;
+  font-weight: 600;
+  color: #4b5563;
+  cursor: pointer;
+  transition: background .12s, color .12s;
+}
+.config-nav-btn:hover { background: #fff; color: #111827; }
+.config-nav-btn.ativa {
+  background: #fff;
+  color: #ea580c;
+  box-shadow: 0 1px 2px rgba(0,0,0,.06);
+}
+
+.config-corpo {
+  padding: 20px 22px 24px;
+  min-width: 0;
+}
+.config-painel { display: flex; flex-direction: column; gap: 16px; }
+.config-painel[hidden] { display: none !important; }
+.config-painel-topo {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f3f4f6;
+  margin-bottom: 4px;
+}
+.config-painel-topo h2 { margin: 0 0 4px; font-size: 1.15rem; }
+.config-painel-topo .dica { margin: 0; }
+
+.config-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 16px 18px;
+  background: #fafafa;
+}
+.config-card--preview { background: #fff; }
+.config-card--info { background: #f0fdf4; border-color: #bbf7d0; }
+.config-card-titulo {
+  margin: 0 0 12px;
+  font-size: .78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: #6b7280;
+}
+.config-campos { display: flex; flex-direction: column; gap: 14px; }
+.config-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+.config-alerta { color: #b45309; font-weight: 600; }
+.config-acoes {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.config-fold {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #fff;
+  overflow: hidden;
+}
+.config-fold summary {
+  padding: 12px 16px;
+  font-weight: 700;
+  font-size: .88rem;
+  color: #374151;
+  cursor: pointer;
+  background: #f9fafb;
+  list-style: none;
+}
+.config-fold summary::-webkit-details-marker { display: none; }
+.config-fold summary::before { content: '▸ '; color: #9ca3af; }
+.config-fold[open] summary::before { content: '▾ '; }
+.config-fold-corpo { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 10px; }
+
+/* Abas legado (outras páginas) */
 .abas { display: flex; gap: 4px; margin-bottom: 16px; flex-wrap: wrap; }
 .aba-btn { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px 8px 0 0; padding: 10px 18px; font-size: .9rem; font-weight: 700; color: #6b7280; cursor: pointer; transition: all .15s; }
 .aba-btn:hover { color: #ea580c; }
@@ -1550,6 +1701,19 @@ body.modal-capa-aberto { overflow: hidden; }
 @media (max-width: 900px) {
   .ia-grid, .ia-grid-3 { grid-template-columns: 1fr; }
   .ia-pub-grid { grid-template-columns: 1fr; }
+  .config-layout { grid-template-columns: 1fr; }
+  .config-nav {
+    position: static;
+    flex-direction: row;
+    flex-wrap: wrap;
+    border-right: none;
+    border-bottom: 1px solid #e5e7eb;
+    max-height: none;
+    padding: 10px;
+  }
+  .config-nav-grupo { width: 100%; margin: 8px 0 4px; }
+  .config-nav-btn { width: auto; flex: 1 1 auto; min-width: calc(50% - 4px); font-size: .8rem; padding: 8px 10px; }
+  .config-grid-2 { grid-template-columns: 1fr; }
   .ia-campo-largo { grid-column: auto; }
   .ia-preview-grid { grid-template-columns: 1fr; }
   .tabela { display: block; overflow-x: auto; white-space: nowrap; }
