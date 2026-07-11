@@ -4,7 +4,7 @@ const { permitir } = require('../../middlewares/auth');
 const { gerarArtigo } = require('../../services/deepseek');
 const { pesquisarNichos, apurarTopico } = require('../../services/newsResearch');
 const { obterImagemParaArtigo, avisoFalhaImagem } = require('../../services/imageFetcher');
-const { marcarTopicosPublicados, deduplicarTopicos, encontrarSimilar } = require('../../utils/topicMatch');
+const { marcarTopicosPublicados, deduplicarTopicos, encontrarSimilar, titulosSimilares } = require('../../utils/topicMatch');
 const { agendarTopicos, prepararTopicosParaFila, obterResumoFila, listarErrosRecentesFila, limparErrosAntigosFila, cancelarFilaPendente, obterProximoSlotFila } = require('../../services/iaFilaPublicacao');
 const {
   criarMonitor,
@@ -569,13 +569,6 @@ router.post('/investigativa/gerar', async (req, res) => {
     });
 
     const posts = await carregarPostsExistentes();
-    const duplicado = encontrarSimilar(pauta.titulo, posts, pauta.resumo);
-    if (duplicado) {
-      return responderJson(res, 400, {
-        ok: false,
-        erro: `Já existe matéria similar: "${duplicado.titulo}". Ajuste as palavras-chave ou edite o post existente.`
-      });
-    }
 
     const artigo = await gerarArtigo({
       tituloReferencia: pauta.titulo,
@@ -587,14 +580,15 @@ router.post('/investigativa/gerar', async (req, res) => {
       fontesApuracao: pauta.fontesApuracao,
       redeSocial: pauta.redeSocial,
       conteudoInternacional: pauta.fonteInternacional,
-      investigativa: true
+      investigativa: true,
+      palavrasChaveInvestigativa: pauta.palavrasChave
     });
 
-    const duplicadoGerado = encontrarSimilar(artigo.titulo, posts, artigo.resumo);
+    const duplicadoGerado = posts.find((p) => titulosSimilares(p.titulo, artigo.titulo));
     if (duplicadoGerado) {
       return responderJson(res, 400, {
         ok: false,
-        erro: `Matéria gerada muito similar a: "${duplicadoGerado.titulo}". Tente outras palavras-chave.`
+        erro: `Já existe matéria com manchete parecida: "${duplicadoGerado.titulo}". Edite o rascunho existente ou refine as palavras-chave.`
       });
     }
 

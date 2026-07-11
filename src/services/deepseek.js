@@ -284,7 +284,8 @@ async function gerarArtigo({
   emAlta,
   redeSocial,
   conteudoInternacional,
-  investigativa
+  investigativa,
+  palavrasChaveInvestigativa
 }) {
   const hoje = new Date().toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
   const listaFontes = (fontesApuracao || [])
@@ -301,7 +302,12 @@ async function gerarArtigo({
   ].filter(Boolean).join('\n');
 
   const prompt = `Você é repórter de portal de notícias gospel no Brasil. Estilo: G1/Globo — direto, humano, com furo no lead.
-${investigativa ? '\nMODO: MATÉRIA INVESTIGATIVA — cruzamento de múltiplas fontes (portais, notícias, redes). Sintetize fatos de TODAS as fontes com redação original. O lead deve revelar o furo principal descoberto na apuração cruzada.\n' : ''}
+${investigativa ? `
+MODO: MATÉRIA INVESTIGATIVA — cruzamento de múltiplas fontes (portais, notícias, redes).
+TEMA OBRIGATÓRIO DO USUÁRIO: ${palavrasChaveInvestigativa || tituloReferencia || nicho || 'conforme pauta'}
+NÃO escreva sobre outro assunto, celebridade ou polêmica que não seja este tema — mesmo que apareça nas fontes.
+Sintetize fatos das fontes relevantes ao tema com redação original. O lead deve revelar o furo principal SOBRE ESTE ASSUNTO.
+` : ''}
 
 DATA: ${hoje} | SITE: ${nomeSite || 'Portal Gospel'}
 
