@@ -20,7 +20,7 @@ const {
   MIN_PALAVRAS_ARTIGO,
   MAX_PALAVRAS_ARTIGO
 } = require('../../services/editorialGuidelines');
-const { apurarPautaInvestigativa, artigoCitaNomesApurados } = require('../../services/investigativeResearch');
+const { apurarPautaInvestigativa, artigoCitaNomesApurados, artigoRespeitaEvidencias } = require('../../services/investigativeResearch');
 
 function avisoQualidadeArtigo(artigo) {
   if (artigo._avisoQualidade) return artigo._avisoQualidade;
@@ -583,8 +583,16 @@ router.post('/investigativa/gerar', async (req, res) => {
       investigativa: true,
       palavrasChaveInvestigativa: pauta.palavrasChave,
       formatoInvestigativa: pauta.formatoInvestigativa,
-      nomesApurados: pauta.nomesApurados
+      nomesApurados: pauta.nomesApurados,
+      evidenciasVerificadas: pauta.evidenciasVerificadas
     });
+
+    if (pauta.formatoInvestigativa === 'listagem_nomes' && !artigoRespeitaEvidencias(artigo, pauta.evidenciasVerificadas)) {
+      return responderJson(res, 400, {
+        ok: false,
+        erro: 'A matéria incluiu pessoas sem prova documentada na apuração. Geração bloqueada — tente novamente.'
+      });
+    }
 
     if (pauta.formatoInvestigativa === 'listagem_nomes' && !artigoCitaNomesApurados(artigo, pauta.nomesApurados)) {
       return responderJson(res, 400, {
@@ -626,6 +634,11 @@ router.post('/investigativa/gerar', async (req, res) => {
       fontes: pauta.fontesResumo,
       contagemFontes: pauta.contagemFontes,
       nomesApurados: pauta.nomesApurados,
+      evidencias: (pauta.evidenciasVerificadas || []).map((e) => ({
+        nome: e.nome,
+        url: e.url,
+        veiculo: e.veiculo
+      })),
       avisoQualidade: avisoQualidadeArtigo(artigo),
       palavras: artigo._palavras || null,
       mensagem: `Matéria investigativa salva como rascunho. Adicione a imagem de capa antes de publicar.${pauta.contagemFontes ? ` Apuradas ${pauta.contagemFontes} fontes.` : ''}`

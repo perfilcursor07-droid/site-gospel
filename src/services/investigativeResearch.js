@@ -13,6 +13,11 @@ const { buscarContextoLlm, buscarWeb } = require('./braveSearch');
 const { extrairCorpoArtigo } = require('./articleSource');
 const { braveDisponivel } = require('./braveApi');
 const { titulosSimilares } = require('../utils/topicMatch');
+const {
+  obterEvidenciasVerificadas,
+  montarBlocoEvidencias,
+  artigoRespeitaEvidencias
+} = require('./evidenceVerification');
 
 const MAX_FONTES_APURAR = 20;
 const MAX_APURACAO_PROFUNDA = 16;
@@ -423,31 +428,19 @@ async function buscarContextoFactual(palavrasChave, formato) {
   return partes.filter(Boolean).join('\n\n---\n\n').slice(0, 12000);
 }
 
-function montarContextoInvestigativo(palavrasChave, apurados, { formato, nomesApurados, contextoFactual }) {
+function montarContextoInvestigativo(palavrasChave, apurados, { formato, evidenciasVerificadas }) {
   const linhas = [
     `TEMA OBRIGATÓRIO: ${palavrasChave}`,
-    `FORMATO: ${formato === 'listagem_nomes' ? 'LISTAGEM — informar QUEM SÃO (nomes completos confirmados nas fontes)' : 'reportagem investigativa'}`,
+    `FORMATO: ${formato === 'listagem_nomes' ? 'LISTAGEM com prova documental por pessoa' : 'reportagem investigativa'}`,
     ''
   ];
 
   if (formato === 'listagem_nomes') {
-    linhas.push(
-      'REGRA CRÍTICA: Cite SOMENTE pessoas cujos nomes aparecem abaixo.',
-      'NÃO invente nomes. NÃO use posts genéricos de redes como substituto.',
-      nomesApurados.length
-        ? `NOMES CONFIRMADOS (${nomesApurados.length}): ${nomesApurados.join('; ')}`
-        : 'NOMES CONFIRMADOS: nenhum — diga ao leitor que a apuração não confirmou nomes.',
-      ''
-    );
-  }
-
-  if (contextoFactual) {
-    linhas.push('=== APURAÇÃO WEB (Brave LLM) ===');
-    linhas.push(contextoFactual.slice(0, 5000));
+    linhas.push(montarBlocoEvidencias(evidenciasVerificadas || []));
     linhas.push('');
   }
 
-  linhas.push(`Matérias e fontes lidas (${apurados.length}):`);
+  linhas.push(`Matérias lidas na apuração (${apurados.length}) — contexto de apoio (não use fatos daqui se não estiverem nas evidências):`);
 
   apurados.forEach((fonte, i) => {
     const veiculo = fonte.redeSocial || fonte.veiculo || fonte.fonte || 'Web';
@@ -473,45 +466,48 @@ async function apurarPautaInvestigativa(palavrasChave, opcoes = {}) {
   const formato = detectarFormatoInvestigativa(chave);
 
   let fontesBrutas = await buscarFontesInvestigativa(chave, { ...opcoes, formato, onda: 1 });
-  const contextoFactual = await buscarContextoFactual(chave, formato);
 
   let apurados = await Promise.all(fontesBrutas.map((item) => apurarTopico(item)));
   apurados = await apuracaoProfunda(apurados);
 
-  let nomesApurados = extrairNomesApuracao(apurados, contextoFactual || '');
+  let evidenciasVerificadas = formato === 'listagem_nomes'
+    ? await obterEvidenciasVerificadas(apurados, chave)
+    : [];
 
-  if (formato === 'listagem_nomes' && nomesApurados.length < 2) {
+  if (formato === 'listagem_nomes' && evidenciasVerificadas.length < MIN_NOMES_LISTAGEM) {
     const fontesOnda2 = await buscarFontesInvestigativa(chave, { ...opcoes, formato, onda: 2 });
     const novos = fontesOnda2.filter((f) => !apurados.some((a) => a.link === f.link || titulosSimilares(a.titulo, f.titulo)));
     if (novos.length) {
       const apurados2 = await Promise.all(novos.map((item) => apurarTopico(item)));
       const profundos2 = await apuracaoProfunda(apurados2);
       apurados = [...apurados, ...profundos2];
-      nomesApurados = extrairNomesApuracao(apurados, contextoFactual || '');
+      evidenciasVerificadas = await obterEvidenciasVerificadas(apurados, chave);
     }
   }
 
-  if (formato === 'listagem_nomes' && nomesApurados.length < MIN_NOMES_LISTAGEM) {
+  const nomesApurados = evidenciasVerificadas.map((e) => e.nome);
+
+  if (formato === 'listagem_nomes' && evidenciasVerificadas.length < MIN_NOMES_LISTAGEM) {
     throw new Error(
-      `Apuração profunda: ${apurados.length} matérias lidas, mas nenhum nome de pastor divorciado foi confirmado nas fontes. ` +
-      'Esse tema pode não ter cobertura jornalística com nomes públicos — tente buscar um pastor específico (ex.: "pastor [nome] divórcio").'
+      `Apuração: ${apurados.length} matérias lidas, mas nenhum caso com divórcio EXPLICITAMENTE documentado em trecho de matéria (com URL). ` +
+      'Não publicamos nomes sem prova — tente buscar um caso específico (ex.: "pastor [nome] anunciou divórcio").'
     );
   }
 
   const todasFontes = deduplicarFontesApuracao(apurados.flatMap((a) => a.fontesApuracao || []));
   const contextoApuracao = montarContextoInvestigativo(chave, apurados, {
     formato,
-    nomesApurados,
-    contextoFactual
+    evidenciasVerificadas
   });
 
   return {
     palavrasChave: chave,
     formatoInvestigativa: formato,
     nomesApurados,
+    evidenciasVerificadas,
     titulo: montarTituloPauta(chave),
     resumo: formato === 'listagem_nomes'
-      ? `Listagem apurada: ${nomesApurados.length} nome(s) em ${apurados.length} matérias lidas.`
+      ? `${evidenciasVerificadas.length} caso(s) com divórcio documentado em ${apurados.length} matérias lidas.`
       : `Matéria investigativa: ${apurados.length} fontes com leitura profunda.`,
     link: apurados.find((a) => a.link)?.link || null,
     nicho: chave.split(/[,;]+/)[0]?.trim() || chave,
@@ -544,6 +540,6 @@ module.exports = {
   buscarFontesInvestigativa,
   normalizarPalavrasChave,
   detectarFormatoInvestigativa,
-  extrairNomesApuracao,
-  artigoCitaNomesApurados
+  artigoCitaNomesApurados,
+  artigoRespeitaEvidencias
 };

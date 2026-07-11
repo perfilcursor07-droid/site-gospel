@@ -287,7 +287,8 @@ async function gerarArtigo({
   investigativa,
   palavrasChaveInvestigativa,
   formatoInvestigativa,
-  nomesApurados
+  nomesApurados,
+  evidenciasVerificadas
 }) {
   const hoje = new Date().toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
   const listaFontes = (fontesApuracao || [])
@@ -308,12 +309,15 @@ ${investigativa ? `
 MODO: MATÉRIA INVESTIGATIVA — cruzamento de múltiplas fontes (portais, notícias, web).
 TEMA OBRIGATÓRIO DO USUÁRIO: ${palavrasChaveInvestigativa || tituloReferencia || nicho || 'conforme pauta'}
 ${formatoInvestigativa === 'listagem_nomes' ? `
-FORMATO LISTAGEM ("quem são eles"):
-- Lead: quantos nomes foram CONFIRMADOS nas fontes e por que a lista importa.
-- Para CADA pessoa listada em NOMES CONFIRMADOS: um <h2> com o nome completo + <p> com contexto do divórcio/caso (só fatos das fontes).
-- NÃO use posts genéricos de redes, versículos bíblicos ou perfis aleatórios como se fossem pastores divorciados.
-- NÃO invente nomes, casos, datas nem declarações. Se faltar dado, diga "informação não confirmada nas fontes".
-NOMES PERMITIDOS (use APENAS estes): ${(nomesApurados || []).join('; ') || 'NENHUM — não invente'}
+FORMATO LISTAGEM ("quem são eles") — SOMENTE COM PROVA DOCUMENTAL:
+- Lead: use o número EXATO de pessoas na lista de evidências (${(evidenciasVerificadas || []).length}). Nunca invente "cinco" ou "vários" se não houver prova.
+- Para CADA evidência abaixo: um <h2> com o nome + <p> reescrevendo o fato do trecho + atribuição ao veículo/URL.
+- PROIBIDO incluir qualquer pessoa que NÃO esteja nas evidências documentais.
+- PROIBIDO inferir divórcio de "primeira esposa" ou biografia genérica.
+- Se só houver 1–2 casos confirmados, diga isso claramente — não encha a lista.
+${(evidenciasVerificadas || []).length
+  ? `PESSOAS COM PROVA (${evidenciasVerificadas.length}): ${evidenciasVerificadas.map((e) => e.nome).join('; ')}`
+  : 'NENHUMA PESSOA CONFIRMADA — escreva matéria explicando que a apuração não encontrou casos documentados com divórcio explícito em matérias lidas.'}
 ` : `
 NÃO escreva sobre outro assunto que não seja o tema acima.
 Sintetize fatos das fontes relevantes com redação original. O lead deve revelar o furo principal SOBRE ESTE ASSUNTO.
@@ -330,12 +334,11 @@ ${listaFontes ? `FONTES (atribua genericamente, sem inventar entrevistas):\n${li
 ${blocoRegrasEditoriais(nomeSite)}
 ${investigativa ? `
 REGRAS INVESTIGATIVAS (OBRIGATÓRIO):
-- Use SOMENTE fatos e nomes que constam explicitamente na pauta/fontes — ZERO invenção.
-- Proibido transformar posts genéricos de Instagram/Threads/TikTok em "casos de pastores divorciados" sem confirmação.
-- Proibido citar cantores, ordens religiosas estrangeiras ou perfis sem relação com o tema como substituto de nomes.
-- Atribua fatos genericamente ("segundo matérias em portais gospel", "conforme apuração").
-- Não invente declarações entre aspas, entrevistas nem "procurados pela reportagem" com respostas fabricadas.
-${formatoInvestigativa === 'listagem_nomes' ? '- Cada <h2> deve ser o nome real de um pastor/líder confirmado nas fontes.' : '- Valor editorial: cruzamento de fontes sobre o tema, sem desviar para outras polêmicas.'}
+- Jornalismo verificável: cada fato sobre uma pessoa precisa estar nas EVIDÊNCIAS DOCUMENTAIS abaixo.
+- ZERO invenção, ZERO inferência, ZERO "conhecimento geral" sobre biografias de pastores.
+- Proibido afirmar divórcio sem trecho explícito de matéria/portal com URL.
+- Não invente declarações, entrevistas nem quantidade de casos.
+${formatoInvestigativa === 'listagem_nomes' ? '- Um <h2> por evidência confirmada — nada além disso.' : '- Valor editorial: cruzamento de fontes documentadas.'}
 ` : ''}
 
 ESTRUTURA OBRIGATÓRIA DA MATÉRIA:
@@ -379,7 +382,7 @@ Retorne APENAS JSON válido:
 }`;
 
   const systemMsg = investigativa
-    ? 'Repórter investigativo gospel brasileiro. Zero invenção: só nomes e fatos presentes nas fontes. E-E-A-T, people-first, sem plágio. Retorne somente JSON válido.'
+    ? 'Repórter investigativo gospel brasileiro. Fact-check rigoroso: só fatos com prova no trecho fornecido. Nunca use biografia de treinamento. JSON válido.'
     : conteudoInternacional
     ? 'Redator investigativo gospel brasileiro. Fontes podem estar em outro idioma: traduza fatos e reescreva em português do Brasil com furo de reportagem. E-E-A-T, original, sem plágio. Retorne somente JSON válido.'
     : 'Redator investigativo gospel brasileiro. Conteúdo people-first, E-E-A-T, original, com furo de reportagem. Reportagem a partir de fontes externas: sim. Plágio: nunca. Matérias ENXUTAS e densas, não longas. Retorne somente JSON válido.';
@@ -468,6 +471,56 @@ function parsearJson(texto) {
   throw new Error('A IA retornou um formato inválido. Tente novamente.');
 }
 
+/**
+ * Fact-check: confirma só evidências com divórcio/separação EXPLÍCITOS no trecho.
+ */
+async function filtrarEvidenciasInvestigativas(evidencias, tema) {
+  if (!Array.isArray(evidencias) || !evidencias.length) return [];
+
+  const lista = evidencias.slice(0, 12).map((e, i) =>
+    `[${i + 1}] NOME: ${e.nome}\nURL: ${e.url}\nTRECHO: ${e.trecho}`
+  ).join('\n\n');
+
+  const prompt = `Você é fact-checker jornalístico. Tema: ${tema}
+
+Analise cada evidência abaixo. CONFIRME apenas se o TRECHO afirma EXPLICITAMENTE que a pessoa passou por divórcio ou separação conjugal documentada.
+
+REJEITE se:
+- for só inferência ("primeira esposa", "casou novamente") sem palavra explícita de divórcio/separação no trecho
+- o trecho não mencionar divórcio/separação do nome indicado
+- parecer biografia genérica ou conhecimento de treinamento sem fato explícito no trecho
+
+EVIDÊNCIAS:
+${lista}
+
+Retorne JSON:
+{
+  "confirmados": [
+    { "nome": "...", "trecho": "...", "url": "...", "veiculo": "..." }
+  ]
+}`;
+
+  const resposta = await chatCompletion(
+    [
+      { role: 'system', content: 'Fact-checker rigoroso. Zero inferência. Só confirma fatos explícitos no trecho. JSON válido.' },
+      { role: 'user', content: prompt }
+    ],
+    { json: true, temperature: 0.1, maxTokens: 2000 }
+  );
+
+  const raw = parsearJson(resposta);
+  const confirmados = Array.isArray(raw.confirmados) ? raw.confirmados : [];
+  return confirmados
+    .filter((c) => c?.nome && c?.trecho)
+    .map((c) => ({
+      nome: c.nome,
+      trecho: c.trecho,
+      url: c.url || evidencias.find((e) => e.nome === c.nome)?.url,
+      veiculo: c.veiculo || evidencias.find((e) => e.nome === c.nome)?.veiculo,
+      tituloFonte: evidencias.find((e) => e.nome === c.nome)?.tituloFonte
+    }));
+}
+
 module.exports = {
   chatCompletion,
   gerarArtigo,
@@ -477,5 +530,6 @@ module.exports = {
   selecionarMelhorImagem,
   validarImagemParaArtigo,
   gerarAltImagem,
-  textoPlano
+  textoPlano,
+  filtrarEvidenciasInvestigativas
 };
