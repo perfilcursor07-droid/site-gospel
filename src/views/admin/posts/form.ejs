@@ -12,6 +12,7 @@
     <div class="modo-tabs" role="tablist">
       <button type="button" class="modo-tab ativa" data-modo="manual" role="tab">Escrever</button>
       <button type="button" class="modo-tab" data-modo="ia" role="tab">Gerar com IA</button>
+      <button type="button" class="modo-tab" data-modo="investigativa" role="tab">Matéria investigativa</button>
     </div>
     <% } %>
   </header>
@@ -352,6 +353,72 @@
     </div>
 
     <div id="ia-status-msg" class="ia-status-msg" hidden></div>
+  </section>
+
+  <section class="painel-ia painel-investigativa modo-painel" id="painel-investigativa" hidden>
+    <div class="painel-ia-intro">
+      <div>
+        <h2>Matéria investigativa</h2>
+        <p class="dica">Digite as palavras-chave do assunto. O sistema pesquisa portais, notícias, redes sociais e web; a IA cruza as fontes e escreve uma reportagem original com furo — sem plágio, padrão Google E-E-A-T.</p>
+      </div>
+      <span class="badge-ia badge-ia--inv">DeepSeek · Apuração</span>
+    </div>
+
+    <div class="ia-bloco">
+      <label for="inv-palavras" class="ia-bloco-titulo">Palavras-chave da matéria</label>
+      <input type="text" id="inv-palavras" class="ia-input-grande" placeholder="Ex: pastor polêmica gospel, igreja São Paulo, escândalo ministério">
+      <p class="dica">Descreva o assunto com nomes, lugares ou eventos. Separe termos por vírgula se quiser ampliar a busca.</p>
+      <div class="tags-rapidas tags-rapidas-inv">
+        <% ['polêmica gospel', 'pastor', 'congresso gospel', 'louvor', 'testemunho', 'repercussão redes'].forEach(function (tag) { %>
+          <button type="button" class="tag-rapida tag-rapida-inv" data-tag="<%= tag %>"><%= tag %></button>
+        <% }) %>
+      </div>
+    </div>
+
+    <div class="ia-opcoes-linha ia-opcoes-busca">
+      <div class="ia-campo ia-campo-compacto">
+        <label for="inv-categoria">Categoria</label>
+        <select id="inv-categoria">
+          <option value="">Sem categoria</option>
+          <% categorias.forEach(function (c) { %>
+            <option value="<%= c.id %>"><%= c.nome %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div class="ia-campo ia-campo-compacto">
+        <label for="inv-dias">Período da apuração</label>
+        <select id="inv-dias">
+          <option value="24h">Últimas 24 horas</option>
+          <option value="3">3 dias</option>
+          <option value="7" selected>7 dias</option>
+          <option value="14">14 dias</option>
+          <option value="tudo">Sem filtro de data</option>
+        </select>
+      </div>
+      <label class="checkbox ia-check-compacto">
+        <input type="checkbox" id="inv-internacional" checked> Incluir fontes internacionais
+      </label>
+    </div>
+
+    <div class="inv-fluxo-passos" id="inv-fluxo-passos" hidden>
+      <div class="inv-passo-item" data-etapa="pesquisa"><span class="inv-passo-icone">○</span> Pesquisando fontes na web, portais e redes…</div>
+      <div class="inv-passo-item" data-etapa="apuracao"><span class="inv-passo-icone">○</span> Apurando conteúdo das fontes encontradas…</div>
+      <div class="inv-passo-item" data-etapa="redacao"><span class="inv-passo-icone">○</span> IA redigindo matéria investigativa…</div>
+      <div class="inv-passo-item" data-etapa="salvar"><span class="inv-passo-icone">○</span> Salvando rascunho…</div>
+    </div>
+
+    <div id="inv-fontes-lista" class="inv-fontes-lista" hidden>
+      <h3 class="inv-fontes-titulo">Fontes apuradas</h3>
+      <ul id="inv-fontes-ul"></ul>
+    </div>
+
+    <div class="ia-passo-acoes ia-passo-acoes-inicio">
+      <button type="button" class="btn btn-primario btn-ia-principal" id="btn-inv-gerar">Pesquisar fontes e gerar matéria</button>
+    </div>
+
+    <p class="dica inv-aviso-rascunho">A matéria é salva sempre como <strong>rascunho</strong> para você revisar o texto e adicionar a imagem de capa antes de publicar.</p>
+
+    <div id="inv-status-msg" class="ia-status-msg" hidden></div>
   </section>
   <% } %>
 
@@ -844,12 +911,14 @@
   <% if (podeIa) { %>
   var modoTabs = document.querySelectorAll('.modo-tab');
   var painelIa = document.getElementById('painel-ia');
+  var painelInv = document.getElementById('painel-investigativa');
 
   modoTabs.forEach(function (tab) {
     tab.addEventListener('click', function () {
       var modo = tab.dataset.modo;
       modoTabs.forEach(function (t) { t.classList.toggle('ativa', t === tab); });
       painelIa.hidden = modo !== 'ia';
+      if (painelInv) painelInv.hidden = modo !== 'investigativa';
       formPost.classList.toggle('ativa', modo === 'manual');
       formPost.hidden = modo !== 'manual';
     });
@@ -1582,6 +1651,126 @@
       radioAuto.checked = true;
       atualizarModoBusca();
     }
+  }
+
+  /* ── Matéria investigativa ── */
+  var btnInvGerar = document.getElementById('btn-inv-gerar');
+  var invStatusMsg = document.getElementById('inv-status-msg');
+  var invFluxoPassos = document.getElementById('inv-fluxo-passos');
+  var invFontesLista = document.getElementById('inv-fontes-lista');
+  var invFontesUl = document.getElementById('inv-fontes-ul');
+
+  document.querySelectorAll('.tag-rapida-inv').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var input = document.getElementById('inv-palavras');
+      var tags = input.value.split(/[,;]/).map(function (t) { return t.trim(); }).filter(Boolean);
+      if (tags.indexOf(btn.dataset.tag) === -1) tags.push(btn.dataset.tag);
+      input.value = tags.join(', ');
+    });
+  });
+
+  function mostrarInvStatus(texto, tipo) {
+    if (!invStatusMsg) return;
+    invStatusMsg.hidden = false;
+    invStatusMsg.className = 'ia-status-msg ia-status-' + (tipo || 'info');
+    invStatusMsg.textContent = texto;
+  }
+
+  function atualizarInvPasso(etapa, estado) {
+    if (!invFluxoPassos) return;
+    var item = invFluxoPassos.querySelector('[data-etapa="' + etapa + '"]');
+    if (!item) return;
+    item.classList.remove('inv-passo--ativo', 'inv-passo--ok', 'inv-passo--erro');
+    if (estado === 'ativo') item.classList.add('inv-passo--ativo');
+    if (estado === 'ok') item.classList.add('inv-passo--ok');
+    if (estado === 'erro') item.classList.add('inv-passo--erro');
+    var icone = item.querySelector('.inv-passo-icone');
+    if (icone) {
+      icone.textContent = estado === 'ok' ? '✓' : estado === 'erro' ? '✕' : estado === 'ativo' ? '◉' : '○';
+    }
+  }
+
+  function simularProgressoInv() {
+    if (!invFluxoPassos) return;
+    invFluxoPassos.hidden = false;
+    ['pesquisa', 'apuracao', 'redacao', 'salvar'].forEach(function (e) { atualizarInvPasso(e, ''); });
+    atualizarInvPasso('pesquisa', 'ativo');
+    setTimeout(function () {
+      atualizarInvPasso('pesquisa', 'ok');
+      atualizarInvPasso('apuracao', 'ativo');
+    }, 4000);
+    setTimeout(function () {
+      atualizarInvPasso('apuracao', 'ok');
+      atualizarInvPasso('redacao', 'ativo');
+    }, 12000);
+    setTimeout(function () {
+      atualizarInvPasso('redacao', 'ok');
+      atualizarInvPasso('salvar', 'ativo');
+    }, 28000);
+  }
+
+  function renderizarFontesInv(fontes) {
+    if (!invFontesLista || !invFontesUl || !fontes || !fontes.length) return;
+    invFontesUl.innerHTML = '';
+    fontes.forEach(function (f) {
+      var li = document.createElement('li');
+      var veiculo = f.veiculo || 'Web';
+      if (f.url) {
+        li.innerHTML = '<a href="' + f.url + '" target="_blank" rel="noopener">' + (f.titulo || 'Fonte') + '</a> <span class="inv-fonte-veiculo">' + veiculo + '</span>';
+      } else {
+        li.textContent = (f.titulo || 'Fonte') + ' (' + veiculo + ')';
+      }
+      invFontesUl.appendChild(li);
+    });
+    invFontesLista.hidden = false;
+  }
+
+  if (btnInvGerar) {
+    btnInvGerar.addEventListener('click', async function () {
+      var palavras = (document.getElementById('inv-palavras')?.value || '').trim();
+      if (!palavras) {
+        mostrarInvStatus('Informe as palavras-chave da matéria.', 'erro');
+        return;
+      }
+      if (!confirm('Pesquisar fontes na internet e gerar matéria investigativa?\n\nO processo pode levar 1–3 minutos. A matéria será salva como rascunho.')) return;
+
+      setCarregando(btnInvGerar, true);
+      mostrarInvStatus('Apuração em andamento — aguarde…', 'info');
+      if (invFontesLista) invFontesLista.hidden = true;
+      simularProgressoInv();
+
+      try {
+        var data = await chamarApi('/admin/posts/ia/investigativa/gerar', {
+          palavrasChave: palavras,
+          categoriaId: document.getElementById('inv-categoria')?.value || null,
+          diasRecentes: document.getElementById('inv-dias')?.value || '7',
+          conteudoInternacional: document.getElementById('inv-internacional')?.checked !== false
+        });
+
+        ['pesquisa', 'apuracao', 'redacao', 'salvar'].forEach(function (e) { atualizarInvPasso(e, 'ok'); });
+        renderizarFontesInv(data.fontes);
+
+        var msg = data.mensagem || 'Matéria salva como rascunho.';
+        if (data.avisoQualidade) msg += ' ' + data.avisoQualidade;
+        mostrarInvStatus(msg, 'sucesso');
+
+        setTimeout(function () {
+          window.location.href = '/admin/posts/' + data.post.id + '/editar?rascunho=inv';
+        }, 2200);
+      } catch (e) {
+        ['pesquisa', 'apuracao', 'redacao', 'salvar'].forEach(function (et) {
+          var item = invFluxoPassos?.querySelector('[data-etapa="' + et + '"]');
+          if (item && item.classList.contains('inv-passo--ativo')) atualizarInvPasso(et, 'erro');
+        });
+        mostrarInvStatus(e.message, 'erro');
+      } finally {
+        setCarregando(btnInvGerar, false, 'Pesquisar fontes e gerar matéria');
+      }
+    });
+  }
+
+  if (new URLSearchParams(window.location.search).get('modo') === 'investigativa' && modoTabs[2]) {
+    modoTabs[2].click();
   }
   <% } %>
 })();

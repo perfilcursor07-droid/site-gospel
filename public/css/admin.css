@@ -1325,8 +1325,8 @@ body.login-page { display: flex; align-items: center; justify-content: center; m
 .voltar-posts:hover { color: #ea580c; }
 .post-editor-titulo h1 { margin: 0; font-size: 1.75rem; }
 
-.modo-tabs { display: flex; background: #e5e7eb; border-radius: 10px; padding: 4px; gap: 4px; }
-.modo-tab { border: none; background: transparent; padding: 10px 20px; border-radius: 8px; font-size: .9rem; font-weight: 700; color: #6b7280; cursor: pointer; transition: all .15s; }
+.modo-tabs { display: flex; background: #e5e7eb; border-radius: 10px; padding: 4px; gap: 4px; flex-wrap: wrap; }
+.modo-tab { border: none; background: transparent; padding: 10px 16px; border-radius: 8px; font-size: .85rem; font-weight: 700; color: #6b7280; cursor: pointer; transition: all .15s; white-space: nowrap; }
 .modo-tab:hover { color: #374151; }
 .modo-tab.ativa { background: #fff; color: #ea580c; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
 
@@ -1553,6 +1553,60 @@ body.modal-capa-aberto { overflow: hidden; }
 .ia-passo-topo h3 { font-size: .88rem; margin: 0; }
 .ia-passo-acoes { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; padding-top: 12px; border-top: 1px solid #f3f4f6; }
 .ia-passo-acoes-publicar { align-items: center; }
+
+/* Matéria investigativa */
+.painel-investigativa { border-left: 3px solid #7c3aed; }
+.badge-ia--inv { background: #ede9fe; color: #6d28d9; border: 1px solid #c4b5fd; }
+.inv-fluxo-passos {
+  margin: 16px 0;
+  padding: 14px 16px;
+  background: #faf5ff;
+  border: 1px solid #e9d5ff;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.inv-passo-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: .84rem;
+  color: #6b7280;
+  font-weight: 600;
+}
+.inv-passo-icone {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #e5e7eb;
+  color: #9ca3af;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .72rem;
+  flex-shrink: 0;
+}
+.inv-passo--ativo { color: #6d28d9; }
+.inv-passo--ativo .inv-passo-icone { background: #7c3aed; color: #fff; }
+.inv-passo--ok { color: #15803d; }
+.inv-passo--ok .inv-passo-icone { background: #dcfce7; color: #15803d; }
+.inv-passo--erro { color: #b91c1c; }
+.inv-passo--erro .inv-passo-icone { background: #fee2e2; color: #b91c1c; }
+.inv-fontes-lista {
+  margin: 12px 0;
+  padding: 12px 14px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+}
+.inv-fontes-titulo { margin: 0 0 8px; font-size: .82rem; font-weight: 800; text-transform: uppercase; color: #6b7280; }
+.inv-fontes-lista ul { margin: 0; padding-left: 18px; }
+.inv-fontes-lista li { margin-bottom: 6px; font-size: .84rem; line-height: 1.4; }
+.inv-fontes-lista a { color: #2563eb; font-weight: 600; }
+.inv-fonte-veiculo { color: #9ca3af; font-size: .78rem; margin-left: 4px; }
+.inv-aviso-rascunho { margin-top: 12px; padding: 10px 12px; background: #fef3c7; border-radius: 8px; color: #92400e; }
+.tags-rapidas-inv { margin-top: 8px; }
 .btn-link { background: none; border: none; padding-left: 0; color: #6b7280; margin-top: 12px; }
 
 .tags-rapidas { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; }

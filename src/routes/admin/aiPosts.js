@@ -20,6 +20,7 @@ const {
   MIN_PALAVRAS_ARTIGO,
   MAX_PALAVRAS_ARTIGO
 } = require('../../services/editorialGuidelines');
+const { apurarPautaInvestigativa } = require('../../services/investigativeResearch');
 
 function avisoQualidadeArtigo(artigo) {
   if (artigo._avisoQualidade) return artigo._avisoQualidade;
@@ -552,6 +553,81 @@ router.post('/preencher-formulario', async (req, res) => {
     });
   } catch (e) {
     console.error('Erro preencher-formulario:', e);
+    responderJson(res, 500, { ok: false, erro: e.message });
+  }
+});
+
+router.post('/investigativa/gerar', async (req, res) => {
+  try {
+    const { palavrasChave, categoriaId, diasRecentes, conteudoInternacional } = req.body;
+    const nomeSite = res.locals.config?.site_nome || 'Site Gospel';
+
+    const pauta = await apurarPautaInvestigativa(palavrasChave, {
+      diasRecentes: diasRecentes || '7',
+      conteudoInternacional: conteudoInternacional !== false && conteudoInternacional !== 'false',
+      incluirRedesSociais: true
+    });
+
+    const posts = await carregarPostsExistentes();
+    const duplicado = encontrarSimilar(pauta.titulo, posts, pauta.resumo);
+    if (duplicado) {
+      return responderJson(res, 400, {
+        ok: false,
+        erro: `Já existe matéria similar: "${duplicado.titulo}". Ajuste as palavras-chave ou edite o post existente.`
+      });
+    }
+
+    const artigo = await gerarArtigo({
+      tituloReferencia: pauta.titulo,
+      resumoReferencia: pauta.resumo,
+      fonte: pauta.link,
+      nicho: pauta.nicho,
+      nomeSite,
+      contextoApuracao: pauta.contextoApuracao,
+      fontesApuracao: pauta.fontesApuracao,
+      redeSocial: pauta.redeSocial,
+      conteudoInternacional: pauta.fonteInternacional,
+      investigativa: true
+    });
+
+    const duplicadoGerado = encontrarSimilar(artigo.titulo, posts, artigo.resumo);
+    if (duplicadoGerado) {
+      return responderJson(res, 400, {
+        ok: false,
+        erro: `Matéria gerada muito similar a: "${duplicadoGerado.titulo}". Tente outras palavras-chave.`
+      });
+    }
+
+    const post = await Post.create({
+      titulo: artigo.titulo,
+      resumo: artigo.resumo,
+      conteudo: artigo.conteudo,
+      categoriaId: categoriaId || null,
+      autorId: req.session.user.id,
+      status: 'rascunho',
+      destaque: false,
+      metaTitle: artigo.meta_title || null,
+      metaDescription: artigo.meta_description || null,
+      imagem: null,
+      imagemAlt: null
+    });
+
+    responderJson(res, 200, {
+      ok: true,
+      post: {
+        id: post.id,
+        titulo: post.titulo,
+        slug: post.slug,
+        status: post.status
+      },
+      fontes: pauta.fontesResumo,
+      contagemFontes: pauta.contagemFontes,
+      avisoQualidade: avisoQualidadeArtigo(artigo),
+      palavras: artigo._palavras || null,
+      mensagem: `Matéria investigativa salva como rascunho. Adicione a imagem de capa antes de publicar.${pauta.contagemFontes ? ` Apuradas ${pauta.contagemFontes} fontes.` : ''}`
+    });
+  } catch (e) {
+    console.error('Erro investigativa/gerar:', e);
     responderJson(res, 500, { ok: false, erro: e.message });
   }
 });

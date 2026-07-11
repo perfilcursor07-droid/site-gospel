@@ -283,7 +283,8 @@ async function gerarArtigo({
   dataReferencia,
   emAlta,
   redeSocial,
-  conteudoInternacional
+  conteudoInternacional,
+  investigativa
 }) {
   const hoje = new Date().toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
   const listaFontes = (fontesApuracao || [])
@@ -300,15 +301,24 @@ async function gerarArtigo({
   ].filter(Boolean).join('\n');
 
   const prompt = `Você é repórter de portal de notícias gospel no Brasil. Estilo: G1/Globo — direto, humano, com furo no lead.
+${investigativa ? '\nMODO: MATÉRIA INVESTIGATIVA — cruzamento de múltiplas fontes (portais, notícias, redes). Sintetize fatos de TODAS as fontes com redação original. O lead deve revelar o furo principal descoberto na apuração cruzada.\n' : ''}
 
 DATA: ${hoje} | SITE: ${nomeSite || 'Portal Gospel'}
 
 PAUTA (base factual — reescreva, NÃO copie):
-${contexto || 'Matéria original sobre tema atual do universo gospel/evangélico brasileiro.'}
+${contextoApuracao || contexto || 'Matéria original sobre tema atual do universo gospel/evangélico brasileiro.'}
 
 ${listaFontes ? `FONTES (atribua genericamente, sem inventar entrevistas):\n${listaFontes}` : ''}
 
 ${blocoRegrasEditoriais(nomeSite)}
+${investigativa ? `
+REGRAS INVESTIGATIVAS (OBRIGATÓRIO):
+- Cruze informações de várias fontes; destaque convergências e divergências quando relevante.
+- Lead com o furo mais impactante encontrado na apuração — não genérico.
+- Atribua fatos a "segundo relatos", "conforme publicações em portais gospel", "em postagem que circulou nas redes" etc.
+- Não invente declarações entre aspas nem entrevistas inexistentes.
+- Valor editorial: o que a redação descobriu ao cruzar as fontes que o leitor não veria em um único link.
+` : ''}
 
 ESTRUTURA OBRIGATÓRIA DA MATÉRIA:
 1. LEAD (1º <p>): o furo — o que aconteceu e por que o leitor deve se importar AGORA.
@@ -343,7 +353,9 @@ Retorne APENAS JSON válido:
   "termos_imagem": "3 buscas separadas por vírgula"
 }`;
 
-  const systemMsg = conteudoInternacional
+  const systemMsg = investigativa
+    ? 'Repórter investigativo gospel brasileiro. Matéria de apuração cruzada com múltiplas fontes. E-E-A-T, people-first, furo de reportagem, zero plágio. Retorne somente JSON válido.'
+    : conteudoInternacional
     ? 'Redator investigativo gospel brasileiro. Fontes podem estar em outro idioma: traduza fatos e reescreva em português do Brasil com furo de reportagem. E-E-A-T, original, sem plágio. Retorne somente JSON válido.'
     : 'Redator investigativo gospel brasileiro. Conteúdo people-first, E-E-A-T, original, com furo de reportagem. Reportagem a partir de fontes externas: sim. Plágio: nunca. Matérias ENXUTAS e densas, não longas. Retorne somente JSON válido.';
 
