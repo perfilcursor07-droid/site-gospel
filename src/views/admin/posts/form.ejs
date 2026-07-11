@@ -401,9 +401,9 @@
     </div>
 
     <div class="inv-fluxo-passos" id="inv-fluxo-passos" hidden>
-      <div class="inv-passo-item" data-etapa="pesquisa"><span class="inv-passo-icone">○</span> Pesquisando fontes na web, portais e redes…</div>
-      <div class="inv-passo-item" data-etapa="apuracao"><span class="inv-passo-icone">○</span> Apurando conteúdo das fontes encontradas…</div>
-      <div class="inv-passo-item" data-etapa="redacao"><span class="inv-passo-icone">○</span> IA redigindo matéria investigativa…</div>
+      <div class="inv-passo-item" data-etapa="pesquisa"><span class="inv-passo-icone">○</span> Pesquisando web, portais e Google News (sem limite de data se selecionado)…</div>
+      <div class="inv-passo-item" data-etapa="apuracao"><span class="inv-passo-icone">○</span> Lendo matérias completas e extraindo nomes…</div>
+      <div class="inv-passo-item" data-etapa="redacao"><span class="inv-passo-icone">○</span> IA redigindo com base nos fatos apurados…</div>
       <div class="inv-passo-item" data-etapa="salvar"><span class="inv-passo-icone">○</span> Salvando rascunho…</div>
     </div>
 
@@ -1698,15 +1698,15 @@
     setTimeout(function () {
       atualizarInvPasso('pesquisa', 'ok');
       atualizarInvPasso('apuracao', 'ativo');
-    }, 4000);
+    }, 8000);
     setTimeout(function () {
       atualizarInvPasso('apuracao', 'ok');
       atualizarInvPasso('redacao', 'ativo');
-    }, 12000);
+    }, 35000);
     setTimeout(function () {
       atualizarInvPasso('redacao', 'ok');
       atualizarInvPasso('salvar', 'ativo');
-    }, 28000);
+    }, 70000);
   }
 
   function renderizarFontesInv(fontes) {
@@ -1732,7 +1732,7 @@
         mostrarInvStatus('Informe as palavras-chave da matéria.', 'erro');
         return;
       }
-      if (!confirm('Pesquisar fontes na internet e gerar matéria investigativa?\n\nO processo pode levar 1–3 minutos. A matéria será salva como rascunho.')) return;
+      if (!confirm('Pesquisar fontes na internet e gerar matéria investigativa?\n\nApuração profunda: pode levar 2–5 minutos (lê matérias completas). A matéria será salva como rascunho.')) return;
 
       setCarregando(btnInvGerar, true);
       mostrarInvStatus('Apuração em andamento — aguarde…', 'info');

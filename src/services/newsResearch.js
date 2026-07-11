@@ -518,6 +518,30 @@ async function buscarGoogleNews(palavraChave, limite = 5, { dias = DIAS_RECENTES
   }));
 }
 
+/** Google News sem filtro de data (apuração histórica). */
+async function buscarGoogleNewsHistorico(palavraChave, limite = 20) {
+  const base = `${palavraChave} gospel evangélico pastor igreja brasil`;
+  const query = encodeURIComponent(base);
+  const url = `https://news.google.com/rss/search?q=${query}&hl=pt-BR&gl=BR&ceid=BR:pt-419`;
+  try {
+    const res = await fetch(url, { headers: { 'User-Agent': USER_AGENT }, signal: AbortSignal.timeout(15000) });
+    if (!res.ok) return [];
+    const xml = await res.text();
+    return extrairItensRss(xml)
+      .slice(0, limite)
+      .map((item) => ({
+        ...item,
+        nicho: palavraChave,
+        fonte: 'Google News',
+        tipoFonte: 'noticia',
+        recente: false
+      }));
+  } catch (e) {
+    console.warn('buscarGoogleNewsHistorico:', e.message);
+    return [];
+  }
+}
+
 async function buscarEmAlta(palavraChave, limite = 4) {
   const query = encodeURIComponent(`${palavraChave} gospel when:1d`);
   const url = `https://news.google.com/rss/search?q=${query}&hl=pt-BR&gl=BR&ceid=BR:pt-419`;
@@ -613,9 +637,9 @@ async function buscarBraveWeb(query, palavraChave, limite = 5, {
     const params = new URLSearchParams({
       q: query,
       count: String(Math.min(Math.max(limite + 5, 10), 20)),
-      country: searchLang === 'en' ? 'US' : 'BR',
-      freshness
+      country: searchLang === 'en' ? 'US' : 'BR'
     });
+    if (freshness) params.set('freshness', freshness);
     if (searchLang) {
       params.set('search_lang', searchLang);
       params.set('ui_lang', searchLang === 'en' ? 'en-US' : 'pt-BR');
@@ -1043,6 +1067,7 @@ async function pesquisarNichos(palavrasChave, quantidadePorNicho = 5, opcoes = {
 module.exports = {
   pesquisarNichos,
   buscarGoogleNews,
+  buscarGoogleNewsHistorico,
   buscarBraveNews,
   buscarRedesSociais,
   buscarPortaisGospel,

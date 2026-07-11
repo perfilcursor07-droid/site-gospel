@@ -78,14 +78,14 @@ async function resolverUrlNoticia(url) {
 
 async function extrairMetadadosArtigo(url) {
   const urlReal = await resolverUrlNoticia(url);
-  if (!urlReal) return { urlReal: null, imagem: null, imagens: [], descricao: null, titulo: null, trecho: null };
+  if (!urlReal) return { urlReal: null, imagem: null, imagens: [], descricao: null, titulo: null, trecho: null, corpo: '' };
 
   try {
     const res = await fetch(urlReal, {
       headers: { 'User-Agent': USER_AGENT, Accept: 'text/html,application/xhtml+xml' },
       signal: AbortSignal.timeout(12000)
     });
-    if (!res.ok) return { urlReal, imagem: null, imagens: [], descricao: null, titulo: null, trecho: null };
+    if (!res.ok) return { urlReal, imagem: null, imagens: [], descricao: null, titulo: null, trecho: null, corpo: '' };
 
     const html = await res.text();
     const imagens = extrairImagensDoHtml(html, urlReal);
@@ -95,19 +95,32 @@ async function extrairMetadadosArtigo(url) {
 
     let trecho = '';
     const paragrafos = html.match(/<p[^>]*>([\s\S]*?)<\/p>/gi) || [];
+    const textosParagrafos = [];
     for (const p of paragrafos) {
       const texto = decodificarHtml(p);
-      if (texto.length > 80) {
-        trecho = texto.slice(0, 500);
-        break;
-      }
+      if (texto.length > 30) textosParagrafos.push(texto);
+      if (!trecho && texto.length > 80) trecho = texto.slice(0, 500);
     }
 
-    return { urlReal, imagem, imagens, descricao, titulo, trecho };
+    const corpo = textosParagrafos.join('\n\n').slice(0, 14000);
+
+    return { urlReal, imagem, imagens, descricao, titulo, trecho, corpo };
   } catch (e) {
     console.warn('extrairMetadadosArtigo:', e.message);
-    return { urlReal, imagem: null, imagens: [], descricao: null, titulo: null, trecho: null };
+    return { urlReal, imagem: null, imagens: [], descricao: null, titulo: null, trecho: null, corpo: '' };
   }
+}
+
+/** Corpo completo do artigo para apuração investigativa profunda. */
+async function extrairCorpoArtigo(url) {
+  if (!url) return { urlReal: null, corpo: '', titulo: null };
+  const meta = await extrairMetadadosArtigo(url);
+  return {
+    urlReal: meta.urlReal,
+    corpo: meta.corpo || meta.trecho || meta.descricao || '',
+    titulo: meta.titulo,
+    descricao: meta.descricao
+  };
 }
 
 function extrairImagensDoHtml(html, baseUrl) {
@@ -309,6 +322,7 @@ module.exports = {
   apurarTopico,
   resolverUrlNoticia,
   extrairMetadadosArtigo,
+  extrairCorpoArtigo,
   extrairImagensDoHtml,
   decodificarHtml,
   urlImagemInvalida

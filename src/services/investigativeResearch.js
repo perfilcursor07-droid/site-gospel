@@ -3,31 +3,36 @@ const {
   apurarTopico,
   buscarBraveNews,
   buscarGoogleNews,
+  buscarGoogleNewsHistorico,
   buscarWebGospel,
   buscarRedesSociais,
   buscarPortaisGospel,
   buscarBraveWeb
 } = require('./newsResearch');
-const { buscarContextoLlm } = require('./braveSearch');
+const { buscarContextoLlm, buscarWeb } = require('./braveSearch');
+const { extrairCorpoArtigo } = require('./articleSource');
 const { braveDisponivel } = require('./braveApi');
 const { titulosSimilares } = require('../utils/topicMatch');
 
-const MAX_FONTES_APURAR = 12;
-const MAX_FONTES_CONTEXTO = 15;
-const MIN_FONTES_IDEAIS = 3;
+const MAX_FONTES_APURAR = 20;
+const MAX_APURACAO_PROFUNDA = 16;
+const MIN_FONTES_IDEAIS = 4;
+const MIN_NOMES_LISTAGEM = 1;
 
 const STOP_TERMOS_INVEST = new Set([
   'gospel', 'evangelico', 'igreja', 'brasil', 'noticia', 'noticias', 'portal',
   'vc', 'voce', 'você', 'nao', 'não', 'sabia', 'que', 'com', 'para', 'uma',
   'the', 'and', 'sobre', 'mais', 'como', 'seu', 'sua', 'dos', 'das', 'nos',
-  'eles', 'elas', 'quem', 'sao', 'são', 'voce', 'você', 'ja', 'já'
+  'eles', 'elas', 'quem', 'sao', 'são', 'ja', 'já', 'evangélicos', 'evangelicos'
 ]);
 
 const NOMES_FALSO_POSITIVO = new Set([
   'mateus', 'timoteo', 'timóteo', 'eclesiastes', 'deus', 'cristo', 'espirito',
   'santo', 'senhor', 'biblia', 'bíblia', 'igreja', 'brasil', 'gospel', 'louvor',
   'youtube', 'instagram', 'threads', 'tiktok', 'facebook', 'google', 'primeira',
-  'carta', 'portanto', 'conforme', 'segundo', 'relatos', 'redes', 'sociais'
+  'carta', 'portanto', 'conforme', 'segundo', 'relatos', 'redes', 'sociais',
+  'evangelica', 'evangélica', 'universal', 'deus', 'amor', 'vida', 'familia',
+  'família', 'casamento', 'ministerio', 'ministério', 'reino', 'céus', 'ceus'
 ]);
 
 function normalizarTextoBusca(texto) {
@@ -35,6 +40,10 @@ function normalizarTextoBusca(texto) {
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase();
+}
+
+function semFiltroPeriodo(diasRecentes) {
+  return diasRecentes === 'tudo' || diasRecentes === 'all' || !diasRecentes;
 }
 
 function extrairTermosInvestigativa(palavrasChave) {
@@ -45,7 +54,7 @@ function extrairTermosInvestigativa(palavrasChave) {
 }
 
 function textoItemInvestigativa(item) {
-  return `${item.titulo || ''} ${item.resumo || ''} ${item.conteudoRede || ''} ${item.nicho || ''}`;
+  return `${item.titulo || ''} ${item.resumo || ''} ${item.conteudoRede || ''} ${item.corpoProfundo || ''} ${item.nicho || ''}`;
 }
 
 function termoApareceNoTexto(texto, termo) {
@@ -59,13 +68,15 @@ function termoApareceNoTexto(texto, termo) {
 }
 
 function contarTermosNoItem(item, termos) {
-  const texto = textoItemInvestigativa(item);
-  return termos.filter((t) => termoApareceNoTexto(texto, t)).length;
+  return termos.filter((t) => termoApareceNoTexto(textoItemInvestigativa(item), t)).length;
 }
 
 function detectarFormatoInvestigativa(palavrasChave) {
   const t = normalizarTextoBusca(palavrasChave);
-  if (/quem\s+(sao|são|e\s+ele|sao\s+ele)|que\s+sao\s+eles|lista\s+de|nomes\s+dos|nomes\s+de|quais\s+(sao|são)|voce\s+nao\s+sabia|você\s+não\s+sabia/.test(t)) {
+  if (/quem\s+(sao|são)|que\s+sao\s+eles|lista\s+de|nomes\s+dos|nomes\s+de|quais\s+(sao|são)|nao\s+sabia|não\s+sabia|voce\s+nao\s+sabia/.test(t)) {
+    return 'listagem_nomes';
+  }
+  if (/pastor|pastora|bispo|pregador/.test(t) && /divorci|separou|separacao|separação/.test(t)) {
     return 'listagem_nomes';
   }
   return 'reportagem';
@@ -78,7 +89,7 @@ function pautaMencionaDivorcio(palavrasChave) {
 }
 
 function itemMencionaDivorcio(item) {
-  return /divorci|divorcio|separou|separacao|separação|dissolucao|dissolução|rompeu.*casamento|fim\s+do\s+casamento/.test(
+  return /divorci|divorcio|separou|separacao|separação|dissolucao|dissolução|rompeu.*casamento|fim\s+do\s+casamento|termino\s+do\s+casamento|anunciou\s+separacao/.test(
     normalizarTextoBusca(textoItemInvestigativa(item))
   );
 }
@@ -86,33 +97,27 @@ function itemMencionaDivorcio(item) {
 function itemPareceInternacionalIrrelevante(item, palavrasChave) {
   const link = (item.link || '').toLowerCase();
   const texto = normalizarTextoBusca(textoItemInvestigativa(item));
-  const focoBrasil = /brasil|brasileir|evangelico\s+br/.test(normalizarTextoBusca(palavrasChave));
-  if (!focoBrasil) return false;
-  if (/venezuela|mexico|argentina|colombia|españa|spain|usa|united\s+states/.test(link + texto)) {
+  if (/venezuela|mexico|argentina|colombia|españa|spain|philippines|filipinas/.test(link + texto)) {
     if (!/brasil|brasileir/.test(texto)) return true;
   }
   return false;
 }
 
-function itemRelevanteParaPauta(item, palavrasChave, formato) {
+function itemRelevanteParaPauta(item, palavrasChave, formato, { relaxado = false } = {}) {
   if (itemPareceInternacionalIrrelevante(item, palavrasChave)) return false;
 
   const termos = extrairTermosInvestigativa(palavrasChave);
   const hits = contarTermosNoItem(item, termos);
-  const minHits = termos.length <= 2 ? 1 : Math.max(2, Math.ceil(termos.length * 0.3));
+  const minHits = relaxado ? 1 : (termos.length <= 2 ? 1 : Math.max(2, Math.ceil(termos.length * 0.25)));
 
-  if (pautaMencionaDivorcio(palavrasChave) && !itemMencionaDivorcio(item)) {
-    const titulo = normalizarTextoBusca(item.titulo || '');
-    if (!/pastor.*divorci|divorci.*pastor|pastores\s+que/.test(titulo)) return false;
-  }
-
-  if (formato === 'listagem_nomes') {
+  if (formato === 'listagem_nomes' || pautaMencionaDivorcio(palavrasChave)) {
     const texto = normalizarTextoBusca(textoItemInvestigativa(item));
-    const temPastor = /pastor|pastora|bispo|pregador|ministro\s+evangel/.test(texto);
-    const temLista = /lista|quem\s+sao|que\s+voce\s+nao\s+sabia|nomes|famoss/.test(texto);
+    const temPastor = /pastor|pastora|bispo|pregador|ministro\s+evangel|lider\s+religios/.test(texto);
+    const temLista = /lista|quem\s+sao|nao\s+sabia|nomes|famoss|voce\s+nao/.test(texto);
     if (temPastor && (itemMencionaDivorcio(item) || temLista)) return true;
-    if (hits >= minHits && temPastor && itemMencionaDivorcio(item)) return true;
-    return hits >= minHits + 1;
+    if (relaxado && temPastor && hits >= 1) return true;
+    if (hits >= minHits && itemMencionaDivorcio(item)) return true;
+    return relaxado && hits >= 1 && /divorci|separou|casamento/.test(texto);
   }
 
   return hits >= minHits;
@@ -134,30 +139,33 @@ function deduplicarFontesApuracao(fontes) {
     if (!chave || vistos.has(chave)) return false;
     vistos.add(chave);
     return true;
-  }).slice(0, MAX_FONTES_CONTEXTO);
+  }).slice(0, 25);
 }
 
 function pontuarRelevanciaInvestigativa(item, palavrasChave, formato) {
-  const termos = extrairTermosInvestigativa(palavrasChave);
   const texto = normalizarTextoBusca(textoItemInvestigativa(item));
-  let score = 0;
+  let score = contarTermosNoItem(item, extrairTermosInvestigativa(palavrasChave)) * 3;
 
-  for (const termo of termos) {
-    if (termoApareceNoTexto(texto, termo)) score += termo.length >= 6 ? 5 : 3;
+  if (formato === 'listagem_nomes' || pautaMencionaDivorcio(palavrasChave)) {
+    if (/pastor|pastora/.test(texto) && itemMencionaDivorcio(item)) score += 12;
+    if (/lista|quem\s+sao|nao\s+sabia|nomes|famoss/.test(texto)) score += 8;
+    if (item.tipoFonte === 'portal_gospel' || item.tipoFonte === 'noticia') score += 6;
+    if ((item.corpoProfundo || '').length > 500) score += 5;
   }
 
-  if (formato === 'listagem_nomes') {
-    if (/pastor|pastora/.test(texto) && itemMencionaDivorcio(item)) score += 8;
-    if (/lista|quem\s+sao|nomes|famoss|voce\s+nao\s+sabia/.test(texto)) score += 6;
-    if (item.tipoFonte === 'portal_gospel' || item.tipoFonte === 'noticia') score += 4;
-    if (item.redeSocial && !/pastor\s+[a-z]|divorci/.test(texto)) score -= 6;
-  }
-
-  if (itemPareceInternacionalIrrelevante(item, palavrasChave)) score -= 20;
-  if (item.tipoFonte === 'portal_gospel') score += 2;
-  if ((item.resumo || '').length > 100) score += 1;
+  if (itemPareceInternacionalIrrelevante(item, palavrasChave)) score -= 30;
+  if (item.tipoFonte === 'portal_gospel') score += 3;
+  if ((item.resumo || '').length > 120) score += 2;
 
   return score;
+}
+
+function capitalizarNome(nome) {
+  return String(nome || '')
+    .trim()
+    .split(/\s+/)
+    .map((p) => (p.length <= 2 && /^(de|da|do|dos|das|e)$/i.test(p) ? p.toLowerCase() : p.charAt(0).toUpperCase() + p.slice(1).toLowerCase()))
+    .join(' ');
 }
 
 function nomeValido(nome) {
@@ -175,13 +183,27 @@ function extrairNomesDoTexto(texto) {
 
   const padroes = [
     /pastor(?:a)?\s+([A-ZÀÁÂÃÉÊÍÓÔÕÚÇ][a-zà-ú]+(?:\s+(?:de|da|do|dos|das)\s+)?[A-ZÀÁÂÃÉÊÍÓÔÕÚÇ][a-zà-ú]+(?:\s+[A-ZÀÁÂÃÉÊÍÓÔÕÚÇ][a-zà-ú]+)?)/g,
-    /(?:^|[\n.!?;])\s*([A-ZÀÁÂÃÉÊÍÓÔÕÚÇ][a-zà-ú]+\s+[A-ZÀÁÂÃÉÊÍÓÔÕÚÇ][a-zà-ú]+(?:\s+[A-ZÀÁÂÃÉÊÍÓÔÕÚÇ][a-zà-ú]+)?)\s+(?:se\s+)?divorciou/gi,
-    /(?:^|[\n•\-–])\s*([A-ZÀÁÂÃÉÊÍÓÔÕÚÇ][a-zà-ú]+\s+[A-ZÀÁÂÃÉÊÍÓÔÕÚÇ][a-zà-ú]+(?:\s+[A-ZÀÁÂÃÉÊÍÓÔÕÚÇ][a-zà-ú]+)?)\s*[–—-]/g
+    /pastor(?:a)?\s+([a-zà-ú]{3,}(?:\s+(?:de|da|do|dos|das)\s+[a-zà-ú]{3,})?(?:\s+[a-zà-ú]{3,})?)/gi,
+    /(?:^|[\n.!?;•])\s*([A-ZÀÁÂÃÉÊÍÓÔÕÚÇ][a-zà-ú]+\s+[A-ZÀÁÂÃÉÊÍÓÔÕÚÇ][a-zà-ú]+(?:\s+[A-ZÀÁÂÃÉÊÍÓÔÕÚÇ][a-zà-ú]+)?)\s+(?:se\s+)?divorciou/gi,
+    /\d+[\.)]\s*(?:Pastor(?:a)?\s+)?([A-ZÀÁÂÃÉÊÍÓÔÕÚÇ][^\n,;]{4,55})/g,
+    /(?:^|[\n•\-–])\s*([A-ZÀÁÂÃÉÊÍÓÔÕÚÇ][a-zà-ú]+\s+[A-ZÀÁÂÃÉÊÍÓÔÕÚÇ][a-zà-ú]+(?:\s+[A-ZÀÁÂÃÉÊÍÓÔÕÚÇ][a-zà-ú]+)?)\s*[–—:\-]/g,
+    /(?:bispo|pregador|cantor\s+gospel)\s+([A-ZÀÁÂÃÉÊÍÓÔÕÚÇ][a-zà-ú]+\s+[A-ZÀÁÂÃÉÊÍÓÔÕÚÇ][a-zà-ú]+(?:\s+[A-ZÀÁÂÃÉÊÍÓÔÕÚÇ][a-zà-ú]+)?)/gi
   ];
 
   for (const rx of padroes) {
     for (const m of bruto.matchAll(rx)) {
-      const nome = (m[1] || '').replace(/\s+/g, ' ').trim();
+      let nome = (m[1] || '').replace(/\s+/g, ' ').trim();
+      nome = nome.replace(/\s*(divorciou|se separou|anunciou).*$/i, '').trim();
+      nome = capitalizarNome(nome);
+      if (nomeValido(nome)) nomes.add(nome);
+    }
+  }
+
+  const janelasDivorcio = bruto.split(/divorci|separou|separação|separacao|dissolução|dissolucao|fim do casamento/gi);
+  for (const janela of janelasDivorcio) {
+    const trecho = janela.slice(0, 180);
+    for (const m of trecho.matchAll(/([A-ZÀÁÂÃÉÊÍÓÔÕÚÇ][a-zà-ú]+\s+[A-ZÀÁÂÃÉÊÍÓÔÕÚÇ][a-zà-ú]+(?:\s+[A-ZÀÁÂÃÉÊÍÓÔÕÚÇ][a-zà-ú]+)?)/g)) {
+      const nome = capitalizarNome(m[1]);
       if (nomeValido(nome)) nomes.add(nome);
     }
   }
@@ -192,13 +214,14 @@ function extrairNomesDoTexto(texto) {
 function extrairNomesApuracao(apurados, contextoExtra = '') {
   const textos = [
     contextoExtra,
-    ...apurados.map((a) => [
+    ...apurados.flatMap((a) => [
       a.titulo,
       a.resumo,
+      a.corpoProfundo,
       a.contextoApuracao,
       ...(a.fontesApuracao || []).map((f) => `${f.titulo || ''} ${f.trecho || ''} ${f.resumo || ''}`)
-    ].join('\n'))
-  ].join('\n');
+    ])
+  ].filter(Boolean).join('\n');
 
   return extrairNomesDoTexto(textos);
 }
@@ -207,71 +230,80 @@ function montarConsultasInvestigativa(palavrasChave, formato) {
   const chave = palavrasChave.trim();
   const consultas = [
     chave,
-    `${chave} gospel brasil`,
-    `"${chave}" pastor evangélico`
+    `${chave} brasil`,
+    `"${chave}"`,
+    `${chave} gospel`
   ];
 
   if (formato === 'listagem_nomes' || pautaMencionaDivorcio(chave)) {
     consultas.push(
-      'pastores evangélicos brasileiros divorciados nomes lista',
-      'pastores gospel famosos que se divorciaram',
-      'pastor evangélico divórcio casamento brasil notícia',
-      'lista pastores divorciados igreja evangélica brasil',
+      'pastores evangélicos brasileiros divorciados nomes',
+      'pastores gospel famosos que se divorciaram lista',
+      'pastor evangélico divórcio casamento brasil',
+      'lista pastores divorciados igreja evangélica',
+      'pastores que divorciaram e você não sabia',
+      'pastores divorciados gospel brasil história',
+      'bispo evangélico divorciado brasil',
+      'pregador divorciou esposa igreja brasil',
+      'pastor separação conjugal evangélico brasil',
       'site:guiame.com.br pastor divorciado',
       'site:gospelprime.com.br pastor divórcio',
-      'site:portaldogospel.com.br pastor separação'
+      'site:portaldogospel.com.br pastor separação',
+      'site:pleno.news pastor divorciado',
+      'site:folhagospel.com divorcio pastor',
+      'site:panorama.com.br pastor separou',
+      'site:supergospelsp.com.br pastor casamento',
+      'site:agenciaelos.com.br pastor',
+      'pastor evangélico anunciou divórcio',
+      'pastores renomados divorciados brasil'
     );
   }
 
-  return [...new Set(consultas)].slice(0, 10);
+  return [...new Set(consultas)];
 }
 
-function montarContextoInvestigativo(palavrasChave, apurados, { formato, nomesApurados, contextoFactual }) {
-  const linhas = [
-    `TEMA OBRIGATÓRIO: ${palavrasChave}`,
-    `FORMATO: ${formato === 'listagem_nomes' ? 'LISTAGEM — informar QUEM SÃO (nomes completos confirmados nas fontes)' : 'reportagem investigativa'}`,
-    ''
-  ];
-
-  if (formato === 'listagem_nomes') {
-    linhas.push(
-      'REGRA CRÍTICA: Cite SOMENTE pessoas cujos nomes aparecem abaixo em FONTES APURADAS.',
-      'Se um nome NÃO estiver listado, NÃO invente, NÃO especule, NÃO use perfis genéricos de redes como substituto.',
-      nomesApurados.length
-        ? `NOMES CONFIRMADOS NAS FONTES (${nomesApurados.length}): ${nomesApurados.join('; ')}`
-        : 'NOMES CONFIRMADOS: nenhum identificado com segurança — explique isso ao leitor; NÃO invente nomes.',
-      ''
-    );
+function opcoesBraveWeb(diasRecentes) {
+  if (semFiltroPeriodo(diasRecentes)) {
+    return { freshness: null, limite: 15 };
   }
-
-  if (contextoFactual) {
-    linhas.push('=== CONTEXTO FACTUAL (Brave/apuração web) ===');
-    linhas.push(contextoFactual.slice(0, 3500));
-    linhas.push('');
-  }
-
-  linhas.push(`Fontes individuais apuradas (${apurados.length}):`);
-
-  apurados.forEach((fonte, i) => {
-    const veiculo = fonte.redeSocial || fonte.veiculo || fonte.fonte || 'Web';
-    linhas.push(`\n=== Fonte ${i + 1}: ${fonte.titulo || 'Sem título'} (${veiculo}) ===`);
-    if (fonte.resumo) linhas.push(`Resumo: ${fonte.resumo}`);
-    if (fonte.contextoApuracao) {
-      linhas.push(fonte.contextoApuracao.slice(0, 2500));
-    } else if (fonte.fontesApuracao?.length) {
-      fonte.fontesApuracao.forEach((f) => {
-        if (f.trecho) linhas.push(`Trecho: ${f.trecho.slice(0, 1000)}`);
-        if (f.resumo) linhas.push(`Detalhe: ${f.resumo.slice(0, 500)}`);
-      });
-    }
-    if (fonte.link) linhas.push(`URL: ${fonte.link}`);
-  });
-
-  return linhas.join('\n').slice(0, 16000);
+  const dias = parseInt(diasRecentes, 10) || (diasRecentes === '24h' ? 1 : 7);
+  if (dias >= 365) return { freshness: null, limite: 15 };
+  if (dias >= 30) return { freshness: 'py', limite: 12 };
+  if (dias >= 7) return { freshness: 'pm', limite: 12 };
+  return { freshness: 'pw', limite: 10 };
 }
 
-function montarTituloPauta(palavrasChave) {
-  return `Apuração: ${palavrasChave.slice(0, 120)}`;
+async function executarBuscaBraveWeb(query, palavrasChave, diasRecentes) {
+  const { freshness, limite } = opcoesBraveWeb(diasRecentes);
+  const opts = { fonteLabel: 'Web apuração' };
+  if (freshness) opts.freshness = freshness;
+  return buscarBraveWeb(query, palavrasChave, limite, opts).catch(() => []);
+}
+
+async function executarBuscaWebBrave(query) {
+  if (!braveDisponivel()) return [];
+  const fresh = 'py';
+  const resultados = await buscarWeb(query, { count: 15, freshness: fresh }).catch(() => []);
+  return resultados.map((r) => ({
+    titulo: r.titulo,
+    link: r.link,
+    resumo: r.resumo,
+    nicho: query,
+    fonte: r.fonte || 'Web',
+    tipoFonte: 'web',
+    recente: false
+  }));
+}
+
+function mesclarResultados(brutos) {
+  const unicos = [];
+  for (const item of brutos) {
+    if (!item?.titulo) continue;
+    if (unicos.some((u) => titulosSimilares(u.titulo, item.titulo))) continue;
+    if (item.link && unicos.some((u) => u.link === item.link)) continue;
+    unicos.push(item);
+  }
+  return unicos;
 }
 
 async function buscarFontesInvestigativa(palavrasChave, opcoes = {}) {
@@ -279,68 +311,61 @@ async function buscarFontesInvestigativa(palavrasChave, opcoes = {}) {
     diasRecentes = '7',
     conteudoInternacional = true,
     incluirRedesSociais = true,
-    formato = 'reportagem'
+    formato = 'reportagem',
+    onda = 1
   } = opcoes;
 
-  const diasBusca = diasRecentes === 'tudo' ? 365 : (parseInt(diasRecentes, 10) || (diasRecentes === '24h' ? 1 : 7));
-  const freshBrave = diasBusca >= 30 ? 'py' : diasBusca >= 7 ? 'pm' : 'pw';
-  const periodo = diasRecentes === 'tudo' ? { dias: 365 } : diasRecentes;
-  const consultas = montarConsultasInvestigativa(palavrasChave, formato);
+  const semFiltro = semFiltroPeriodo(diasRecentes);
+  const diasBusca = semFiltro ? 3650 : (parseInt(diasRecentes, 10) || (diasRecentes === '24h' ? 1 : 7));
+  const consultas = onda === 2
+    ? [
+      'pastor evangelico divorciou brasil nome completo',
+      'pastores famosos gospel separação casamento lista',
+      'historia pastores divorciados igreja evangélica brasil'
+    ]
+    : montarConsultasInvestigativa(palavrasChave, formato);
 
   const buscasConsulta = consultas.flatMap((q) => [
-    buscarBraveWeb(q, palavrasChave, 8, { freshness: freshBrave, fonteLabel: 'Web apuração' }).catch(() => []),
-    buscarGoogleNews(q, 6, { dias: Math.min(diasBusca, 30) }).catch(() => [])
+    executarBuscaBraveWeb(q, palavrasChave, diasRecentes),
+    semFiltro
+      ? buscarGoogleNewsHistorico(q, 12).catch(() => [])
+      : buscarGoogleNews(q, 8, { dias: Math.min(diasBusca, 30) }).catch(() => []),
+    executarBuscaWebBrave(q)
   ]);
 
-  const [topicosNichos, brave, google, web, portais, redes, ...extrasConsultas] = await Promise.all([
-    pesquisarNichos(palavrasChave, 8, {
-      incluirRedesSociais: formato === 'listagem_nomes' ? false : incluirRedesSociais,
-      somenteRedesSociais: false,
-      somenteRecentes: diasRecentes !== 'tudo' && diasRecentes !== '365',
-      diasRecentes: diasRecentes === 'tudo' ? '365' : diasRecentes,
-      conteudoInternacional: formato === 'listagem_nomes' ? false : conteudoInternacional,
-      incluirGoogleTrends: false,
-      buscaAmpliada: true
-    }),
-    buscarBraveNews(palavrasChave, 12, Math.min(diasBusca, 30)).catch(() => []),
-    buscarGoogleNews(palavrasChave, 10, { dias: Math.min(diasBusca, 30) }).catch(() => []),
-    buscarWebGospel(palavrasChave, 10, Math.min(diasBusca, 30), { ampliado: true }).catch(() => []),
-    buscarPortaisGospel(palavrasChave, 12, Math.min(diasBusca, 30), { ampliado: true }).catch(() => []),
-    formato === 'listagem_nomes'
-      ? Promise.resolve([])
-      : (incluirRedesSociais
-        ? buscarRedesSociais(palavrasChave, 8, periodo, { modoAmpliado: false, conteudoInternacional }).catch(() => [])
-        : Promise.resolve([])),
-    ...buscasConsulta
-  ]);
+  const lotesBase = onda === 1
+    ? await Promise.all([
+      pesquisarNichos(palavrasChave, 10, {
+        incluirRedesSociais: false,
+        somenteRedesSociais: false,
+        somenteRecentes: !semFiltro,
+        diasRecentes: semFiltro ? '365' : diasRecentes,
+        conteudoInternacional: false,
+        incluirGoogleTrends: false,
+        buscaAmpliada: true
+      }),
+      buscarBraveNews(palavrasChave, 15, semFiltro ? 365 : Math.min(diasBusca, 30)).catch(() => []),
+      semFiltro
+        ? buscarGoogleNewsHistorico(palavrasChave, 20)
+        : buscarGoogleNews(palavrasChave, 12, { dias: Math.min(diasBusca, 30) }).catch(() => []),
+      buscarWebGospel(palavrasChave, 15, semFiltro ? 365 : Math.min(diasBusca, 30), { ampliado: true }).catch(() => []),
+      buscarPortaisGospel(palavrasChave, 15, semFiltro ? 365 : Math.min(diasBusca, 30), { ampliado: true }).catch(() => []),
+      ...buscasConsulta
+    ])
+    : await Promise.all(buscasConsulta);
 
-  const brutos = [
-    ...topicosNichos,
-    ...brave,
-    ...google,
-    ...web,
-    ...portais,
-    ...redes,
-    ...extrasConsultas.flat()
-  ];
+  const brutos = mesclarResultados(lotesBase.flat(2));
 
-  const unicos = [];
-  for (const item of brutos) {
-    if (!item?.titulo) continue;
-    if (unicos.some((u) => titulosSimilares(u.titulo, item.titulo))) continue;
-    unicos.push(item);
-  }
-
-  const relevantes = unicos
-    .filter((item) => itemRelevanteParaPauta(item, palavrasChave, formato))
+  const relaxado = semFiltro || onda === 2;
+  const relevantes = brutos
+    .filter((item) => itemRelevanteParaPauta(item, palavrasChave, formato, { relaxado }))
     .sort((a, b) => pontuarRelevanciaInvestigativa(b, palavrasChave, formato) - pontuarRelevanciaInvestigativa(a, palavrasChave, formato));
 
   let selecionados = relevantes.slice(0, MAX_FONTES_APURAR);
 
   if (selecionados.length < MIN_FONTES_IDEAIS) {
-    const fallback = unicos
+    const fallback = brutos
       .filter((item) => !itemPareceInternacionalIrrelevante(item, palavrasChave))
-      .filter((item) => contarTermosNoItem(item, extrairTermosInvestigativa(palavrasChave)) >= 1)
       .sort((a, b) => pontuarRelevanciaInvestigativa(b, palavrasChave, formato) - pontuarRelevanciaInvestigativa(a, palavrasChave, formato));
     for (const item of fallback) {
       if (selecionados.length >= MAX_FONTES_APURAR) break;
@@ -358,39 +383,122 @@ async function buscarFontesInvestigativa(palavrasChave, opcoes = {}) {
   return selecionados;
 }
 
-async function buscarContextoFactual(palavrasChave, formato) {
-  if (!braveDisponivel()) return null;
-  const query = formato === 'listagem_nomes'
-    ? `Liste pastores evangélicos brasileiros que se divorciaram, com nomes completos e contexto verificável. Tema: ${palavrasChave}. Apenas fatos de fontes confiáveis.`
-    : `Fatos verificáveis sobre: ${palavrasChave}. Contexto gospel/evangélico brasileiro.`;
-  try {
-    return await buscarContextoLlm(query, { maxTokens: 3200 });
-  } catch {
-    return null;
+async function apuracaoProfunda(apurados) {
+  const comLink = apurados.filter((a) => a.link && !a.redeSocial).slice(0, MAX_APURACAO_PROFUNDA);
+  const lote = 4;
+
+  for (let i = 0; i < comLink.length; i += lote) {
+    const fatia = comLink.slice(i, i + lote);
+    await Promise.all(fatia.map(async (item) => {
+      try {
+        const { corpo, titulo } = await extrairCorpoArtigo(item.link);
+        if (corpo) {
+          item.corpoProfundo = corpo.slice(0, 12000);
+          if (titulo && !item.titulo) item.titulo = titulo;
+        }
+      } catch (e) {
+        console.warn('apuracaoProfunda:', item.link, e.message);
+      }
+    }));
   }
+
+  return apurados;
+}
+
+async function buscarContextoFactual(palavrasChave, formato) {
+  if (!braveDisponivel()) return '';
+
+  const consultas = formato === 'listagem_nomes'
+    ? [
+      `Liste pastores evangélicos brasileiros que se divorciaram, com nomes completos e contexto. Tema: ${palavrasChave}. Somente fatos verificáveis de matérias e portais.`,
+      `Quais pastores gospel do Brasil passaram por divórcio ou separação conjugal? Nomes completos e igrejas/denominações quando disponível.`,
+      `Histórico de pastores evangélicos brasileiros divorciados: ${palavrasChave}`
+    ]
+    : [`Fatos verificáveis sobre: ${palavrasChave}. Contexto gospel brasileiro.`];
+
+  const partes = await Promise.all(
+    consultas.map((q) => buscarContextoLlm(q, { maxTokens: 4000 }).catch(() => null))
+  );
+
+  return partes.filter(Boolean).join('\n\n---\n\n').slice(0, 12000);
+}
+
+function montarContextoInvestigativo(palavrasChave, apurados, { formato, nomesApurados, contextoFactual }) {
+  const linhas = [
+    `TEMA OBRIGATÓRIO: ${palavrasChave}`,
+    `FORMATO: ${formato === 'listagem_nomes' ? 'LISTAGEM — informar QUEM SÃO (nomes completos confirmados nas fontes)' : 'reportagem investigativa'}`,
+    ''
+  ];
+
+  if (formato === 'listagem_nomes') {
+    linhas.push(
+      'REGRA CRÍTICA: Cite SOMENTE pessoas cujos nomes aparecem abaixo.',
+      'NÃO invente nomes. NÃO use posts genéricos de redes como substituto.',
+      nomesApurados.length
+        ? `NOMES CONFIRMADOS (${nomesApurados.length}): ${nomesApurados.join('; ')}`
+        : 'NOMES CONFIRMADOS: nenhum — diga ao leitor que a apuração não confirmou nomes.',
+      ''
+    );
+  }
+
+  if (contextoFactual) {
+    linhas.push('=== APURAÇÃO WEB (Brave LLM) ===');
+    linhas.push(contextoFactual.slice(0, 5000));
+    linhas.push('');
+  }
+
+  linhas.push(`Matérias e fontes lidas (${apurados.length}):`);
+
+  apurados.forEach((fonte, i) => {
+    const veiculo = fonte.redeSocial || fonte.veiculo || fonte.fonte || 'Web';
+    linhas.push(`\n=== Fonte ${i + 1}: ${fonte.titulo || 'Sem título'} (${veiculo}) ===`);
+    if (fonte.resumo) linhas.push(`Resumo: ${fonte.resumo}`);
+    if (fonte.corpoProfundo) {
+      linhas.push(`Conteúdo lido (${fonte.corpoProfundo.length} chars):\n${fonte.corpoProfundo.slice(0, 4000)}`);
+    } else if (fonte.contextoApuracao) {
+      linhas.push(fonte.contextoApuracao.slice(0, 2500));
+    }
+    if (fonte.link) linhas.push(`URL: ${fonte.link}`);
+  });
+
+  return linhas.join('\n').slice(0, 22000);
+}
+
+function montarTituloPauta(palavrasChave) {
+  return `Apuração: ${palavrasChave.slice(0, 120)}`;
 }
 
 async function apurarPautaInvestigativa(palavrasChave, opcoes = {}) {
   const chave = normalizarPalavrasChave(palavrasChave);
   const formato = detectarFormatoInvestigativa(chave);
 
-  const [fontesBrutas, contextoFactual] = await Promise.all([
-    buscarFontesInvestigativa(chave, { ...opcoes, formato }),
-    buscarContextoFactual(chave, formato)
-  ]);
+  let fontesBrutas = await buscarFontesInvestigativa(chave, { ...opcoes, formato, onda: 1 });
+  const contextoFactual = await buscarContextoFactual(chave, formato);
 
-  const apurados = await Promise.all(fontesBrutas.map((item) => apurarTopico(item)));
-  const todasFontes = deduplicarFontesApuracao(apurados.flatMap((a) => a.fontesApuracao || []));
-  const nomesApurados = extrairNomesApuracao(apurados, contextoFactual || '');
+  let apurados = await Promise.all(fontesBrutas.map((item) => apurarTopico(item)));
+  apurados = await apuracaoProfunda(apurados);
+
+  let nomesApurados = extrairNomesApuracao(apurados, contextoFactual || '');
 
   if (formato === 'listagem_nomes' && nomesApurados.length < 2) {
+    const fontesOnda2 = await buscarFontesInvestigativa(chave, { ...opcoes, formato, onda: 2 });
+    const novos = fontesOnda2.filter((f) => !apurados.some((a) => a.link === f.link || titulosSimilares(a.titulo, f.titulo)));
+    if (novos.length) {
+      const apurados2 = await Promise.all(novos.map((item) => apurarTopico(item)));
+      const profundos2 = await apuracaoProfunda(apurados2);
+      apurados = [...apurados, ...profundos2];
+      nomesApurados = extrairNomesApuracao(apurados, contextoFactual || '');
+    }
+  }
+
+  if (formato === 'listagem_nomes' && nomesApurados.length < MIN_NOMES_LISTAGEM) {
     throw new Error(
-      `A apuração encontrou ${apurados.length} fonte(s), mas não identificou nomes de pastores divorciados com segurança. ` +
-      'Tente palavras-chave com nomes específicos (ex.: "pastor Fulano divórcio") ou busque em portais que publiquem listas. ' +
-      'A IA não vai inventar nomes.'
+      `Apuração profunda: ${apurados.length} matérias lidas, mas nenhum nome de pastor divorciado foi confirmado nas fontes. ` +
+      'Esse tema pode não ter cobertura jornalística com nomes públicos — tente buscar um pastor específico (ex.: "pastor [nome] divórcio").'
     );
   }
 
+  const todasFontes = deduplicarFontesApuracao(apurados.flatMap((a) => a.fontesApuracao || []));
   const contextoApuracao = montarContextoInvestigativo(chave, apurados, {
     formato,
     nomesApurados,
@@ -403,8 +511,8 @@ async function apurarPautaInvestigativa(palavrasChave, opcoes = {}) {
     nomesApurados,
     titulo: montarTituloPauta(chave),
     resumo: formato === 'listagem_nomes'
-      ? `Listagem apurada: ${nomesApurados.length} nome(s) confirmado(s) em ${apurados.length} fontes sobre "${chave}".`
-      : `Matéria investigativa sobre "${chave}" com ${apurados.length} fontes apuradas.`,
+      ? `Listagem apurada: ${nomesApurados.length} nome(s) em ${apurados.length} matérias lidas.`
+      : `Matéria investigativa: ${apurados.length} fontes com leitura profunda.`,
     link: apurados.find((a) => a.link)?.link || null,
     nicho: chave.split(/[,;]+/)[0]?.trim() || chave,
     contextoApuracao,
@@ -428,7 +536,7 @@ function artigoCitaNomesApurados(artigo, nomesApurados) {
     const sobrenome = nome.split(/\s+/).pop();
     return texto.includes(nome) || (sobrenome && sobrenome.length > 3 && texto.includes(sobrenome));
   });
-  return citados.length >= Math.min(2, nomesApurados.length);
+  return citados.length >= Math.min(1, nomesApurados.length);
 }
 
 module.exports = {
