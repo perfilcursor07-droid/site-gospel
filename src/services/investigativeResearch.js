@@ -19,10 +19,16 @@ const {
   artigoRespeitaEvidencias
 } = require('./evidenceVerification');
 
-const MAX_FONTES_APURAR = 20;
-const MAX_APURACAO_PROFUNDA = 16;
-const MIN_FONTES_IDEAIS = 4;
+const MAX_FONTES_APURAR = 55;
+const MAX_APURACAO_PROFUNDA = 45;
+const MIN_FONTES_IDEAIS = 8;
 const MIN_NOMES_LISTAGEM = 1;
+
+const PORTAIS_APURACAO = [
+  'guiame.com.br', 'gospelprime.com.br', 'portaldogospel.com.br', 'folhagospel.com',
+  'panorama.com.br', 'pleno.news', 'agenciaelos.com.br', 'supergospelsp.com.br',
+  'verdadegospel.com.br', 'gospelcenter.com.br', 'adoradores.com.br', 'g1.globo.com'
+];
 
 const STOP_TERMOS_INVEST = new Set([
   'gospel', 'evangelico', 'igreja', 'brasil', 'noticia', 'noticias', 'portal',
@@ -78,7 +84,7 @@ function contarTermosNoItem(item, termos) {
 
 function detectarFormatoInvestigativa(palavrasChave) {
   const t = normalizarTextoBusca(palavrasChave);
-  if (/quem\s+(sao|são)|que\s+sao\s+eles|lista\s+de|nomes\s+dos|nomes\s+de|quais\s+(sao|são)|nao\s+sabia|não\s+sabia|voce\s+nao\s+sabia/.test(t)) {
+  if (/quem\s+(sao|são)|que\s+sao\s+eles|veja\s+qu[ae]\s+sao|lista\s+de|nomes\s+dos|nomes\s+de|quais\s+(sao|são)|nao\s+sabia|não\s+sabia|voce\s+nao\s+sabia|você\s+não\s+sabia/.test(t)) {
     return 'listagem_nomes';
   }
   if (/pastor|pastora|bispo|pregador/.test(t) && /divorci|separou|separacao|separação/.test(t)) {
@@ -144,7 +150,7 @@ function deduplicarFontesApuracao(fontes) {
     if (!chave || vistos.has(chave)) return false;
     vistos.add(chave);
     return true;
-  }).slice(0, 25);
+  }).slice(0, 50);
 }
 
 function pontuarRelevanciaInvestigativa(item, palavrasChave, formato) {
@@ -242,26 +248,29 @@ function montarConsultasInvestigativa(palavrasChave, formato) {
 
   if (formato === 'listagem_nomes' || pautaMencionaDivorcio(chave)) {
     consultas.push(
-      'pastores evangélicos brasileiros divorciados nomes',
-      'pastores gospel famosos que se divorciaram lista',
+      'pastor evangelico divorciou brasil',
+      'pastora divorciou gospel brasil',
+      'pastor anunciou divórcio',
+      'pastor anunciou separação conjugal',
+      'pastores evangélicos divorciados nomes',
+      'pastores gospel famosos que se divorciaram',
       'pastor evangélico divórcio casamento brasil',
       'lista pastores divorciados igreja evangélica',
       'pastores que divorciaram e você não sabia',
-      'pastores divorciados gospel brasil história',
-      'bispo evangélico divorciado brasil',
+      'bispo evangélico divorciou brasil',
       'pregador divorciou esposa igreja brasil',
-      'pastor separação conjugal evangélico brasil',
-      'site:guiame.com.br pastor divorciado',
-      'site:gospelprime.com.br pastor divórcio',
-      'site:portaldogospel.com.br pastor separação',
-      'site:pleno.news pastor divorciado',
-      'site:folhagospel.com divorcio pastor',
-      'site:panorama.com.br pastor separou',
-      'site:supergospelsp.com.br pastor casamento',
-      'site:agenciaelos.com.br pastor',
-      'pastor evangélico anunciou divórcio',
+      'pastor separação conjugal evangélico',
+      '"divorciou" pastor gospel brasil',
+      '"anunciou o divórcio" pastor',
+      'Lanna Holder divorcio Ronaldo',
+      'Alan Pereira divorcio lagoinha',
+      'pastor evangélico término casamento',
       'pastores renomados divorciados brasil'
     );
+    for (const site of PORTAIS_APURACAO) {
+      consultas.push(`site:${site} pastor divorciou`);
+      consultas.push(`site:${site} divórcio pastor`);
+    }
   }
 
   return [...new Set(consultas)];
@@ -269,7 +278,7 @@ function montarConsultasInvestigativa(palavrasChave, formato) {
 
 function opcoesBraveWeb(diasRecentes) {
   if (semFiltroPeriodo(diasRecentes)) {
-    return { freshness: null, limite: 15 };
+    return { freshness: null, limite: 20 };
   }
   const dias = parseInt(diasRecentes, 10) || (diasRecentes === '24h' ? 1 : 7);
   if (dias >= 365) return { freshness: null, limite: 15 };
@@ -285,10 +294,12 @@ async function executarBuscaBraveWeb(query, palavrasChave, diasRecentes) {
   return buscarBraveWeb(query, palavrasChave, limite, opts).catch(() => []);
 }
 
-async function executarBuscaWebBrave(query) {
+async function executarBuscaWebBrave(query, semFiltro) {
   if (!braveDisponivel()) return [];
-  const fresh = 'py';
-  const resultados = await buscarWeb(query, { count: 15, freshness: fresh }).catch(() => []);
+  const resultados = await buscarWeb(query, {
+    count: 20,
+    freshness: semFiltro ? undefined : 'py'
+  }).catch(() => []);
   return resultados.map((r) => ({
     titulo: r.titulo,
     link: r.link,
@@ -324,23 +335,35 @@ async function buscarFontesInvestigativa(palavrasChave, opcoes = {}) {
   const diasBusca = semFiltro ? 3650 : (parseInt(diasRecentes, 10) || (diasRecentes === '24h' ? 1 : 7));
   const consultas = onda === 2
     ? [
-      'pastor evangelico divorciou brasil nome completo',
-      'pastores famosos gospel separação casamento lista',
-      'historia pastores divorciados igreja evangélica brasil'
+      'pastor evangelico divorciou brasil nome',
+      'pastora gospel anunciou divorcio',
+      'pastores famosos separação casamento brasil',
+      'historia pastores divorciados igreja',
+      'cantor gospel divorciou pastor',
+      'bispo divorciou brasil noticia'
     ]
-    : montarConsultasInvestigativa(palavrasChave, formato);
+    : onda === 3
+      ? [
+        'Lanna Holder divorcio',
+        'Ronaldo Holder divorcio',
+        'Alan Pereira divorcio pastor',
+        'pastor lagoinha divorciou',
+        'pastor universal divorciou',
+        'pastor batista divorciou brasil'
+      ]
+      : montarConsultasInvestigativa(palavrasChave, formato);
 
   const buscasConsulta = consultas.flatMap((q) => [
     executarBuscaBraveWeb(q, palavrasChave, diasRecentes),
     semFiltro
-      ? buscarGoogleNewsHistorico(q, 12).catch(() => [])
-      : buscarGoogleNews(q, 8, { dias: Math.min(diasBusca, 30) }).catch(() => []),
-    executarBuscaWebBrave(q)
+      ? buscarGoogleNewsHistorico(q, 18).catch(() => [])
+      : buscarGoogleNews(q, 10, { dias: Math.min(diasBusca, 30) }).catch(() => []),
+    executarBuscaWebBrave(q, semFiltro)
   ]);
 
   const lotesBase = onda === 1
     ? await Promise.all([
-      pesquisarNichos(palavrasChave, 10, {
+      pesquisarNichos(palavrasChave, 12, {
         incluirRedesSociais: false,
         somenteRedesSociais: false,
         somenteRecentes: !semFiltro,
@@ -349,19 +372,21 @@ async function buscarFontesInvestigativa(palavrasChave, opcoes = {}) {
         incluirGoogleTrends: false,
         buscaAmpliada: true
       }),
-      buscarBraveNews(palavrasChave, 15, semFiltro ? 365 : Math.min(diasBusca, 30)).catch(() => []),
+      buscarBraveNews('pastor divorciou gospel brasil', 20, semFiltro ? 365 : Math.min(diasBusca, 30)).catch(() => []),
+      buscarBraveNews(palavrasChave, 20, semFiltro ? 365 : Math.min(diasBusca, 30)).catch(() => []),
       semFiltro
-        ? buscarGoogleNewsHistorico(palavrasChave, 20)
-        : buscarGoogleNews(palavrasChave, 12, { dias: Math.min(diasBusca, 30) }).catch(() => []),
-      buscarWebGospel(palavrasChave, 15, semFiltro ? 365 : Math.min(diasBusca, 30), { ampliado: true }).catch(() => []),
-      buscarPortaisGospel(palavrasChave, 15, semFiltro ? 365 : Math.min(diasBusca, 30), { ampliado: true }).catch(() => []),
+        ? buscarGoogleNewsHistorico('pastor divorciou gospel brasil', 25)
+        : buscarGoogleNews(palavrasChave, 15, { dias: Math.min(diasBusca, 30) }).catch(() => []),
+      semFiltro ? buscarGoogleNewsHistorico(palavrasChave, 25) : Promise.resolve([]),
+      buscarWebGospel('pastor divorciou gospel', 20, semFiltro ? 365 : Math.min(diasBusca, 30), { ampliado: true }).catch(() => []),
+      buscarPortaisGospel('pastor divorciou divórcio', 25, semFiltro ? 365 : Math.min(diasBusca, 30), { ampliado: true }).catch(() => []),
       ...buscasConsulta
     ])
     : await Promise.all(buscasConsulta);
 
   const brutos = mesclarResultados(lotesBase.flat(2));
 
-  const relaxado = semFiltro || onda === 2;
+  const relaxado = semFiltro || onda >= 2;
   const relevantes = brutos
     .filter((item) => itemRelevanteParaPauta(item, palavrasChave, formato, { relaxado }))
     .sort((a, b) => pontuarRelevanciaInvestigativa(b, palavrasChave, formato) - pontuarRelevanciaInvestigativa(a, palavrasChave, formato));
@@ -389,18 +414,27 @@ async function buscarFontesInvestigativa(palavrasChave, opcoes = {}) {
 }
 
 async function apuracaoProfunda(apurados) {
-  const comLink = apurados.filter((a) => a.link && !a.redeSocial).slice(0, MAX_APURACAO_PROFUNDA);
-  const lote = 4;
+  const comLink = apurados
+    .filter((a) => a.link && !a.redeSocial)
+    .sort((a, b) => {
+      const ta = `${a.titulo || ''} ${a.resumo || ''}`;
+      const tb = `${b.titulo || ''} ${b.resumo || ''}`;
+      const pa = /divorci|divórcio|separou|separa/i.test(ta) ? 1 : 0;
+      const pb = /divorci|divórcio|separou|separa/i.test(tb) ? 1 : 0;
+      return pb - pa;
+    })
+    .slice(0, MAX_APURACAO_PROFUNDA);
+
+  const lote = 5;
 
   for (let i = 0; i < comLink.length; i += lote) {
     const fatia = comLink.slice(i, i + lote);
     await Promise.all(fatia.map(async (item) => {
       try {
-        const { corpo, titulo } = await extrairCorpoArtigo(item.link);
-        if (corpo) {
-          item.corpoProfundo = corpo.slice(0, 12000);
-          if (titulo && !item.titulo) item.titulo = titulo;
-        }
+        const { corpo, titulo, descricao } = await extrairCorpoArtigo(item.link);
+        const texto = corpo || descricao || '';
+        if (texto) item.corpoProfundo = texto.slice(0, 16000);
+        if (titulo) item.titulo = item.titulo || titulo;
       } catch (e) {
         console.warn('apuracaoProfunda:', item.link, e.message);
       }
@@ -476,11 +510,20 @@ async function apurarPautaInvestigativa(palavrasChave, opcoes = {}) {
 
   if (formato === 'listagem_nomes' && evidenciasVerificadas.length < MIN_NOMES_LISTAGEM) {
     const fontesOnda2 = await buscarFontesInvestigativa(chave, { ...opcoes, formato, onda: 2 });
-    const novos = fontesOnda2.filter((f) => !apurados.some((a) => a.link === f.link || titulosSimilares(a.titulo, f.titulo)));
-    if (novos.length) {
-      const apurados2 = await Promise.all(novos.map((item) => apurarTopico(item)));
-      const profundos2 = await apuracaoProfunda(apurados2);
-      apurados = [...apurados, ...profundos2];
+    const novos2 = fontesOnda2.filter((f) => !apurados.some((a) => a.link === f.link || titulosSimilares(a.titulo, f.titulo)));
+    if (novos2.length) {
+      const ap2 = await Promise.all(novos2.map((item) => apurarTopico(item)));
+      apurados = [...apurados, ...(await apuracaoProfunda(ap2))];
+      evidenciasVerificadas = await obterEvidenciasVerificadas(apurados, chave);
+    }
+  }
+
+  if (formato === 'listagem_nomes' && evidenciasVerificadas.length < MIN_NOMES_LISTAGEM) {
+    const fontesOnda3 = await buscarFontesInvestigativa(chave, { ...opcoes, formato, onda: 3 });
+    const novos3 = fontesOnda3.filter((f) => !apurados.some((a) => a.link === f.link || titulosSimilares(a.titulo, f.titulo)));
+    if (novos3.length) {
+      const ap3 = await Promise.all(novos3.map((item) => apurarTopico(item)));
+      apurados = [...apurados, ...(await apuracaoProfunda(ap3))];
       evidenciasVerificadas = await obterEvidenciasVerificadas(apurados, chave);
     }
   }
@@ -489,8 +532,9 @@ async function apurarPautaInvestigativa(palavrasChave, opcoes = {}) {
 
   if (formato === 'listagem_nomes' && evidenciasVerificadas.length < MIN_NOMES_LISTAGEM) {
     throw new Error(
-      `Apuração: ${apurados.length} matérias lidas, mas nenhum caso com divórcio EXPLICITAMENTE documentado em trecho de matéria (com URL). ` +
-      'Não publicamos nomes sem prova — tente buscar um caso específico (ex.: "pastor [nome] anunciou divórcio").'
+      `Apuração: ${apurados.length} matérias analisadas (leitura profunda em até ${MAX_APURACAO_PROFUNDA}), ` +
+      'mas nenhum caso com divórcio EXPLICITAMENTE documentado em trecho com URL. ' +
+      'Tente um caso específico (ex.: "pastor [nome] anunciou divórcio") ou verifique se há matérias indexadas sobre o assunto.'
     );
   }
 

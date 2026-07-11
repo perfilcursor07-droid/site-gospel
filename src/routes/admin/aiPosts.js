@@ -641,7 +641,13 @@ router.post('/investigativa/gerar', async (req, res) => {
       })),
       avisoQualidade: avisoQualidadeArtigo(artigo),
       palavras: artigo._palavras || null,
-      mensagem: `Matéria investigativa salva como rascunho. Adicione a imagem de capa antes de publicar.${pauta.contagemFontes ? ` Apuradas ${pauta.contagemFontes} fontes.` : ''}`
+      mensagem: `Matéria investigativa salva como rascunho. Adicione a imagem de capa antes de publicar.${
+        pauta.contagemFontes ? ` ${pauta.contagemFontes} matérias analisadas.` : ''
+      }${
+        pauta.evidenciasVerificadas?.length
+          ? ` ${pauta.evidenciasVerificadas.length} caso(s) com divórcio documentado.`
+          : ''
+      }`
     });
   } catch (e) {
     console.error('Erro investigativa/gerar:', e);

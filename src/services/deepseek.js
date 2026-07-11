@@ -477,7 +477,7 @@ function parsearJson(texto) {
 async function filtrarEvidenciasInvestigativas(evidencias, tema) {
   if (!Array.isArray(evidencias) || !evidencias.length) return [];
 
-  const lista = evidencias.slice(0, 12).map((e, i) =>
+  const lista = evidencias.slice(0, 20).map((e, i) =>
     `[${i + 1}] NOME: ${e.nome}\nURL: ${e.url}\nTRECHO: ${e.trecho}`
   ).join('\n\n');
 

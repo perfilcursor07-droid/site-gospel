@@ -1732,7 +1732,7 @@
         mostrarInvStatus('Informe as palavras-chave da matéria.', 'erro');
         return;
       }
-      if (!confirm('Pesquisar fontes na internet e gerar matéria investigativa?\n\nApuração profunda: pode levar 2–5 minutos (lê matérias completas). A matéria será salva como rascunho.')) return;
+      if (!confirm('Pesquisar fontes na internet e gerar matéria investigativa?\n\nApuração ampliada: até ~55 fontes, leitura profunda de até 45 matérias e 3 ondas de busca. Pode levar 3–8 minutos. A matéria será salva como rascunho.')) return;
 
       setCarregando(btnInvGerar, true);
       mostrarInvStatus('Apuração em andamento — aguarde…', 'info');
@@ -1751,6 +1751,10 @@
         renderizarFontesInv(data.fontes);
 
         var msg = data.mensagem || 'Matéria salva como rascunho.';
+        if (data.evidencias && data.evidencias.length) {
+          msg += ' Casos documentados: ' + data.evidencias.map(function (e) { return e.nome; }).join(', ') + '.';
+        }
+        if (data.contagemFontes) msg += ' (' + data.contagemFontes + ' matérias analisadas)';
         if (data.avisoQualidade) msg += ' ' + data.avisoQualidade;
         mostrarInvStatus(msg, 'sucesso');
 
