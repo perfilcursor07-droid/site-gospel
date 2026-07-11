@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { extrairMetadadosArtigo, urlImagemInvalida } = require('./articleSource');
-const { identificarCapaArtigo, selecionarMelhorImagem, gerarAltImagem, validarImagemParaArtigo } = require('./deepseek');
+const { identificarCapaArtigo, selecionarMelhorImagem, validarImagemParaArtigo } = require('./deepseek');
 const { salvarComoWebp } = require('../utils/imageProcessor');
 const { buscarImagemPython, listarImagensPython, baixarImagemUrlPython } = require('./pythonImageSearch');
 const { marcarRespostaBrave, marcarRespostaBraveOk, braveDisponivel, braveQuotaExcedida } = require('./braveApi');
@@ -233,6 +233,43 @@ function decodificarHtmlEntidades(str) {
     .replace(/&quot;/g, '"')
     .replace(/&#8211;|&ndash;/g, '–')
     .replace(/&#8212;|&mdash;/g, '—');
+}
+
+const LEGENDA_META_RUIDO = /^(image|photo|picture|foto|imagem|untitled|stock|download|thumbnail|banner|logo|icon|default|placeholder|no[\s-]?image)/i;
+
+function limparTextoLegenda(texto) {
+  return decodificarHtmlEntidades(texto || '')
+    .replace(/\s+/g, ' ')
+    .replace(/^(imagem|foto|photo|picture)\s+(de|of)\s+/i, '')
+    .replace(/\s*[|\-–—]\s*(getty|shutterstock|istock|alamy|wikimedia|flickr).*$/i, '')
+    .trim();
+}
+
+function legendaMetaValida(texto) {
+  if (!texto || texto.length < 10 || texto.length > 200) return false;
+  if (/^https?:\/\//i.test(texto)) return false;
+  if (/\.(jpe?g|png|webp|gif)(\?|$)/i.test(texto)) return false;
+  if (LEGENDA_META_RUIDO.test(texto)) return false;
+  if (/^\d+\s*x\s*\d+$/i.test(texto)) return false;
+  return true;
+}
+
+/** Legenda/alt a partir dos metadados reais da imagem — não inventa cena. */
+function montarLegendaCapa(candidato, tituloMateria) {
+  const candidatos = [
+    candidato?.title,
+    candidato?.alt,
+    candidato?.snippet,
+    candidato?.name
+  ].map(limparTextoLegenda).filter(legendaMetaValida);
+
+  const unicos = [...new Set(candidatos)];
+  if (unicos.length) {
+    return unicos[0].slice(0, 125);
+  }
+
+  const titulo = limparTextoLegenda(tituloMateria);
+  return titulo ? titulo.slice(0, 125) : null;
 }
 
 function variantesNomePessoa(nome) {
@@ -1460,13 +1497,7 @@ async function obterImagemParaArtigo({
   async function tentarCapa(candidatos, opcoes) {
     const resultado = await escolherEBaixarImagem(candidatos, ctx, artigoBrief, opcoes);
     if (!resultado?.imagem) return null;
-    let alt = null;
-    try {
-      alt = await gerarAltImagem(artigoBrief);
-    } catch (e) {
-      console.warn('gerarAltImagem:', e.message);
-      alt = `${titulo} — capa`.slice(0, 125);
-    }
+    const alt = montarLegendaCapa(resultado.candidato, titulo);
     return { imagem: resultado.imagem, alt };
   }
 
@@ -1591,13 +1622,11 @@ async function obterImagemParaArtigo({
         ].filter(Boolean)
       });
       if (python?.imagem) {
-        let alt = python.alt;
-        try {
-          alt = await gerarAltImagem(artigoBrief);
-        } catch (e) {
-          console.warn('gerarAltImagem (pós-Python):', e.message);
-        }
-        return { imagem: python.imagem, alt: alt || python.alt };
+        const alt = montarLegendaCapa(
+          { title: python.alt, alt: python.alt },
+          titulo
+        );
+        return { imagem: python.imagem, alt };
       }
     } catch (e) {
       console.warn('Fallback Python falhou:', e.message);
@@ -1800,12 +1829,11 @@ async function salvarCandidatoComoCapa({ url, preview, contextLink, titulo, resu
   if (!salva) return null;
 
   let altFinal = (alt || '').trim();
-  if (!altFinal && titulo) {
-    try {
-      altFinal = await gerarAltImagem({ titulo, resumo, assuntoImagem });
-    } catch {
-      altFinal = titulo.slice(0, 125);
-    }
+  if (!altFinal) {
+    altFinal = montarLegendaCapa(
+      { title, alt: assuntoImagem },
+      titulo
+    );
   }
 
   return { imagem: salva, alt: altFinal || null };

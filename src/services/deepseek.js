@@ -64,19 +64,23 @@ function textoPlano(html) {
   return (html || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
-async function gerarAltImagem({ titulo, resumo, assuntoImagem, pessoaPrincipal }) {
-  const prompt = `Crie um texto alternativo (alt) SEO para a imagem de capa desta matéria gospel.
+async function gerarAltImagem({ titulo, resumo, assuntoImagem, pessoaPrincipal, metaImagem }) {
+  const meta = String(metaImagem || '').replace(/\s+/g, ' ').trim();
+  if (meta.length >= 10 && meta.length <= 125) {
+    return meta.slice(0, 125);
+  }
 
-TÍTULO: ${titulo}
-RESUMO: ${resumo}
-${assuntoImagem ? `CENA DA FOTO: ${assuntoImagem}` : ''}
-${pessoaPrincipal ? `PESSOA: ${pessoaPrincipal}` : ''}
+  const prompt = `Crie um texto alternativo (alt) curto para a capa desta matéria gospel.
 
-REGRAS:
-- Português do Brasil, descritivo e natural
-- Máximo 125 caracteres
-- Descreva o que aparece na foto em relação à matéria
-- Sem aspas, sem "imagem de"
+TÍTULO DA MATÉRIA: ${titulo}
+RESUMO: ${resumo || ''}
+${metaImagem ? `TEXTO DA FONTE DA IMAGEM (priorize isto): ${metaImagem}` : ''}
+
+REGRAS OBRIGATÓRIAS:
+- Português do Brasil, máximo 125 caracteres
+- NÃO invente pessoas, gestos, objetos ou cenas que não estejam confirmados
+- Se não souber o que aparece na foto, use apenas o tema da matéria de forma neutra (ex.: "Congresso Nacional em Brasília" ou o título resumido)
+- Sem aspas, sem prefixo "imagem de"
 
 JSON: {"alt": "texto alt aqui"}`;
 
