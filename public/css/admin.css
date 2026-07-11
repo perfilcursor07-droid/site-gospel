@@ -360,7 +360,7 @@ body.sidebar-overlay::before {
   color: #b91c1c;
 }
 .topbar-user-dropdown-item--sair:hover svg { color: #dc2626; }
-.conteudo main { padding: 28px; }
+.conteudo main { padding: 28px; overflow-x: hidden; }
 .conteudo h1 { color: #111827; font-weight: 800; margin-bottom: 20px; }
 .conteudo h2 { color: #111827; font-weight: 800; margin: 28px 0 14px; }
 .conteudo h3 { color: #111827; font-weight: 800; margin-top: 8px; }
@@ -612,10 +612,20 @@ body.sidebar-overlay::before {
 .preview-og { max-width: 360px; aspect-ratio: 1200 / 630; object-fit: cover; }
 
 /* ── Página de configurações ── */
-.config-page { max-width: 1100px; }
+.config-page { width: 100%; max-width: none; }
 .config-header { margin-bottom: 1.25rem; }
 .config-header h1 { margin: 0 0 4px; font-size: 1.5rem; }
 .config-header-desc { margin: 0; color: #6b7280; font-size: .88rem; }
+
+.config-layout.form {
+  padding: 0;
+  border: none;
+  box-shadow: none;
+  background: transparent;
+  gap: 0;
+  max-width: none;
+  width: 100%;
+}
 
 .config-ia-fold {
   margin-bottom: 1.25rem;
@@ -636,12 +646,82 @@ body.sidebar-overlay::before {
 .config-ia-fold summary::before { content: '▸ '; }
 .config-ia-fold[open] summary::before { content: '▾ '; }
 .config-ia-corpo { padding: 0 16px 14px; }
-.config-ia-botoes { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; margin-top: 10px; }
+.config-ia-botoes { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; }
 .config-label { display: block; font-weight: 700; font-size: .82rem; margin-bottom: 6px; color: #374151; }
+
+/* Botões da página de configurações */
+.btn-config {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  font-size: .84rem;
+  font-weight: 700;
+  line-height: 1.2;
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background .15s, border-color .15s, color .15s, box-shadow .15s;
+}
+.btn-config:hover { opacity: 1; text-decoration: none; }
+.btn-config--primario {
+  background: linear-gradient(180deg, #f97316, #ea580c);
+  color: #fff;
+  box-shadow: 0 1px 2px rgba(234, 88, 12, .25);
+}
+.btn-config--primario:hover { background: linear-gradient(180deg, #fb923c, #f97316); color: #fff; }
+.btn-config--outline {
+  background: #fff;
+  color: #374151;
+  border-color: #d1d5db;
+}
+.btn-config--outline:hover { background: #f9fafb; border-color: #9ca3af; color: #111827; }
+.btn-config--ghost {
+  background: #f3f4f6;
+  color: #374151;
+  border-color: #e5e7eb;
+}
+.btn-config--ghost:hover { background: #e5e7eb; color: #111827; }
+.btn-config--lg { padding: 12px 24px; font-size: .95rem; }
+.btn-config--compact { padding: 6px 12px; font-size: .78rem; }
+
+.config-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-end;
+  margin-top: 14px;
+  padding: 12px 14px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+}
+.config-toolbar--links { margin-top: 12px; }
+.config-toolbar-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: .82rem;
+  font-weight: 700;
+  color: #374151;
+  min-width: 0;
+}
+.config-select {
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: .88rem;
+  font-family: inherit;
+  background: #fff;
+  min-width: 120px;
+}
 
 .config-layout {
   display: grid;
-  grid-template-columns: 200px 1fr;
+  grid-template-columns: 200px minmax(0, 1fr);
   gap: 0;
   align-items: start;
   border: 1px solid #e5e7eb;
@@ -649,6 +729,7 @@ body.sidebar-overlay::before {
   background: #fff;
   overflow: hidden;
   box-shadow: 0 1px 3px rgba(0,0,0,.04);
+  width: 100%;
 }
 
 .config-nav {
@@ -697,6 +778,18 @@ body.sidebar-overlay::before {
 .config-corpo {
   padding: 20px 22px 24px;
   min-width: 0;
+  overflow-x: hidden;
+}
+.config-corpo input[type="text"],
+.config-corpo input[type="url"],
+.config-corpo input[type="email"],
+.config-corpo input[type="number"],
+.config-corpo input[type="password"],
+.config-corpo select,
+.config-corpo textarea {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 .config-painel { display: flex; flex-direction: column; gap: 16px; }
 .config-painel[hidden] { display: none !important; }
@@ -717,6 +810,8 @@ body.sidebar-overlay::before {
   border-radius: 10px;
   padding: 16px 18px;
   background: #fafafa;
+  min-width: 0;
+  overflow: hidden;
 }
 .config-card--preview { background: #fff; }
 .config-card--info { background: #f0fdf4; border-color: #bbf7d0; }
@@ -740,6 +835,9 @@ body.sidebar-overlay::before {
   margin-top: 24px;
   padding-top: 16px;
   border-top: 1px solid #e5e7eb;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .config-fold {
@@ -781,9 +879,46 @@ body.sidebar-overlay::before {
 .sitemap-alerta { margin-top: 10px !important; padding: 10px 12px; border-radius: 8px; background: #fef3c7; color: #92400e; font-weight: 600; }
 .sitemap-links h3,
 .sitemap-amostra h3 { margin: 0 0 10px; font-size: 1rem; color: #111827; }
-.sitemap-link-item { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
-.sitemap-link-tipo { min-width: 88px; font-size: .78rem; font-weight: 700; text-transform: uppercase; color: #6b7280; }
-.sitemap-link-campo { flex: 1; min-width: 220px; font-family: ui-monospace, monospace; font-size: .82rem; background: #f9fafb; }
+.sitemap-link-row {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  grid-template-areas:
+    "tipo url"
+    "acoes acoes";
+  gap: 8px 10px;
+  align-items: center;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+}
+.sitemap-link-tipo {
+  grid-area: tipo;
+  font-size: .72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: #6b7280;
+}
+.sitemap-link-campo {
+  grid-area: url;
+  width: 100%;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-family: ui-monospace, monospace;
+  font-size: .78rem;
+  background: #f9fafb;
+  color: #374151;
+}
+.sitemap-link-acoes {
+  grid-area: acoes;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
 .sitemap-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; }
 .sitemap-stat { border: 1px solid #e5e7eb; border-radius: 10px; padding: 12px; background: #fff; text-align: center; }
 .sitemap-stat strong { display: block; font-size: 1.35rem; color: #ea580c; }

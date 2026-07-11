@@ -13,10 +13,10 @@
       <label class="config-label" for="ia-config-descricao">Sobre o seu site</label>
       <textarea id="ia-config-descricao" class="ia-input-grande" rows="2" placeholder="Ex.: Site gospel com notícias, louvor e igrejas no Brasil. Público evangélico jovem e adulto."></textarea>
       <div class="config-ia-botoes">
-        <button type="button" class="btn btn-primario btn-sm" id="btn-ia-config-todas">Preencher tudo</button>
-        <button type="button" class="btn btn-sec btn-sm" id="btn-ia-config-identidade">Identidade</button>
-        <button type="button" class="btn btn-sec btn-sm" id="btn-ia-config-seo">SEO</button>
-        <button type="button" class="btn btn-sec btn-sm" id="btn-ia-config-rodape">Rodapé</button>
+        <button type="button" class="btn btn-config btn-config--primario" id="btn-ia-config-todas">Preencher tudo</button>
+        <button type="button" class="btn btn-config btn-config--outline" id="btn-ia-config-identidade">Identidade</button>
+        <button type="button" class="btn btn-config btn-config--outline" id="btn-ia-config-seo">SEO</button>
+        <button type="button" class="btn btn-config btn-config--outline" id="btn-ia-config-rodape">Rodapé</button>
       </div>
       <p class="ia-status-msg ia-status-info" id="ia-config-status" hidden></p>
     </div>
@@ -48,7 +48,7 @@
             <h2>Identidade</h2>
             <p class="dica">Nome, visual e cores exibidos em todo o site.</p>
           </div>
-          <button type="button" class="btn btn-sec btn-sm btn-ia-aba" data-ia-secao="identidade">✨ IA</button>
+          <button type="button" class="btn btn-config btn-config--outline btn-config--compact btn-ia-aba" data-ia-secao="identidade">✨ IA</button>
         </div>
 
         <div class="config-card">
@@ -116,7 +116,7 @@
             <h2>Rodapé</h2>
             <p class="dica">Copyright e links extras. Páginas do admin aparecem automaticamente.</p>
           </div>
-          <button type="button" class="btn btn-sec btn-sm btn-ia-aba" data-ia-secao="rodape">✨ IA</button>
+          <button type="button" class="btn btn-config btn-config--outline btn-config--compact btn-ia-aba" data-ia-secao="rodape">✨ IA</button>
         </div>
         <div class="config-card">
           <div class="config-campos">
@@ -137,7 +137,7 @@
             <h2>SEO</h2>
             <p class="dica">Como o site aparece no Google e ao compartilhar links.</p>
           </div>
-          <button type="button" class="btn btn-sec btn-sm btn-ia-aba" data-ia-secao="seo">✨ IA</button>
+          <button type="button" class="btn btn-config btn-config--outline btn-config--compact btn-ia-aba" data-ia-secao="seo">✨ IA</button>
         </div>
 
         <div class="config-card">
@@ -259,7 +259,7 @@
         </div>
 
         <div class="config-card config-card--info">
-          <a href="https://search.google.com/test/amp" target="_blank" rel="noopener" class="btn btn-sec btn-sm">Validar AMP no Google</a>
+          <a href="https://search.google.com/test/amp" target="_blank" rel="noopener" class="btn btn-config btn-config--outline">Validar AMP no Google</a>
         </div>
       </div>
 
@@ -297,23 +297,27 @@
         <div class="config-card">
           <h3 class="config-card-titulo">Links do sitemap</h3>
           <% sitemap.sitemaps.forEach(function (item) { %>
-            <div class="sitemap-link-item">
+            <div class="sitemap-link-row">
               <span class="sitemap-link-tipo"><%= item.tipo === 'google-news' ? 'News' : 'Principal' %></span>
-              <input type="text" class="sitemap-link-campo" value="<%= item.loc %>" readonly>
-              <button type="button" class="btn btn-sec btn-sm btn-copiar" data-copiar-alvo="<%= item.loc %>">Copiar</button>
-              <a href="<%= item.loc %>" target="_blank" rel="noopener" class="btn btn-sec btn-sm">Abrir</a>
+              <input type="text" class="sitemap-link-campo" value="<%= item.loc %>" readonly title="<%= item.loc %>">
+              <div class="sitemap-link-acoes">
+                <button type="button" class="btn btn-config btn-config--ghost btn-copiar" data-copiar-alvo="<%= item.loc %>">Copiar</button>
+                <a href="<%= item.loc %>" target="_blank" rel="noopener" class="btn btn-config btn-config--outline">Abrir</a>
+              </div>
             </div>
           <% }) %>
-          <div class="sitemap-link-item">
+          <div class="sitemap-link-row">
             <span class="sitemap-link-tipo">robots</span>
-            <input type="text" class="sitemap-link-campo" value="<%= sitemap.robotsUrl %>" readonly>
-            <button type="button" class="btn btn-sec btn-sm btn-copiar" data-copiar-alvo="<%= sitemap.robotsUrl %>">Copiar</button>
-            <a href="<%= sitemap.robotsUrl %>" target="_blank" rel="noopener" class="btn btn-sec btn-sm">Abrir</a>
+            <input type="text" class="sitemap-link-campo" value="<%= sitemap.robotsUrl %>" readonly title="<%= sitemap.robotsUrl %>">
+            <div class="sitemap-link-acoes">
+              <button type="button" class="btn btn-config btn-config--ghost btn-copiar" data-copiar-alvo="<%= sitemap.robotsUrl %>">Copiar</button>
+              <a href="<%= sitemap.robotsUrl %>" target="_blank" rel="noopener" class="btn btn-config btn-config--outline">Abrir</a>
+            </div>
           </div>
-          <div class="sitemap-acoes-google" style="margin-top:12px">
-            <a href="<%= sitemap.googleSearchConsoleUrl %>" target="_blank" rel="noopener" class="btn btn-primario btn-sm">Search Console</a>
+          <div class="config-toolbar config-toolbar--links">
+            <a href="<%= sitemap.googleSearchConsoleUrl %>" target="_blank" rel="noopener" class="btn btn-config btn-config--primario">Search Console</a>
             <% if (sitemap.googleSitemapPingUrl) { %>
-              <a href="<%= sitemap.googleSitemapPingUrl %>" target="_blank" rel="noopener" class="btn btn-sec btn-sm">Ping sitemap</a>
+              <a href="<%= sitemap.googleSitemapPingUrl %>" target="_blank" rel="noopener" class="btn btn-config btn-config--outline">Ping sitemap</a>
             <% } %>
           </div>
         </div>
@@ -331,9 +335,9 @@
               <input type="checkbox" name="google_indexing_ativo" <%= (config.google_indexing_ativo || 'nao') === 'sim' ? 'checked' : '' %>>
               Enviar ao Google automaticamente ao publicar post
             </label>
-            <div class="config-ia-botoes" style="margin-top:10px">
-              <label>Posts a enviar
-                <select id="google-indexing-limite">
+            <div class="config-toolbar">
+              <label class="config-toolbar-campo">Posts a enviar
+                <select id="google-indexing-limite" class="config-select">
                   <option value="10">10</option>
                   <option value="30" selected>30</option>
                   <option value="50">50</option>
@@ -341,8 +345,8 @@
                   <option value="200">200</option>
                 </select>
               </label>
-              <button type="button" class="btn btn-sec btn-sm" id="btn-google-indexing-testar">Testar</button>
-              <button type="button" class="btn btn-primario btn-sm" id="btn-google-indexing-enviar">Enviar lote</button>
+              <button type="button" class="btn btn-config btn-config--outline" id="btn-google-indexing-testar">Testar conexão</button>
+              <button type="button" class="btn btn-config btn-config--primario" id="btn-google-indexing-enviar">Enviar lote ao Google</button>
             </div>
             <p id="google-indexing-resultado" class="dica" style="margin-top:8px"></p>
           </div>
@@ -354,7 +358,9 @@
             <label>Chave IndexNow
               <input type="text" name="indexnow_chave" value="<%= config.indexnow_chave || '' %>" readonly>
             </label>
-            <button type="submit" class="btn btn-sec btn-sm" name="gerar_indexnow" value="1">Gerar nova chave</button>
+            <div class="config-toolbar" style="margin-top:0;padding-left:0;padding-right:0;border:none;background:transparent">
+              <button type="submit" class="btn btn-config btn-config--outline" name="gerar_indexnow" value="1">Gerar nova chave</button>
+            </div>
             <% if (config.indexnow_chave && sitemap.base) { %>
               <p class="dica"><code><%= sitemap.base %>/<%= config.indexnow_chave %>.txt</code><% if (sitemap.indexnowAtivo) { %> — ativo<% } %></p>
             <% } %>
@@ -389,7 +395,7 @@
       </div>
 
       <div class="config-acoes">
-        <button type="submit" class="btn btn-primario">Salvar configurações</button>
+        <button type="submit" class="btn btn-config btn-config--primario btn-config--lg">Salvar configurações</button>
       </div>
     </div>
   </form>
