@@ -11,6 +11,16 @@ const {
   mensagemAvisoQualidade
 } = require('./editorialGuidelines');
 
+function deduplicarEvidencias(evidencias) {
+  const map = new Map();
+  for (const ev of evidencias || []) {
+    if (!ev?.nome) continue;
+    const k = ev.nome.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+    if (!map.has(k)) map.set(k, ev);
+  }
+  return [...map.values()];
+}
+
 function obterApiKey() {
   const key = process.env.DEEPSEEK_API_KEY;
   if (!key) throw new Error('DEEPSEEK_API_KEY não configurada no arquivo .env');
@@ -288,9 +298,11 @@ async function gerarArtigo({
   palavrasChaveInvestigativa,
   formatoInvestigativa,
   nomesApurados,
-  evidenciasVerificadas
+  evidenciasVerificadas,
+  correcaoInvestigativa
 }) {
   const hoje = new Date().toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
+  const evidenciasLista = deduplicarEvidencias(evidenciasVerificadas);
   const listaFontes = (fontesApuracao || [])
     .map((f, i) => `${i + 1}. ${f.veiculo || 'Fonte'}: ${f.titulo || ''}${f.url ? ` (${f.url})` : ''}`)
     .join('\n');
@@ -310,14 +322,16 @@ MODO: MATÉRIA INVESTIGATIVA — cruzamento de múltiplas fontes (portais, notí
 TEMA OBRIGATÓRIO DO USUÁRIO: ${palavrasChaveInvestigativa || tituloReferencia || nicho || 'conforme pauta'}
 ${formatoInvestigativa === 'listagem_nomes' ? `
 FORMATO LISTAGEM ("quem são eles") — SOMENTE COM PROVA DOCUMENTAL:
-- Lead: use o número EXATO de pessoas na lista de evidências (${(evidenciasVerificadas || []).length}). Nunca invente "cinco" ou "vários" se não houver prova.
-- Para CADA evidência abaixo: um <h2> com o nome + <p> reescrevendo o fato do trecho + atribuição ao veículo/URL.
-- PROIBIDO incluir qualquer pessoa que NÃO esteja nas evidências documentais.
+- Lead: use o número EXATO de pessoas confirmadas abaixo (${evidenciasLista.length}). Nunca invente quantidade maior.
+- Para CADA pessoa confirmada: um <h2> com o nome EXATO da lista + 1–2 <p> reescrevendo o fato do trecho + atribuição ao veículo/URL.
+- PROIBIDO incluir qualquer pessoa que NÃO esteja na lista abaixo.
 - PROIBIDO inferir divórcio de "primeira esposa" ou biografia genérica.
+- Pode usar UM <h2>Contexto</h2> no final (seção genérica, sem nome de pessoa).
 - Se só houver 1–2 casos confirmados, diga isso claramente — não encha a lista.
-${(evidenciasVerificadas || []).length
-  ? `PESSOAS COM PROVA (${evidenciasVerificadas.length}): ${evidenciasVerificadas.map((e) => e.nome).join('; ')}`
+${evidenciasLista.length
+  ? `PESSOAS COM PROVA (${evidenciasLista.length}) — use estes nomes nos <h2>: ${evidenciasLista.map((e) => e.nome).join('; ')}`
   : 'NENHUMA PESSOA CONFIRMADA — escreva matéria explicando que a apuração não encontrou casos documentados com divórcio explícito em matérias lidas.'}
+${correcaoInvestigativa ? `\nCORREÇÃO OBRIGATÓRIA: ${correcaoInvestigativa}` : ''}
 ` : `
 NÃO escreva sobre outro assunto que não seja o tema acima.
 Sintetize fatos das fontes relevantes com redação original. O lead deve revelar o furo principal SOBRE ESTE ASSUNTO.
@@ -338,14 +352,14 @@ REGRAS INVESTIGATIVAS (OBRIGATÓRIO):
 - ZERO invenção, ZERO inferência, ZERO "conhecimento geral" sobre biografias de pastores.
 - Proibido afirmar divórcio sem trecho explícito de matéria/portal com URL.
 - Não invente declarações, entrevistas nem quantidade de casos.
-${formatoInvestigativa === 'listagem_nomes' ? '- Um <h2> por evidência confirmada — nada além disso.' : '- Valor editorial: cruzamento de fontes documentadas.'}
+${formatoInvestigativa === 'listagem_nomes' ? '- Um <h2> por pessoa confirmada (nome exato da lista) + opcional <h2>Contexto</h2>. Nenhum outro nome em subtítulo.' : '- Valor editorial: cruzamento de fontes documentadas.'}
 ` : ''}
 
 ESTRUTURA OBRIGATÓRIA DA MATÉRIA:
 ${formatoInvestigativa === 'listagem_nomes' ? `
 1. LEAD (1º <p>): apresente a lista e quantos nomes foram confirmados nas fontes.
-2. BLOCO POR PESSOA: <h2>Nome Completo</h2> + 1–2 <p> com contexto factual de cada um (só nomes confirmados).
-3. <h2>Contexto</h2> + 1–2 <p>: panorama sobre divórcio entre líderes evangélicos (sem generalizar além das fontes).
+2. BLOCO POR PESSOA: <h2>Nome Exato Da Lista</h2> + 1–2 <p> com contexto factual (só nomes confirmados).
+3. OPCIONAL: <h2>Contexto</h2> + 1–2 <p> sobre panorama geral (sem citar pessoas não confirmadas).
 4. FECHAMENTO (1 <p> curto).
 ` : `
 1. LEAD (1º <p>): o furo — o que aconteceu e por que o leitor deve se importar AGORA.

@@ -21,6 +21,7 @@ const {
   MAX_PALAVRAS_ARTIGO
 } = require('../../services/editorialGuidelines');
 const { apurarPautaInvestigativa, artigoCitaNomesApurados, artigoRespeitaEvidencias } = require('../../services/investigativeResearch');
+const { listarH2Invalidos, consolidarEvidencias } = require('../../services/evidenceVerification');
 
 function avisoQualidadeArtigo(artigo) {
   if (artigo._avisoQualidade) return artigo._avisoQualidade;
@@ -570,7 +571,9 @@ router.post('/investigativa/gerar', async (req, res) => {
 
     const posts = await carregarPostsExistentes();
 
-    const artigo = await gerarArtigo({
+    const evidenciasConsolidadas = consolidarEvidencias(pauta.evidenciasVerificadas);
+
+    let artigo = await gerarArtigo({
       tituloReferencia: pauta.titulo,
       resumoReferencia: pauta.resumo,
       fonte: pauta.link,
@@ -583,21 +586,45 @@ router.post('/investigativa/gerar', async (req, res) => {
       investigativa: true,
       palavrasChaveInvestigativa: pauta.palavrasChave,
       formatoInvestigativa: pauta.formatoInvestigativa,
-      nomesApurados: pauta.nomesApurados,
-      evidenciasVerificadas: pauta.evidenciasVerificadas
+      nomesApurados: evidenciasConsolidadas.map((e) => e.nome),
+      evidenciasVerificadas: evidenciasConsolidadas
     });
 
-    if (pauta.formatoInvestigativa === 'listagem_nomes' && !artigoRespeitaEvidencias(artigo, pauta.evidenciasVerificadas)) {
-      return responderJson(res, 400, {
-        ok: false,
-        erro: 'A matéria incluiu pessoas sem prova documentada na apuração. Geração bloqueada — tente novamente.'
+    if (pauta.formatoInvestigativa === 'listagem_nomes' && !artigoRespeitaEvidencias(artigo, evidenciasConsolidadas)) {
+      const invalidos = listarH2Invalidos(artigo, evidenciasConsolidadas);
+      const permitidos = evidenciasConsolidadas.map((e) => e.nome).join(', ');
+      artigo = await gerarArtigo({
+        tituloReferencia: pauta.titulo,
+        resumoReferencia: pauta.resumo,
+        fonte: pauta.link,
+        nicho: pauta.nicho,
+        nomeSite,
+        contextoApuracao: pauta.contextoApuracao,
+        fontesApuracao: pauta.fontesApuracao,
+        redeSocial: pauta.redeSocial,
+        conteudoInternacional: pauta.fonteInternacional,
+        investigativa: true,
+        palavrasChaveInvestigativa: pauta.palavrasChave,
+        formatoInvestigativa: pauta.formatoInvestigativa,
+        nomesApurados: evidenciasConsolidadas.map((e) => e.nome),
+        evidenciasVerificadas: evidenciasConsolidadas,
+        correcaoInvestigativa: `A redação anterior incluiu subtítulos não permitidos (${invalidos.join(', ')}). Escreva SOMENTE sobre: ${permitidos}. Use <h2> com o nome exato de cada um + opcional <h2>Contexto</h2>. Não cite outros pastores.`
       });
     }
 
-    if (pauta.formatoInvestigativa === 'listagem_nomes' && !artigoCitaNomesApurados(artigo, pauta.nomesApurados)) {
+    if (pauta.formatoInvestigativa === 'listagem_nomes' && !artigoRespeitaEvidencias(artigo, evidenciasConsolidadas)) {
+      const invalidos = listarH2Invalidos(artigo, evidenciasConsolidadas);
+      const permitidos = evidenciasConsolidadas.map((e) => e.nome).join(', ');
       return responderJson(res, 400, {
         ok: false,
-        erro: `A IA não incluiu os nomes confirmados na apuração (${pauta.nomesApurados.join(', ')}). Tente novamente ou refine as palavras-chave.`
+        erro: `A matéria incluiu pessoas sem prova documentada (${invalidos.join(', ')}). Confirmados na apuração: ${permitidos}. Tente novamente.`
+      });
+    }
+
+    if (pauta.formatoInvestigativa === 'listagem_nomes' && !artigoCitaNomesApurados(artigo, evidenciasConsolidadas.map((e) => e.nome))) {
+      return responderJson(res, 400, {
+        ok: false,
+        erro: `A IA não incluiu os nomes confirmados na apuração (${evidenciasConsolidadas.map((e) => e.nome).join(', ')}). Tente novamente ou refine as palavras-chave.`
       });
     }
 

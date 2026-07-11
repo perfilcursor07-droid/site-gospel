@@ -19,6 +19,8 @@ const RX_VERBO_ACAO = /\s+(?:anunciou|anuncia|confirmou|confirma|divorciou|separ
 
 const RX_IGREJA_SUFIXO = /\s+(?:da|de|do)\s+(?:igreja|lagoinha|universal|batista|presbiteriana|metodista|adventista|quadrangular|renovo|videira|sara|sara\s+nossa\s+terra|comunidade|ministerio|ministério|templo|congregacao|congregação).*$/i;
 
+const H2_SECOES_PERMITIDAS = /^(contexto|conclus[aã]o|conclusao|impacto|panorama|repercuss[aã]o|repercussao|desdobramento|pr[oó]ximos passos|reflex[aã]o|reflexao|entenda|panorama|o caso|fechamento|s[ií]ntese|leitura|bastidores|reacoes|reações)$/i;
+
 function limparTituloReligioso(nome) {
   return String(nome || '')
     .replace(/^(?:pastor(?:a)?|bispo|apóstolo|apostolo|pregador|cantor(?:a)?(?:\s+gospel)?)\s+/i, '')
@@ -207,12 +209,70 @@ function extrairEvidenciasDocumentais(apurados) {
   return evidencias.sort((a, b) => (b.confiavel ? 1 : 0) - (a.confiavel ? 1 : 0));
 }
 
+function consolidarEvidencias(evidencias) {
+  const map = new Map();
+  for (const ev of evidencias || []) {
+    if (!ev?.nome) continue;
+    const chave = normalizar(limparTituloReligioso(ev.nome));
+    const existente = map.get(chave);
+    if (
+      !existente
+      || (ev.confiavel && !existente.confiavel)
+      || String(ev.trecho || '').length > String(existente.trecho || '').length
+    ) {
+      map.set(chave, { ...ev, nome: limparTituloReligioso(capitalizarNome(ev.nome)) || ev.nome });
+    }
+  }
+  return [...map.values()].sort((a, b) => (b.confiavel ? 1 : 0) - (a.confiavel ? 1 : 0));
+}
+
+function h2EhSecaoGenerica(h2) {
+  const t = normalizar(String(h2 || '').trim().replace(/<[^>]+>/g, ''));
+  return H2_SECOES_PERMITIDAS.test(t) || t.length < 4;
+}
+
+function h2PareceNomePessoa(h2) {
+  const limpo = limparTituloReligioso(String(h2 || '').trim().replace(/<[^>]+>/g, ''));
+  const partes = limpo.split(/\s+/).filter(Boolean);
+  if (partes.length < 2 || partes.length > 5) return false;
+  if (h2EhSecaoGenerica(h2)) return false;
+  return partes.every((p) => /^[A-Za-zÀ-ú'-]{2,}$/.test(p));
+}
+
+function nomePermitidoNoH2(h2, permitidos) {
+  const limpo = normalizar(limparTituloReligioso(String(h2 || '').trim().replace(/<[^>]+>/g, '')));
+  if (!limpo) return false;
+
+  for (const p of permitidos) {
+    const np = normalizar(p);
+    if (limpo === np) return true;
+    if (limpo.includes(np) || np.includes(limpo)) return true;
+
+    const partesP = np.split(/\s+/).filter((w) => w.length > 2);
+    const partesH = limpo.split(/\s+/).filter((w) => w.length > 2);
+    const coincidencias = partesP.filter((w) => partesH.includes(w));
+    if (coincidencias.length >= 2) return true;
+    if (coincidencias.length >= 1 && partesP.length === 2 && partesH.length === 2) return true;
+  }
+  return false;
+}
+
+function listarH2Invalidos(artigo, evidencias) {
+  if (!evidencias?.length) return [];
+  const permitidos = consolidarEvidencias(evidencias).map((e) => e.nome);
+  const h2s = [...String(artigo.conteudo || '').matchAll(/<h2[^>]*>([^<]+)/gi)]
+    .map((m) => m[1].trim())
+    .filter(Boolean);
+
+  return h2s.filter((h) => h2PareceNomePessoa(h) && !nomePermitidoNoH2(h, permitidos));
+}
+
 async function obterEvidenciasVerificadas(apurados, tema) {
-  const brutas = extrairEvidenciasDocumentais(apurados);
+  const brutas = consolidarEvidencias(extrairEvidenciasDocumentais(apurados));
   if (!brutas.length) return [];
 
   try {
-    const confirmadas = await filtrarEvidenciasInvestigativas(brutas, tema);
+    const confirmadas = consolidarEvidencias(await filtrarEvidenciasInvestigativas(brutas, tema));
     if (confirmadas.length) return confirmadas;
   } catch (e) {
     console.warn('obterEvidenciasVerificadas IA:', e.message);
@@ -242,19 +302,15 @@ function montarBlocoEvidencias(evidencias) {
 }
 
 function artigoRespeitaEvidencias(artigo, evidencias) {
-  if (!evidencias?.length) return true;
-  const permitidos = new Set(evidencias.map((e) => normalizar(e.nome)));
-  const h2s = [...String(artigo.conteudo || '').matchAll(/<h2[^>]*>([^<]+)/gi)]
-    .map((m) => m[1].trim())
-    .filter(Boolean);
-  const extras = h2s.filter((h) => !permitidos.has(normalizar(h)));
-  return extras.length === 0;
+  return listarH2Invalidos(artigo, evidencias).length === 0;
 }
 
 module.exports = {
   extrairEvidenciasDocumentais,
   obterEvidenciasVerificadas,
+  consolidarEvidencias,
   montarBlocoEvidencias,
   artigoRespeitaEvidencias,
+  listarH2Invalidos,
   sentencaConfirmaDivorcio
 };

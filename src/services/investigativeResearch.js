@@ -16,7 +16,8 @@ const { titulosSimilares } = require('../utils/topicMatch');
 const {
   obterEvidenciasVerificadas,
   montarBlocoEvidencias,
-  artigoRespeitaEvidencias
+  artigoRespeitaEvidencias,
+  consolidarEvidencias
 } = require('./evidenceVerification');
 
 const MAX_FONTES_APURAR = 55;
@@ -528,9 +529,10 @@ async function apurarPautaInvestigativa(palavrasChave, opcoes = {}) {
     }
   }
 
-  const nomesApurados = evidenciasVerificadas.map((e) => e.nome);
+  const evidenciasConsolidadas = consolidarEvidencias(evidenciasVerificadas);
+  const nomesApurados = evidenciasConsolidadas.map((e) => e.nome);
 
-  if (formato === 'listagem_nomes' && evidenciasVerificadas.length < MIN_NOMES_LISTAGEM) {
+  if (formato === 'listagem_nomes' && evidenciasConsolidadas.length < MIN_NOMES_LISTAGEM) {
     throw new Error(
       `Apuração: ${apurados.length} matérias analisadas (leitura profunda em até ${MAX_APURACAO_PROFUNDA}), ` +
       'mas nenhum caso com divórcio EXPLICITAMENTE documentado em trecho com URL. ' +
@@ -541,17 +543,17 @@ async function apurarPautaInvestigativa(palavrasChave, opcoes = {}) {
   const todasFontes = deduplicarFontesApuracao(apurados.flatMap((a) => a.fontesApuracao || []));
   const contextoApuracao = montarContextoInvestigativo(chave, apurados, {
     formato,
-    evidenciasVerificadas
+    evidenciasVerificadas: evidenciasConsolidadas
   });
 
   return {
     palavrasChave: chave,
     formatoInvestigativa: formato,
     nomesApurados,
-    evidenciasVerificadas,
+    evidenciasVerificadas: evidenciasConsolidadas,
     titulo: montarTituloPauta(chave),
     resumo: formato === 'listagem_nomes'
-      ? `${evidenciasVerificadas.length} caso(s) com divórcio documentado em ${apurados.length} matérias lidas.`
+      ? `${evidenciasConsolidadas.length} caso(s) com divórcio documentado em ${apurados.length} matérias lidas.`
       : `Matéria investigativa: ${apurados.length} fontes com leitura profunda.`,
     link: apurados.find((a) => a.link)?.link || null,
     nicho: chave.split(/[,;]+/)[0]?.trim() || chave,
