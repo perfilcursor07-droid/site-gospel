@@ -285,7 +285,9 @@ async function gerarArtigo({
   redeSocial,
   conteudoInternacional,
   investigativa,
-  palavrasChaveInvestigativa
+  palavrasChaveInvestigativa,
+  formatoInvestigativa,
+  nomesApurados
 }) {
   const hoje = new Date().toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
   const listaFontes = (fontesApuracao || [])
@@ -303,10 +305,19 @@ async function gerarArtigo({
 
   const prompt = `Você é repórter de portal de notícias gospel no Brasil. Estilo: G1/Globo — direto, humano, com furo no lead.
 ${investigativa ? `
-MODO: MATÉRIA INVESTIGATIVA — cruzamento de múltiplas fontes (portais, notícias, redes).
+MODO: MATÉRIA INVESTIGATIVA — cruzamento de múltiplas fontes (portais, notícias, web).
 TEMA OBRIGATÓRIO DO USUÁRIO: ${palavrasChaveInvestigativa || tituloReferencia || nicho || 'conforme pauta'}
-NÃO escreva sobre outro assunto, celebridade ou polêmica que não seja este tema — mesmo que apareça nas fontes.
-Sintetize fatos das fontes relevantes ao tema com redação original. O lead deve revelar o furo principal SOBRE ESTE ASSUNTO.
+${formatoInvestigativa === 'listagem_nomes' ? `
+FORMATO LISTAGEM ("quem são eles"):
+- Lead: quantos nomes foram CONFIRMADOS nas fontes e por que a lista importa.
+- Para CADA pessoa listada em NOMES CONFIRMADOS: um <h2> com o nome completo + <p> com contexto do divórcio/caso (só fatos das fontes).
+- NÃO use posts genéricos de redes, versículos bíblicos ou perfis aleatórios como se fossem pastores divorciados.
+- NÃO invente nomes, casos, datas nem declarações. Se faltar dado, diga "informação não confirmada nas fontes".
+NOMES PERMITIDOS (use APENAS estes): ${(nomesApurados || []).join('; ') || 'NENHUM — não invente'}
+` : `
+NÃO escreva sobre outro assunto que não seja o tema acima.
+Sintetize fatos das fontes relevantes com redação original. O lead deve revelar o furo principal SOBRE ESTE ASSUNTO.
+`}
 ` : ''}
 
 DATA: ${hoje} | SITE: ${nomeSite || 'Portal Gospel'}
@@ -319,19 +330,27 @@ ${listaFontes ? `FONTES (atribua genericamente, sem inventar entrevistas):\n${li
 ${blocoRegrasEditoriais(nomeSite)}
 ${investigativa ? `
 REGRAS INVESTIGATIVAS (OBRIGATÓRIO):
-- Cruze informações de várias fontes; destaque convergências e divergências quando relevante.
-- Lead com o furo mais impactante encontrado na apuração — não genérico.
-- Atribua fatos a "segundo relatos", "conforme publicações em portais gospel", "em postagem que circulou nas redes" etc.
-- Não invente declarações entre aspas nem entrevistas inexistentes.
-- Valor editorial: o que a redação descobriu ao cruzar as fontes que o leitor não veria em um único link.
+- Use SOMENTE fatos e nomes que constam explicitamente na pauta/fontes — ZERO invenção.
+- Proibido transformar posts genéricos de Instagram/Threads/TikTok em "casos de pastores divorciados" sem confirmação.
+- Proibido citar cantores, ordens religiosas estrangeiras ou perfis sem relação com o tema como substituto de nomes.
+- Atribua fatos genericamente ("segundo matérias em portais gospel", "conforme apuração").
+- Não invente declarações entre aspas, entrevistas nem "procurados pela reportagem" com respostas fabricadas.
+${formatoInvestigativa === 'listagem_nomes' ? '- Cada <h2> deve ser o nome real de um pastor/líder confirmado nas fontes.' : '- Valor editorial: cruzamento de fontes sobre o tema, sem desviar para outras polêmicas.'}
 ` : ''}
 
 ESTRUTURA OBRIGATÓRIA DA MATÉRIA:
+${formatoInvestigativa === 'listagem_nomes' ? `
+1. LEAD (1º <p>): apresente a lista e quantos nomes foram confirmados nas fontes.
+2. BLOCO POR PESSOA: <h2>Nome Completo</h2> + 1–2 <p> com contexto factual de cada um (só nomes confirmados).
+3. <h2>Contexto</h2> + 1–2 <p>: panorama sobre divórcio entre líderes evangélicos (sem generalizar além das fontes).
+4. FECHAMENTO (1 <p> curto).
+` : `
 1. LEAD (1º <p>): o furo — o que aconteceu e por que o leitor deve se importar AGORA.
 2. DESENVOLVIMENTO (3–4 <p>): fatos, contexto breve, repercussão na comunidade gospel.
 3. <h2> + 1–2 <p>: detalhes ou desdobramento do caso.
 4. <h2> + 1–2 <p>: impacto, reações ou próximos passos.
 5. FECHAMENTO (1 <p> curto): síntese sem repetir o lead.
+`}
 
 REGRAS DE ESCRITA:
 - ${IDEAL_MIN_PALAVRAS}–${IDEAL_MAX_PALAVRAS} palavras no corpo (nunca ultrapasse ${MAX_PALAVRAS_ARTIGO}).
@@ -360,7 +379,7 @@ Retorne APENAS JSON válido:
 }`;
 
   const systemMsg = investigativa
-    ? 'Repórter investigativo gospel brasileiro. Matéria de apuração cruzada com múltiplas fontes. E-E-A-T, people-first, furo de reportagem, zero plágio. Retorne somente JSON válido.'
+    ? 'Repórter investigativo gospel brasileiro. Zero invenção: só nomes e fatos presentes nas fontes. E-E-A-T, people-first, sem plágio. Retorne somente JSON válido.'
     : conteudoInternacional
     ? 'Redator investigativo gospel brasileiro. Fontes podem estar em outro idioma: traduza fatos e reescreva em português do Brasil com furo de reportagem. E-E-A-T, original, sem plágio. Retorne somente JSON válido.'
     : 'Redator investigativo gospel brasileiro. Conteúdo people-first, E-E-A-T, original, com furo de reportagem. Reportagem a partir de fontes externas: sim. Plágio: nunca. Matérias ENXUTAS e densas, não longas. Retorne somente JSON válido.';
@@ -370,7 +389,7 @@ Retorne APENAS JSON válido:
       { role: 'system', content: systemMsg },
       { role: 'user', content: prompt }
     ],
-    { json: true, temperature: 0.78, maxTokens: 5000 }
+    { json: true, temperature: investigativa ? 0.45 : 0.78, maxTokens: 5000 }
   );
 
   let artigo = normalizarArtigo(resposta);

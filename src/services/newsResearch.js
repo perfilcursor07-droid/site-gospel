@@ -1047,6 +1047,7 @@ module.exports = {
   buscarRedesSociais,
   buscarPortaisGospel,
   buscarWebGospel,
+  buscarBraveWeb,
   apurarTopico,
   itemEhRecente,
   itemQualidadeValida

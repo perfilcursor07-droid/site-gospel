@@ -20,7 +20,7 @@ const {
   MIN_PALAVRAS_ARTIGO,
   MAX_PALAVRAS_ARTIGO
 } = require('../../services/editorialGuidelines');
-const { apurarPautaInvestigativa } = require('../../services/investigativeResearch');
+const { apurarPautaInvestigativa, artigoCitaNomesApurados } = require('../../services/investigativeResearch');
 
 function avisoQualidadeArtigo(artigo) {
   if (artigo._avisoQualidade) return artigo._avisoQualidade;
@@ -581,8 +581,17 @@ router.post('/investigativa/gerar', async (req, res) => {
       redeSocial: pauta.redeSocial,
       conteudoInternacional: pauta.fonteInternacional,
       investigativa: true,
-      palavrasChaveInvestigativa: pauta.palavrasChave
+      palavrasChaveInvestigativa: pauta.palavrasChave,
+      formatoInvestigativa: pauta.formatoInvestigativa,
+      nomesApurados: pauta.nomesApurados
     });
+
+    if (pauta.formatoInvestigativa === 'listagem_nomes' && !artigoCitaNomesApurados(artigo, pauta.nomesApurados)) {
+      return responderJson(res, 400, {
+        ok: false,
+        erro: `A IA não incluiu os nomes confirmados na apuração (${pauta.nomesApurados.join(', ')}). Tente novamente ou refine as palavras-chave.`
+      });
+    }
 
     const duplicadoGerado = posts.find((p) => titulosSimilares(p.titulo, artigo.titulo));
     if (duplicadoGerado) {
@@ -616,6 +625,7 @@ router.post('/investigativa/gerar', async (req, res) => {
       },
       fontes: pauta.fontesResumo,
       contagemFontes: pauta.contagemFontes,
+      nomesApurados: pauta.nomesApurados,
       avisoQualidade: avisoQualidadeArtigo(artigo),
       palavras: artigo._palavras || null,
       mensagem: `Matéria investigativa salva como rascunho. Adicione a imagem de capa antes de publicar.${pauta.contagemFontes ? ` Apuradas ${pauta.contagemFontes} fontes.` : ''}`
