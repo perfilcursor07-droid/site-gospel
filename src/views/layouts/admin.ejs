@@ -13,7 +13,7 @@
 <body class="admin" id="admin-body">
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-topo">
-      <a href="/admin" class="sidebar-brand">
+      <a href="/admin" class="sidebar-brand" title="<%= config.site_nome || 'Painel Admin' %>">
         <% if (config.logo) { %>
           <img src="<%= config.logo %>" alt="<%= config.site_nome || 'Site Gospel' %>" class="sidebar-brand-img">
         <% } else { %>
@@ -28,7 +28,7 @@
 
     <% const path = typeof adminPath !== 'undefined' ? adminPath : ''; %>
     <nav id="sidebar-nav" class="sidebar-nav">
-      <p class="sidebar-secao">Menu</p>
+      <p class="sidebar-secao">Principal</p>
       <a href="/admin" class="nav-item <%= path === '/' ? 'ativo' : '' %>" data-tooltip="Dashboard">
         <span class="nav-icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></span>
         <span class="nav-texto">Dashboard</span>
@@ -47,7 +47,9 @@
           <span class="nav-texto">Categorias</span>
         </a>
       <% } %>
+
       <% if (usuarioLogado.papel === 'administrador') { %>
+        <p class="sidebar-secao">Sistema</p>
         <a href="/admin/usuarios" class="nav-item <%= path.startsWith('/usuarios') ? 'ativo' : '' %>" data-tooltip="Usuários">
           <span class="nav-icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
           <span class="nav-texto">Usuários</span>
@@ -58,7 +60,7 @@
         </a>
       <% } %>
 
-      <p class="sidebar-secao">Ações</p>
+      <p class="sidebar-secao">Atalhos</p>
       <a href="/" target="_blank" class="nav-item" data-tooltip="Ver site">
         <span class="nav-icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></span>
         <span class="nav-texto">Ver site</span>
@@ -70,6 +72,13 @@
     </nav>
 
     <div class="sidebar-rodape">
+      <div class="sidebar-user">
+        <span class="sidebar-user-avatar" aria-hidden="true"><%= usuarioLogado.nome.charAt(0).toUpperCase() %></span>
+        <div class="sidebar-user-info">
+          <strong class="nav-texto"><%= usuarioLogado.nome %></strong>
+          <span class="nav-texto sidebar-user-papel"><%= usuarioLogado.papel %></span>
+        </div>
+      </div>
       <button type="button" class="sidebar-collapse" id="sidebar-collapse" aria-label="Recolher menu">
         <svg class="icone-collapse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
         <span class="nav-texto">Recolher menu</span>
