@@ -2,6 +2,7 @@ const { Op } = require('sequelize');
 const { IaMonitorAuto } = require('../models');
 const { pesquisarNichos } = require('./newsResearch');
 const { agendarTopicos, prepararTopicosParaFila } = require('./iaFilaPublicacao');
+const { parseInicioFimBrasil } = require('../utils/brasilDatetime');
 
 let processandoMonitores = false;
 
@@ -41,10 +42,10 @@ async function criarMonitor({
   const palavras = String(palavrasChave || '').trim();
   if (!palavras) throw new Error('Informe ao menos uma palavra-chave para monitorar.');
 
-  const inicio = inicioEm ? new Date(inicioEm) : new Date();
+  const inicio = inicioEm ? (parseInicioFimBrasil(inicioEm) || new Date(inicioEm)) : new Date();
   if (Number.isNaN(inicio.getTime())) throw new Error('Data de início inválida.');
 
-  const fim = fimEm ? new Date(fimEm) : null;
+  const fim = fimEm ? (parseInicioFimBrasil(fimEm) || new Date(fimEm)) : null;
   if (fim && Number.isNaN(fim.getTime())) throw new Error('Data de fim inválida.');
   if (fim && fim <= inicio) throw new Error('A data de fim deve ser posterior ao início.');
 

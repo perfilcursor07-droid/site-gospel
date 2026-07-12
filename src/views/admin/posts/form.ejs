@@ -207,8 +207,8 @@
             </div>
             <div class="ia-opcoes-linha ia-opcoes-linha-intervalo ia-inicio-custom-linha" id="ia-inicio-custom-linha" hidden>
               <div class="ia-campo">
-                <label for="ia-inicio-custom">Data e hora de início</label>
-                <input type="datetime-local" id="ia-inicio-custom" class="ia-input-datetime">
+                <label for="ia-inicio-custom">Data e hora de início <span class="ia-fuso-dica">(Brasília)</span></label>
+                <input type="datetime-local" id="ia-inicio-custom" class="ia-input-datetime" title="Horário de Brasília (BRT)">
               </div>
             </div>
             <p class="dica ia-inicio-dica" id="ia-inicio-dica" hidden></p>
@@ -332,12 +332,12 @@
           </div>
           <div class="ia-opcoes-linha ia-opcoes-linha-intervalo">
             <div class="ia-campo">
-              <label for="ia-auto-inicio">Início</label>
-              <input type="datetime-local" id="ia-auto-inicio" class="ia-input-datetime">
+              <label for="ia-auto-inicio">Início <span class="ia-fuso-dica">(Brasília)</span></label>
+              <input type="datetime-local" id="ia-auto-inicio" class="ia-input-datetime" title="Horário de Brasília (BRT)">
             </div>
             <div class="ia-campo">
-              <label for="ia-auto-fim">Fim (opcional)</label>
-              <input type="datetime-local" id="ia-auto-fim" class="ia-input-datetime">
+              <label for="ia-auto-fim">Fim (opcional) <span class="ia-fuso-dica">(Brasília)</span></label>
+              <input type="datetime-local" id="ia-auto-fim" class="ia-input-datetime" title="Horário de Brasília (BRT)">
             </div>
           </div>
           <p class="dica ia-plano-publicacao" id="ia-auto-plano"></p>
@@ -574,6 +574,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
+<script src="/js/brasil-datetime.js"></script>
 <script>
 (function () {
   var titulo = document.getElementById('campo-titulo');
@@ -1023,11 +1024,12 @@
     }
   }
 
-  function formatarDataHoraLocal(iso) {
-    if (!iso) return '';
-    return new Date(iso).toLocaleString('pt-BR', {
-      day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
-    });
+  function formatarDataHoraLocal(val) {
+    return (window.BrasilDatetime && BrasilDatetime.formatar(val)) || '';
+  }
+
+  function isoDatetimeLocalBr(val) {
+    return (window.BrasilDatetime && BrasilDatetime.datetimeLocalParaIso(val)) || new Date(val).toISOString();
   }
 
   function atualizarInicioIntervalo() {
@@ -1047,9 +1049,7 @@
       }
     }
     if (modo === 'custom' && inputCustom && !inputCustom.value) {
-      var d = new Date(Date.now() + 60 * 60 * 1000);
-      d.setMinutes(Math.ceil(d.getMinutes() / 5) * 5, 0, 0);
-      inputCustom.value = d.toISOString().slice(0, 16);
+      BrasilDatetime.preencherInput(inputCustom, 1);
     }
     atualizarPlanoPublicacao();
   }
@@ -1093,10 +1093,7 @@
   var autoPalavras = document.getElementById('ia-auto-palavras');
 
   function definirDatetimePadrao(input, offsetHoras) {
-    if (!input || input.value) return;
-    var d = new Date(Date.now() + (offsetHoras || 0) * 60 * 60 * 1000);
-    d.setMinutes(Math.ceil(d.getMinutes() / 5) * 5, 0, 0);
-    input.value = d.toISOString().slice(0, 16);
+    if (window.BrasilDatetime) BrasilDatetime.preencherInput(input, offsetHoras || 0);
   }
 
   function modoBuscaAtual() {
@@ -1125,7 +1122,7 @@
     var termo = palavras.split(',')[0].trim();
     var inicio = autoInicio?.value ? formatarDataHoraLocal(autoInicio.value) : 'agora';
     var fim = autoFim?.value ? formatarDataHoraLocal(autoFim.value) : 'sem limite';
-    autoPlano.textContent = 'A cada ' + formatarTempo(min) + ', buscar até ' + qtd + ' assunto(s) recente(s) sobre "' + termo + '" e publicar automaticamente (' + inicio + ' → ' + fim + ').';
+    autoPlano.textContent = 'A cada ' + formatarTempo(min) + ', buscar até ' + qtd + ' assunto(s) recente(s) sobre "' + termo + '" e publicar automaticamente (' + inicio + ' → ' + fim + ', horário de Brasília).';
   }
 
   async function carregarMonitores() {
@@ -1223,7 +1220,7 @@
         mostrarStatus('Informe a data de início.', 'erro');
         return;
       }
-      if (autoFim?.value && new Date(autoFim.value) <= new Date(autoInicio.value)) {
+      if (autoFim?.value && BrasilDatetime.datetimeLocalParaDate(autoFim.value) <= BrasilDatetime.datetimeLocalParaDate(autoInicio.value)) {
         mostrarStatus('A data de fim deve ser posterior ao início.', 'erro');
         return;
       }
@@ -1238,8 +1235,8 @@
           status: document.getElementById('ia-auto-status')?.value || 'publicado',
           quantidadePorCiclo: document.getElementById('ia-auto-qtd')?.value || 1,
           minutosIntervalo: document.getElementById('ia-auto-intervalo')?.value || 5,
-          inicioEm: new Date(autoInicio.value).toISOString(),
-          fimEm: autoFim?.value ? new Date(autoFim.value).toISOString() : null
+          inicioEm: isoDatetimeLocalBr(autoInicio.value),
+          fimEm: autoFim?.value ? isoDatetimeLocalBr(autoFim.value) : null
         }, opcoesBuscaAuto());
         var data = await chamarApi('/admin/posts/ia/monitor-criar', payload);
         mostrarStatus(data.mensagem, 'sucesso');
@@ -1488,7 +1485,7 @@
     if (modoInicio === 'custom') {
       var val = document.getElementById('ia-inicio-custom')?.value;
       if (!val) throw new Error('Informe a data e hora de início.');
-      payload.inicioEm = new Date(val).toISOString();
+      payload.inicioEm = isoDatetimeLocalBr(val);
     }
     return chamarApi('/admin/posts/ia/agendar-fila', Object.assign(payload, opcoesBuscaIa()));
   }

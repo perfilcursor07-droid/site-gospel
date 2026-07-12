@@ -1540,6 +1540,7 @@ body.modal-capa-aberto { overflow: hidden; }
   margin: 0 0 12px;
 }
 .ia-dica-status { margin: 6px 0 0; font-size: .72rem; }
+.ia-fuso-dica { font-size: .72rem; font-weight: 400; color: #6b7280; }
 
 .ia-modo-opcoes-compacto { gap: 8px; }
 .ia-modo-opcoes-compacto .ia-modo-opcao { padding: 10px 12px; }

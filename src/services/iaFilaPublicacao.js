@@ -5,6 +5,7 @@ const { apurarTopico } = require('./articleSource');
 const { obterImagemParaArtigo } = require('./imageFetcher');
 const { encontrarSimilar, marcarTopicosPublicados, deduplicarTopicos } = require('../utils/topicMatch');
 const { notificarPublicacao } = require('./indexacao');
+const { parseInicioFimBrasil } = require('../utils/brasilDatetime');
 
 let processando = false;
 
@@ -124,7 +125,8 @@ async function calcularInicioAgendamento({ autorId, modoInicio, inicioEm, msInte
   const agora = Date.now();
 
   if (modoInicio === 'custom' && inicioEm) {
-    const custom = new Date(inicioEm).getTime();
+    const customDate = parseInicioFimBrasil(inicioEm) || new Date(inicioEm);
+    const custom = customDate.getTime();
     if (!Number.isNaN(custom)) return Math.max(agora, custom);
   }
 
