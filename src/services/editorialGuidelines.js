@@ -64,6 +64,35 @@ function sortearEstruturaArtigo() {
   return estruturas[Math.floor(Math.random() * estruturas.length)];
 }
 
+/**
+ * Sorteia o estilo do lead (1º parágrafo) — evita que todas as matérias
+ * abram do mesmo jeito ("Fulano fez X nesta terça...").
+ */
+function sortearEstiloLead() {
+  const estilos = [
+    'Abra pelo FATO direto: o que aconteceu, quem e onde, em uma frase forte.',
+    'Abra pela CONSEQUÊNCIA/repercussão: o efeito que o fato causou, e só depois explique o que houve.',
+    'Abra por um DETALHE concreto e específico das fontes (número, local, data, frase dita) e amarre ao fato principal.',
+    'Abra pelo CONTRASTE: o que se esperava versus o que de fato aconteceu.',
+    'Abra situando o LEITOR no momento: quando e onde o fato veio à tona, e por que importa agora.'
+  ];
+  return estilos[Math.floor(Math.random() * estilos.length)];
+}
+
+/**
+ * Sorteia o estilo da manchete — varia o formato do título entre matérias.
+ */
+function sortearEstiloTitulo() {
+  const estilos = [
+    'Manchete direta e factual (sujeito + verbo + fato).',
+    'Manchete com o dado ou detalhe mais forte da apuração em evidência.',
+    'Manchete de duas partes separadas por ponto e vírgula ou dois-pontos (fato; desdobramento).',
+    'Manchete começando pelo desdobramento ou consequência do fato.',
+    'Manchete com citação indireta ou termo-chave entre aspas simples, se houver fala relevante nas fontes.'
+  ];
+  return estilos[Math.floor(Math.random() * estilos.length)];
+}
+
 const FRASES_PROIBIDAS_IA = [
   'é importante ressaltar', 'vale ressaltar', 'vale destacar', 'vale lembrar',
   'nesse sentido', 'diante disso', 'em suma', 'em resumo', 'por fim',
@@ -142,5 +171,7 @@ module.exports = {
   mensagemAvisoQualidade,
   sortearFaixaPalavras,
   sortearEstruturaArtigo,
+  sortearEstiloLead,
+  sortearEstiloTitulo,
   FRASES_PROIBIDAS_IA
 };

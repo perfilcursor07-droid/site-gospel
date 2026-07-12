@@ -1067,6 +1067,8 @@ async function pesquisarNichos(palavrasChave, quantidadePorNicho = 5, opcoes = {
 
 module.exports = {
   pesquisarNichos,
+  buscarEmAlta,
+  buscarGoogleNews24h,
   buscarGoogleNews,
   buscarGoogleNewsHistorico,
   buscarBraveNews,

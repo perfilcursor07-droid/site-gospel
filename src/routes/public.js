@@ -3,8 +3,6 @@ const { Op } = require('sequelize');
 const { Post, Page, Category, Comment } = require('../models');
 const { dividirConteudoParaLeiaMais } = require('../utils/postContent');
 const { gerarCaptcha, validarCaptcha } = require('../utils/commentCaptcha');
-const { buscarHibrida } = require('../services/braveSearch');
-const { braveDisponivel } = require('../services/braveApi');
 const {
   gerarSitemapPrincipal,
   gerarSitemapNews,
@@ -306,26 +304,14 @@ router.get('/busca', async (req, res, next) => {
           },
           include: includePadrao,
           order: [['publicadoEm', 'DESC']],
-          limit: 20
+          limit: 40
         })
       : [];
-
-    let buscaWeb = { noticias: [], web: [] };
-    if (q && q.length >= 2 && braveDisponivel()) {
-      try {
-        buscaWeb = await buscarHibrida(q);
-      } catch (e) {
-        console.warn('buscarHibrida:', e.message);
-      }
-    }
 
     res.render('site/busca', {
       titulo: 'Busca',
       posts,
-      q,
-      noticiasWeb: buscaWeb.noticias,
-      resultadosWeb: buscaWeb.web,
-      buscaBraveAtiva: braveDisponivel()
+      q
     });
   } catch (e) { next(e); }
 });

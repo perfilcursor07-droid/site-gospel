@@ -11,6 +11,8 @@ const {
   mensagemAvisoQualidade,
   sortearFaixaPalavras,
   sortearEstruturaArtigo,
+  sortearEstiloLead,
+  sortearEstiloTitulo,
   FRASES_PROIBIDAS_IA
 } = require('./editorialGuidelines');
 
@@ -316,6 +318,8 @@ async function gerarArtigo({
   const evidenciasLista = deduplicarEvidencias(evidenciasVerificadas);
   const faixaSorteada = sortearFaixaPalavras();
   const estruturaSorteada = sortearEstruturaArtigo();
+  const leadSorteado = sortearEstiloLead();
+  const tituloSorteado = sortearEstiloTitulo();
   const listaFontes = (fontesApuracao || [])
     .map((f, i) => `${i + 1}. ${f.veiculo || 'Fonte'}: ${f.titulo || ''}${f.url ? ` (${f.url})` : ''}`)
     .join('\n');
@@ -376,7 +380,7 @@ ${formatoInvestigativa === 'listagem_nomes' ? `
 3. OPCIONAL: <h2>Contexto</h2> + 1–2 <p> sobre panorama geral (sem citar pessoas não confirmadas).
 4. FECHAMENTO (1 <p> curto).
 ` : `
-1. LEAD (1º <p>): o furo — o que aconteceu e por que o leitor deve se importar AGORA.
+1. LEAD (1º <p>): o furo — o que aconteceu e por que o leitor deve se importar AGORA. Estilo do lead DESTA matéria: ${leadSorteado}
 2. DESENVOLVIMENTO (3–4 <p>): fatos, contexto breve, repercussão na comunidade gospel.
 3. VARIAÇÃO DESTA MATÉRIA: ${estruturaSorteada}
 4. FECHAMENTO (1 <p> curto): fato final, desdobramento ou expectativa — NUNCA resumo do texto.
@@ -398,7 +402,7 @@ IDIOMA DA FONTE (IMPORTANTE):
 
 Retorne APENAS JSON válido:
 {
-  "titulo": "manchete com furo, máx 90 caracteres, sem clickbait",
+  "titulo": "manchete com furo, máx 90 caracteres, sem clickbait. Formato desta manchete: ${tituloSorteado}",
   "resumo": "linha fina jornalística, máx 200 caracteres",
   "conteudo": "HTML com <p> e <h2> — entre ${faixaSorteada.min} e ${faixaSorteada.max} palavras",
   "meta_title": "SEO máx 60 caracteres",

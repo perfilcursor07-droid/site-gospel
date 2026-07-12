@@ -3,6 +3,7 @@ const { Post } = require('../../models');
 const { permitir } = require('../../middlewares/auth');
 const { gerarArtigo } = require('../../services/deepseek');
 const { pesquisarNichos, apurarTopico } = require('../../services/newsResearch');
+const { buscarEmAltaAgora } = require('../../services/trendingGospel');
 const { obterImagemParaArtigo, avisoFalhaImagem } = require('../../services/imageFetcher');
 const { marcarTopicosPublicados, deduplicarTopicos, encontrarSimilar, titulosSimilares } = require('../../utils/topicMatch');
 const { agendarTopicos, prepararTopicosParaFila, obterResumoFila, listarErrosRecentesFila, limparErrosAntigosFila, cancelarFilaPendente, obterProximoSlotFila } = require('../../services/iaFilaPublicacao');
@@ -126,6 +127,19 @@ router.post('/pesquisar', async (req, res) => {
     responderJson(res, 200, { ok: true, topicos: topicosMarcados });
   } catch (e) {
     responderJson(res, 400, { ok: false, erro: e.message });
+  }
+});
+
+router.post('/em-alta', async (req, res) => {
+  try {
+    const { palavrasExtras, horas } = req.body || {};
+    const posts = await carregarPostsExistentes();
+    const { topicos, totalAnalisado } = await buscarEmAltaAgora(palavrasExtras, { horas });
+    const marcados = marcarTopicosPublicados(topicos, posts);
+    responderJson(res, 200, { ok: true, topicos: marcados, totalAnalisado });
+  } catch (e) {
+    console.error('Erro em-alta:', e);
+    responderJson(res, 500, { ok: false, erro: e.message });
   }
 });
 

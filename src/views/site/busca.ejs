@@ -10,9 +10,7 @@
   }
 
   const totalLocal = posts.length;
-  const totalWeb = (typeof noticiasWeb !== 'undefined' ? noticiasWeb.length : 0)
-    + (typeof resultadosWeb !== 'undefined' ? resultadosWeb.length : 0);
-  const totalGeral = totalLocal + totalWeb;
+  const nomeSite = config.site_nome || 'O Buxixo Gospel';
 %>
 <section>
   <h1 class="flex items-center gap-3 text-2xl font-extrabold text-gray-900 mb-2">
@@ -20,16 +18,12 @@
   </h1>
   <% if (q) { %>
     <p class="text-sm text-gray-500 mb-6">
-      <%= totalGeral %> resultado<%= totalGeral === 1 ? '' : 's' %>
-      <% if (totalLocal && totalWeb) { %> · <%= totalLocal %> no site · <%= totalWeb %> na web<% } %>
+      <%= totalLocal %> resultado<%= totalLocal === 1 ? '' : 's' %> em <%= nomeSite %>
     </p>
   <% } %>
 
   <% if (posts.length) { %>
   <div class="mb-8">
-    <h2 class="busca-secao-titulo">
-      <span class="post-secao-barra"></span> No <%= config.site_nome || 'site' %>
-    </h2>
     <div class="bg-white rounded-lg border border-gray-200 divide-y divide-gray-100">
       <% posts.forEach(function (post) { %>
         <article class="group">
@@ -49,60 +43,13 @@
       <% }) %>
     </div>
   </div>
-  <% } %>
-
-  <% if (typeof noticiasWeb !== 'undefined' && noticiasWeb.length) { %>
-  <div class="mb-8">
-    <h2 class="busca-secao-titulo">
-      <span class="post-secao-barra"></span> Notícias gospel na web
-    </h2>
-    <div class="busca-web-lista">
-      <% noticiasWeb.forEach(function (item) { %>
-        <article class="busca-web-item">
-          <a href="<%= item.link %>" target="_blank" rel="noopener noreferrer" class="busca-web-link">
-            <div class="busca-web-corpo">
-              <% if (item.veiculo) { %><span class="busca-web-veiculo"><%= item.veiculo %></span><% } %>
-              <h3 class="busca-web-titulo"><%- destacar(item.titulo) %></h3>
-              <% if (item.resumo) { %><p class="busca-web-resumo"><%- destacar(item.resumo) %></p><% } %>
-            </div>
-            <span class="busca-web-externo" aria-hidden="true">↗</span>
-          </a>
-        </article>
-      <% }) %>
-    </div>
-  </div>
-  <% } %>
-
-  <% if (typeof resultadosWeb !== 'undefined' && resultadosWeb.length) { %>
-  <div class="mb-8">
-    <h2 class="busca-secao-titulo">
-      <span class="post-secao-barra"></span> Mais resultados na internet
-    </h2>
-    <div class="busca-web-lista">
-      <% resultadosWeb.forEach(function (item) { %>
-        <article class="busca-web-item">
-          <a href="<%= item.link %>" target="_blank" rel="noopener noreferrer" class="busca-web-link">
-            <div class="busca-web-corpo">
-              <% if (item.veiculo) { %><span class="busca-web-veiculo"><%= item.veiculo %></span><% } %>
-              <h3 class="busca-web-titulo"><%- destacar(item.titulo) %></h3>
-              <% if (item.resumo) { %><p class="busca-web-resumo"><%- destacar(item.resumo) %></p><% } %>
-            </div>
-            <span class="busca-web-externo" aria-hidden="true">↗</span>
-          </a>
-        </article>
-      <% }) %>
-    </div>
-  </div>
-  <% } %>
-
-  <% if (!posts.length && !(noticiasWeb && noticiasWeb.length) && !(resultadosWeb && resultadosWeb.length)) { %>
+  <% } else { %>
   <div class="bg-white rounded-lg border border-gray-200 p-10 text-center">
     <p class="text-4xl mb-3">🔍</p>
     <p class="text-lg font-bold text-gray-700"><%= q ? 'Nenhum resultado encontrado' : 'Digite algo para buscar' %></p>
     <p class="mt-1 text-sm text-gray-500">
       <% if (q) { %>
-        Tente outras palavras ou navegue pelas categorias no menu.
-        <% if (!buscaBraveAtiva) { %> Configure a Brave Search API para buscar também na web.<% } %>
+        Tente outras palavras ou abra o menu para navegar pelas categorias.
       <% } else { %>
         Use o campo de busca no topo da página.
       <% } %>

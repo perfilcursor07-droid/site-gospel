@@ -13,6 +13,7 @@
       <button type="button" class="modo-tab ativa" data-modo="manual" role="tab">Escrever</button>
       <button type="button" class="modo-tab" data-modo="ia" role="tab">Gerar com IA</button>
       <button type="button" class="modo-tab" data-modo="investigativa" role="tab">Matéria investigativa</button>
+      <button type="button" class="modo-tab modo-tab--alta" data-modo="em-alta" role="tab">🔥 Em alta agora</button>
     </div>
     <% } %>
   </header>
@@ -421,6 +422,63 @@
     <p class="dica inv-aviso-rascunho">A matéria é salva sempre como <strong>rascunho</strong> para você revisar o texto e adicionar a imagem de capa antes de publicar.</p>
 
     <div id="inv-status-msg" class="ia-status-msg" hidden></div>
+  </section>
+
+  <section class="painel-ia painel-em-alta modo-painel" id="painel-em-alta" hidden>
+    <div class="painel-ia-intro">
+      <div>
+        <h2>Em alta agora no nicho gospel</h2>
+        <p class="dica">Radar do que está bombando AGORA em portais, Google News, Google Trends e redes sociais. Quanto mais veículos falando do mesmo assunto, mais alto ele aparece. Escolha um tema e a IA apura mais fontes e escreve uma matéria original, exclusiva e com furo — padrão Google E-E-A-T, sem plágio.</p>
+      </div>
+      <span class="badge-ia badge-ia--alta">Radar · Tempo real</span>
+    </div>
+
+    <div class="ia-opcoes-linha ia-opcoes-busca">
+      <div class="ia-campo">
+        <label for="alta-palavras">Filtrar por termos (opcional)</label>
+        <input type="text" id="alta-palavras" class="ia-input-grande" placeholder="Ex: pastor, worship, congresso — deixe vazio para radar geral">
+      </div>
+      <div class="ia-campo ia-campo-compacto">
+        <label for="alta-horas">Janela</label>
+        <select id="alta-horas">
+          <option value="24" selected>Últimas 24 horas</option>
+          <option value="48">Últimas 48 horas</option>
+        </select>
+      </div>
+      <div class="ia-campo ia-campo-compacto">
+        <label for="alta-categoria">Categoria</label>
+        <select id="alta-categoria">
+          <option value="">Sem categoria</option>
+          <% categorias.forEach(function (c) { %>
+            <option value="<%= c.id %>"><%= c.nome %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div class="ia-campo ia-campo-compacto">
+        <label for="alta-status">Salvar como</label>
+        <select id="alta-status">
+          <option value="rascunho" selected>Rascunho (revisar antes)</option>
+          <option value="publicado">Publicado direto</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="ia-passo-acoes ia-passo-acoes-inicio">
+      <button type="button" class="btn btn-primario btn-ia-principal" id="btn-alta-buscar">Ver o que está em alta agora</button>
+    </div>
+
+    <div id="alta-lista-wrap" hidden>
+      <div class="ia-lista-header">
+        <label class="checkbox"><input type="checkbox" id="alta-selecionar-todos"> Selecionar todos</label>
+        <span class="dica" id="alta-resumo-busca"></span>
+      </div>
+      <div id="alta-lista" class="alta-lista"></div>
+      <div class="ia-passo-acoes">
+        <button type="button" class="btn btn-primario btn-ia-principal" id="btn-alta-gerar" disabled>Gerar matérias dos selecionados</button>
+      </div>
+    </div>
+
+    <div id="alta-status-msg" class="ia-status-msg" hidden></div>
   </section>
   <% } %>
 
@@ -915,6 +973,7 @@
   var modoTabs = document.querySelectorAll('.modo-tab');
   var painelIa = document.getElementById('painel-ia');
   var painelInv = document.getElementById('painel-investigativa');
+  var painelAlta = document.getElementById('painel-em-alta');
 
   modoTabs.forEach(function (tab) {
     tab.addEventListener('click', function () {
@@ -922,6 +981,7 @@
       modoTabs.forEach(function (t) { t.classList.toggle('ativa', t === tab); });
       painelIa.hidden = modo !== 'ia';
       if (painelInv) painelInv.hidden = modo !== 'investigativa';
+      if (painelAlta) painelAlta.hidden = modo !== 'em-alta';
       formPost.classList.toggle('ativa', modo === 'manual');
       formPost.hidden = modo !== 'manual';
     });
@@ -1774,6 +1834,140 @@
 
   if (new URLSearchParams(window.location.search).get('modo') === 'investigativa' && modoTabs[2]) {
     modoTabs[2].click();
+  }
+
+  /* ── Em alta agora ── */
+  var altaTopicos = [];
+  var btnAltaBuscar = document.getElementById('btn-alta-buscar');
+  var btnAltaGerar = document.getElementById('btn-alta-gerar');
+  var altaLista = document.getElementById('alta-lista');
+  var altaListaWrap = document.getElementById('alta-lista-wrap');
+  var altaStatusMsg = document.getElementById('alta-status-msg');
+  var altaSelecionarTodos = document.getElementById('alta-selecionar-todos');
+
+  function mostrarAltaStatus(texto, tipo) {
+    if (!altaStatusMsg) return;
+    altaStatusMsg.hidden = false;
+    altaStatusMsg.className = 'ia-status-msg ia-status-' + (tipo || 'info');
+    altaStatusMsg.textContent = texto;
+  }
+
+  function escaparHtml(s) {
+    var d = document.createElement('div');
+    d.textContent = s || '';
+    return d.innerHTML;
+  }
+
+  function atualizarBotaoAltaGerar() {
+    if (!btnAltaGerar) return;
+    var marcados = altaLista.querySelectorAll('input[type="checkbox"]:checked:not(:disabled)').length;
+    btnAltaGerar.disabled = marcados === 0;
+    btnAltaGerar.textContent = marcados > 0
+      ? 'Gerar ' + marcados + ' matéria(s) dos selecionados'
+      : 'Gerar matérias dos selecionados';
+  }
+
+  function renderizarAltaLista(topicos) {
+    altaLista.innerHTML = '';
+    topicos.forEach(function (t, idx) {
+      var card = document.createElement('label');
+      card.className = 'alta-card' + (t.jaPublicado ? ' alta-card--publicado' : '');
+      var badges = '';
+      if (t.sinalTrends) badges += '<span class="alta-badge alta-badge--trend">Google Trends</span>';
+      if (t.sinalRedes) badges += '<span class="alta-badge alta-badge--rede">Redes sociais</span>';
+      if (t.contagemFontes > 1) badges += '<span class="alta-badge">' + t.contagemFontes + ' fontes</span>';
+      if (t.jaPublicado) badges += '<span class="alta-badge alta-badge--pub">Já publicado</span>';
+      card.innerHTML =
+        '<input type="checkbox" data-idx="' + idx + '"' + (t.jaPublicado ? ' disabled' : '') + '>' +
+        '<span class="alta-rank">#' + (t.posicao || idx + 1) + '</span>' +
+        '<span class="alta-info">' +
+          '<strong>' + escaparHtml(t.titulo) + '</strong>' +
+          (t.resumo ? '<small>' + escaparHtml(t.resumo).slice(0, 180) + '</small>' : '') +
+          '<span class="alta-meta">' + escaparHtml((t.veiculos || []).join(' · ') || t.fonte || '') + '</span>' +
+          '<span class="alta-badges">' + badges + '</span>' +
+        '</span>';
+      altaLista.appendChild(card);
+    });
+    altaLista.querySelectorAll('input[type="checkbox"]').forEach(function (cb) {
+      cb.addEventListener('change', atualizarBotaoAltaGerar);
+    });
+    atualizarBotaoAltaGerar();
+  }
+
+  if (btnAltaBuscar) {
+    btnAltaBuscar.addEventListener('click', async function () {
+      setCarregando(btnAltaBuscar, true);
+      mostrarAltaStatus('Varrendo portais, Google News, Trends e redes sociais — isso leva ~30–60 segundos…', 'info');
+      try {
+        var data = await chamarApi('/admin/posts/ia/em-alta', {
+          palavrasExtras: document.getElementById('alta-palavras')?.value || '',
+          horas: document.getElementById('alta-horas')?.value || '24'
+        });
+        altaTopicos = data.topicos || [];
+        if (!altaTopicos.length) {
+          mostrarAltaStatus('Nenhum assunto forte em alta encontrado agora. Tente novamente em alguns minutos ou amplie a janela para 48h.', 'erro');
+          altaListaWrap.hidden = true;
+          return;
+        }
+        renderizarAltaLista(altaTopicos);
+        altaListaWrap.hidden = false;
+        var resumoBusca = document.getElementById('alta-resumo-busca');
+        if (resumoBusca) resumoBusca.textContent = altaTopicos.length + ' assunto(s) em alta, de ' + (data.totalAnalisado || 0) + ' publicações analisadas.';
+        mostrarAltaStatus('Radar atualizado. Marque os assuntos e clique em gerar — a IA apura mais fontes e escreve matéria original com furo.', 'sucesso');
+      } catch (e) {
+        mostrarAltaStatus(e.message, 'erro');
+      } finally {
+        setCarregando(btnAltaBuscar, false, 'Ver o que está em alta agora');
+      }
+    });
+  }
+
+  if (altaSelecionarTodos) {
+    altaSelecionarTodos.addEventListener('change', function () {
+      altaLista.querySelectorAll('input[type="checkbox"]:not(:disabled)').forEach(function (cb) {
+        cb.checked = altaSelecionarTodos.checked;
+      });
+      atualizarBotaoAltaGerar();
+    });
+  }
+
+  if (btnAltaGerar) {
+    btnAltaGerar.addEventListener('click', async function () {
+      var selecionados = [];
+      altaLista.querySelectorAll('input[type="checkbox"]:checked:not(:disabled)').forEach(function (cb) {
+        var t = altaTopicos[parseInt(cb.dataset.idx, 10)];
+        if (t) selecionados.push(t);
+      });
+      if (!selecionados.length) return;
+      var statusAlvo = document.getElementById('alta-status')?.value || 'rascunho';
+      if (!confirm('Gerar ' + selecionados.length + ' matéria(s) a partir dos assuntos em alta?\n\nA IA lê as fontes, apura mais informações e escreve texto original e exclusivo. Pode levar 1–3 minutos por matéria.')) return;
+
+      setCarregando(btnAltaGerar, true);
+      mostrarAltaStatus('IA apurando e escrevendo as matérias — aguarde…', 'info');
+      try {
+        var data = await chamarApi('/admin/posts/ia/gerar-lote', {
+          topicos: selecionados,
+          categoriaId: document.getElementById('alta-categoria')?.value || null,
+          status: statusAlvo,
+          destaque: false
+        });
+        var msg = data.mensagem || (data.criados.length + ' matéria(s) gerada(s).');
+        mostrarAltaStatus(msg + (data.criados.length ? ' Redirecionando para a lista de posts…' : ''), data.criados.length ? 'sucesso' : 'erro');
+        if (data.criados.length) {
+          setTimeout(function () { window.location.href = '/admin/posts'; }, 2500);
+        }
+      } catch (e) {
+        mostrarAltaStatus(e.message, 'erro');
+      } finally {
+        setCarregando(btnAltaGerar, false);
+        atualizarBotaoAltaGerar();
+      }
+    });
+  }
+
+  if (new URLSearchParams(window.location.search).get('modo') === 'em-alta') {
+    var tabAlta = document.querySelector('.modo-tab[data-modo="em-alta"]');
+    if (tabAlta) tabAlta.click();
   }
   <% } %>
 })();
