@@ -13,6 +13,8 @@ const {
   sortearEstruturaArtigo,
   sortearEstiloLead,
   sortearEstiloTitulo,
+  sortearVozRedator,
+  detectarH2Genericos,
   FRASES_PROIBIDAS_IA
 } = require('./editorialGuidelines');
 
@@ -22,6 +24,37 @@ function detectarMuletasIa(conteudo) {
     .replace(/<[^>]+>/g, ' ')
     .toLowerCase();
   return FRASES_PROIBIDAS_IA.filter((f) => texto.includes(f));
+}
+
+function normalizarBusca(s) {
+  return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+}
+
+/**
+ * Detecta citações entre aspas atribuídas a pessoas cujo nome NÃO aparece
+ * no material de apuração — forte indício de declaração/personagem inventado.
+ */
+function detectarCitacoesInventadas(conteudo, contextoApuracao) {
+  const texto = String(conteudo || '').replace(/<[^>]+>/g, ' ');
+  const contexto = normalizarBusca(contextoApuracao || '');
+  const suspeitos = new Set();
+
+  const rxNome = /\b([A-ZÁÉÍÓÚÂÊÔÃÕÇ][a-záéíóúâêôãõç]+(?:\s+(?:de|da|do|dos|das))?\s+[A-ZÁÉÍÓÚÂÊÔÃÕÇ][a-záéíóúâêôãõç]+)\b/g;
+  // Frases com aspas + verbo de fala próximo (antes ou depois da fala)
+  const rxFala = /[“"][^”"]{15,300}[”"][^.”"]{0,120}?(?:diz|disse|afirma|afirmou|conta|contou|relata|relatou|pondera|ponderou|explica|explicou|declara|declarou|garante|garantiu|comenta|comentou|avalia|avaliou|destaca|destacou)[^.]{0,140}|(?:diz|disse|afirma|afirmou|conta|contou|relata|relatou|pondera|ponderou|explica|explicou|declara|declarou|garante|garantiu|segundo)[^.]{0,120}?[“"][^”"]{15,300}[”"]/gi;
+
+  const blocos = texto.match(rxFala) || [];
+  for (const bloco of blocos) {
+    let m;
+    rxNome.lastIndex = 0;
+    while ((m = rxNome.exec(bloco)) !== null) {
+      const nome = m[1].trim();
+      // Ignora nomes de cidades/instituições comuns em atribuição
+      if (/^(São|Rio|Belo|Porto|Assembleia|Igreja|Santa|Santo|Nova|Google|Espírito)\b/i.test(nome)) continue;
+      if (!contexto.includes(normalizarBusca(nome))) suspeitos.add(nome);
+    }
+  }
+  return [...suspeitos];
 }
 
 function deduplicarEvidencias(evidencias) {
@@ -320,6 +353,7 @@ async function gerarArtigo({
   const estruturaSorteada = sortearEstruturaArtigo();
   const leadSorteado = sortearEstiloLead();
   const tituloSorteado = sortearEstiloTitulo();
+  const vozSorteada = sortearVozRedator();
   const listaFontes = (fontesApuracao || [])
     .map((f, i) => `${i + 1}. ${f.veiculo || 'Fonte'}: ${f.titulo || ''}${f.url ? ` (${f.url})` : ''}`)
     .join('\n');
@@ -334,6 +368,7 @@ async function gerarArtigo({
   ].filter(Boolean).join('\n');
 
   const prompt = `Você é repórter de portal de notícias gospel no Brasil. Estilo: G1/Globo — direto, humano, com furo no lead.
+SUA VOZ NESTA MATÉRIA (siga à risca — cada matéria do portal tem um redator diferente): ${vozSorteada}
 ${investigativa ? `
 MODO: MATÉRIA INVESTIGATIVA — cruzamento de múltiplas fontes (portais, notícias, web).
 TEMA OBRIGATÓRIO DO USUÁRIO: ${palavrasChaveInvestigativa || tituloReferencia || nicho || 'conforme pauta'}
@@ -471,11 +506,28 @@ Retorne JSON completo enxuto.`;
     }
   }
 
+  const materialApuracao = [contextoApuracao, contexto, tituloReferencia, resumoReferencia]
+    .filter(Boolean).join('\n');
   const muletas = detectarMuletasIa(artigo.conteudo);
-  if (muletas.length >= 2) {
-    const humanizarPrompt = `Este artigo contém expressões de texto automatizado que precisam ser removidas: ${muletas.map((m) => `"${m}"`).join(', ')}.
+  const h2Genericos = detectarH2Genericos(artigo.conteudo);
+  const citacoesSuspeitas = detectarCitacoesInventadas(artigo.conteudo, materialApuracao);
 
-Reescreva APENAS as frases que contêm essas expressões, com redação natural de repórter (tom G1/Globo). Mantenha todos os fatos, títulos, nomes e a estrutura HTML. NÃO adicione novas muletas como "vale ressaltar", "além disso", "em suma".
+  if (muletas.length >= 2 || h2Genericos.length || citacoesSuspeitas.length) {
+    const problemas = [];
+    if (citacoesSuspeitas.length) {
+      problemas.push(`CITAÇÕES/PERSONAGENS POSSIVELMENTE INVENTADOS (gravíssimo): ${citacoesSuspeitas.map((n) => `"${n}"`).join(', ')} — essas pessoas NÃO aparecem no material de apuração. REMOVA as declarações entre aspas e os personagens; relate os fatos de forma indireta, sem inventar falas nem pessoas. Não substitua por outras citações inventadas.`);
+    }
+    if (h2Genericos.length) {
+      problemas.push(`SUBTÍTULOS GENÉRICOS DE TEMPLATE: ${h2Genericos.map((h) => `"${h}"`).join(', ')} — reescreva cada um como mini-manchete específica do fato (ex.: "Igreja suspende cultos da semana" em vez de "Repercussão na igreja local").`);
+    }
+    if (muletas.length) {
+      problemas.push(`EXPRESSÕES DE TEXTO AUTOMATIZADO: ${muletas.map((m) => `"${m}"`).join(', ')} — reescreva apenas as frases que as contêm, com redação natural de repórter.`);
+    }
+
+    const humanizarPrompt = `Revise este artigo corrigindo os problemas abaixo. Mantenha todos os FATOS REAIS, a estrutura HTML e o restante do texto intacto. NÃO adicione muletas como "vale ressaltar", "além disso", "em suma".
+
+PROBLEMAS A CORRIGIR:
+${problemas.map((p, i) => `${i + 1}. ${p}`).join('\n')}
 
 ARTIGO:
 ${JSON.stringify({ titulo: artigo.titulo, resumo: artigo.resumo, conteudo: artigo.conteudo })}
@@ -488,7 +540,11 @@ Retorne o JSON completo atualizado (mesmo formato).`;
         { json: true, temperature: 0.7, maxTokens: 5000 }
       );
       const candidato = normalizarArtigo(humanizado);
-      if (detectarMuletasIa(candidato.conteudo).length < muletas.length) {
+      const aindaSuspeito = detectarCitacoesInventadas(candidato.conteudo, materialApuracao);
+      const melhorou = detectarMuletasIa(candidato.conteudo).length <= muletas.length
+        && detectarH2Genericos(candidato.conteudo).length <= h2Genericos.length
+        && aindaSuspeito.length <= citacoesSuspeitas.length;
+      if (candidato.conteudo && melhorou) {
         artigo = candidato;
         qualidade = avaliarComprimento(artigo.conteudo);
       }
@@ -582,6 +638,7 @@ Retorne JSON:
 module.exports = {
   chatCompletion,
   gerarArtigo,
+  detectarCitacoesInventadas,
   parsearJson,
   normalizarArtigo,
   identificarCapaArtigo,

@@ -99,8 +99,61 @@ const FRASES_PROIBIDAS_IA = [
   'além disso', 'no entanto, é', 'cabe destacar', 'é fundamental',
   'desempenha um papel', 'cenário atual', 'nos dias de hoje',
   'não podemos esquecer', 'sem dúvida', 'com certeza', 'de fato,',
-  'mergulhar', 'navegar por', 'panorama geral', 'era digital'
+  'mergulhar', 'navegar por', 'panorama geral', 'era digital',
+  // Clichês de fábrica em notícia gerada — repetem em todas as matérias
+  'reacendeu o debate', 'reacende o debate', 'acendeu o debate',
+  'abalou a comunidade', 'comoveu a comunidade', 'chocou a comunidade',
+  'a discussão deve continuar', 'o debate deve continuar', 'deve continuar nas próximas',
+  'a discussão não é nova', 'o debate não é novo', 'não é de hoje que',
+  'trajetória marcada', 'figura conhecida', 'deixa um legado',
+  'ganhou as redes', 'tomou as redes', 'movimentou as redes',
+  'segue repercutindo', 'resta saber', 'só o tempo dirá',
+  'em meio a', 'diante do ocorrido', 'diante da repercussão'
 ];
+
+/** Subtítulos genéricos que denunciam template de IA — devem ser específicos ao fato. */
+const H2_GENERICOS_PROIBIDOS = [
+  'repercussão', 'repercussão nas redes', 'repercussão nas igrejas', 'repercussão na igreja local',
+  'contexto', 'entenda o caso', 'o que se sabe', 'o debate', 'o debate teológico',
+  'trajetória', 'trajetória de fé', 'trajetória de fé e trabalho', 'próximos passos',
+  'o que aconteceu', 'entenda', 'saiba mais', 'histórico', 'quem é', 'quem era'
+];
+
+function extrairH2s(conteudo) {
+  const h2s = [];
+  const rx = /<h2[^>]*>([\s\S]*?)<\/h2>/gi;
+  let m;
+  while ((m = rx.exec(String(conteudo || ''))) !== null) {
+    h2s.push(m[1].replace(/<[^>]+>/g, '').trim());
+  }
+  return h2s;
+}
+
+/** Detecta <h2> genéricos de template (ex.: "Repercussão nas igrejas"). */
+function detectarH2Genericos(conteudo) {
+  return extrairH2s(conteudo).filter((h2) => {
+    const norm = h2.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+    return H2_GENERICOS_PROIBIDOS.some((g) => {
+      const gn = g.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+      return norm === gn || norm.startsWith(gn + ' ') || (norm.length <= gn.length + 12 && norm.includes(gn));
+    });
+  });
+}
+
+/**
+ * Sorteia uma "voz" de redator — muda ritmo e vocabulário entre matérias
+ * para que dois textos seguidos não pareçam do mesmo autor.
+ */
+function sortearVozRedator() {
+  const vozes = [
+    'Redator veterano de redação: frases secas, diretas, sem adjetivos desnecessários. Vai direto ao fato.',
+    'Repórter de cotidiano: ritmo ágil, frases curtas intercaladas com uma mais longa, linguagem próxima do leitor comum.',
+    'Repórter de política/religião: preciso com nomes, cargos e datas; tom sóbrio, sem dramatizar.',
+    'Redator de portal popular: texto vivo e acessível, mas sem sensacionalismo; prioriza o detalhe humano do fato.',
+    'Repórter analítico: conecta o fato ao seu contexto com uma observação própria, mas sem opinar; frases médias e bem encadeadas.'
+  ];
+  return vozes[Math.floor(Math.random() * vozes.length)];
+}
 
 function blocoRegrasEditoriais(nomeSite = 'portal gospel') {
   return `
@@ -127,6 +180,16 @@ ORIGINALIDADE E ANTI-SPAM:
 - Conteúdo único: estrutura, ordem dos fatos e redação próprias.
 - Proibido: texto raso, massificado, repetitivo ou criado só para ranquear.
 - Proibido: clickbait enganoso ou manchete que não corresponde ao texto.
+
+CITAÇÕES E PESSOAS (REGRA INVIOLÁVEL):
+- PROIBIDO inventar declarações entre aspas. Só use aspas se a fala EXATA estiver no material da pauta.
+- PROIBIDO criar personagens: pastores, teólogos, fiéis, universitários ou "especialistas" com nome e igreja que não aparecem nas fontes. Isso é fabricação de notícia.
+- Se as fontes não trazem falas, escreva a matéria SEM aspas — relate os fatos e a repercussão de forma indireta.
+- Melhor uma matéria sem citação nenhuma do que uma citação inventada.
+
+SUBTÍTULOS (<h2>):
+- Cada <h2> deve ser uma mini-manchete ESPECÍFICA do fato (ex.: "Igreja suspende cultos da semana", "Prefeitura decreta três dias de luto").
+- PROIBIDO subtítulos genéricos de template: ${H2_GENERICOS_PROIBIDOS.slice(0, 12).map((h) => `"${h}"`).join(', ')} e similares.
 
 ESCRITA HUMANA (OBRIGATÓRIO — evite marcas de texto automatizado):
 - PROIBIDO usar estas muletas: ${FRASES_PROIBIDAS_IA.map((f) => `"${f}"`).join(', ')}.
@@ -173,5 +236,8 @@ module.exports = {
   sortearEstruturaArtigo,
   sortearEstiloLead,
   sortearEstiloTitulo,
-  FRASES_PROIBIDAS_IA
+  sortearVozRedator,
+  detectarH2Genericos,
+  FRASES_PROIBIDAS_IA,
+  H2_GENERICOS_PROIBIDOS
 };
