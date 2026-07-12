@@ -35,6 +35,44 @@ function avaliarComprimento(conteudo) {
   };
 }
 
+/**
+ * Sorteia uma faixa de palavras por matéria para evitar que todas as
+ * publicações tenham extensão quase idêntica (padrão típico de conteúdo em massa).
+ */
+function sortearFaixaPalavras() {
+  const alvos = [
+    { min: 500, max: 650 },
+    { min: 550, max: 750 },
+    { min: 650, max: 850 },
+    { min: 700, max: 950 }
+  ];
+  return alvos[Math.floor(Math.random() * alvos.length)];
+}
+
+/**
+ * Sorteia uma variação de estrutura para a matéria (nº de subtítulos,
+ * uso de lista, posição do contexto) — evita template fixo detectável.
+ */
+function sortearEstruturaArtigo() {
+  const estruturas = [
+    'Use 2 subtítulos <h2>. Sem listas.',
+    'Use 3 subtítulos <h2> curtos. Sem listas.',
+    'Use 2 subtítulos <h2> e UMA lista <ul> curta (3–4 itens) onde fizer sentido (ex.: pontos principais, cronologia).',
+    'Use 2 subtítulos <h2>. Inclua um parágrafo curto de contexto histórico ANTES do primeiro <h2>.',
+    'Use 3 subtítulos <h2>. O último deve ser sobre repercussão ou próximos passos.'
+  ];
+  return estruturas[Math.floor(Math.random() * estruturas.length)];
+}
+
+const FRASES_PROIBIDAS_IA = [
+  'é importante ressaltar', 'vale ressaltar', 'vale destacar', 'vale lembrar',
+  'nesse sentido', 'diante disso', 'em suma', 'em resumo', 'por fim',
+  'além disso', 'no entanto, é', 'cabe destacar', 'é fundamental',
+  'desempenha um papel', 'cenário atual', 'nos dias de hoje',
+  'não podemos esquecer', 'sem dúvida', 'com certeza', 'de fato,',
+  'mergulhar', 'navegar por', 'panorama geral', 'era digital'
+];
+
 function blocoRegrasEditoriais(nomeSite = 'portal gospel') {
   return `
 DIRETRIZES GOOGLE 2026 — CONTEÚDO ÚTIL, ORIGINAL E PEOPLE-FIRST (${nomeSite}):
@@ -60,6 +98,14 @@ ORIGINALIDADE E ANTI-SPAM:
 - Conteúdo único: estrutura, ordem dos fatos e redação próprias.
 - Proibido: texto raso, massificado, repetitivo ou criado só para ranquear.
 - Proibido: clickbait enganoso ou manchete que não corresponde ao texto.
+
+ESCRITA HUMANA (OBRIGATÓRIO — evite marcas de texto automatizado):
+- PROIBIDO usar estas muletas: ${FRASES_PROIBIDAS_IA.map((f) => `"${f}"`).join(', ')}.
+- Varie o comprimento das frases: misture frases curtas (impacto) com médias. Nunca 4 frases seguidas do mesmo tamanho.
+- Comece parágrafos de formas diferentes — nunca dois parágrafos seguidos começando com o mesmo tipo de palavra (nome, gerúndio, "O", "A").
+- Use detalhes concretos quando disponíveis nas fontes: cidade, igreja, dia da semana, número exato — em vez de generalidades.
+- Escreva transições naturais de repórter, não conectivos escolares.
+- O fechamento NUNCA deve resumir o texto ("como vimos...") — termine com fato, desdobramento ou expectativa.
 
 EXTENSÃO (notícia enxuta e completa):
 - Alvo: ${IDEAL_MIN_PALAVRAS}–${IDEAL_MAX_PALAVRAS} palavras (mín. ${MIN_PALAVRAS_ARTIGO}, máx. ${MAX_PALAVRAS_ARTIGO}).
@@ -93,5 +139,8 @@ module.exports = {
   contarPalavrasConteudo,
   avaliarComprimento,
   blocoRegrasEditoriais,
-  mensagemAvisoQualidade
+  mensagemAvisoQualidade,
+  sortearFaixaPalavras,
+  sortearEstruturaArtigo,
+  FRASES_PROIBIDAS_IA
 };

@@ -8,8 +8,19 @@ const {
   IDEAL_MIN_PALAVRAS,
   IDEAL_MAX_PALAVRAS,
   contarPalavrasConteudo,
-  mensagemAvisoQualidade
+  mensagemAvisoQualidade,
+  sortearFaixaPalavras,
+  sortearEstruturaArtigo,
+  FRASES_PROIBIDAS_IA
 } = require('./editorialGuidelines');
+
+/** Detecta muletas de texto automatizado no artigo gerado. */
+function detectarMuletasIa(conteudo) {
+  const texto = String(conteudo || '')
+    .replace(/<[^>]+>/g, ' ')
+    .toLowerCase();
+  return FRASES_PROIBIDAS_IA.filter((f) => texto.includes(f));
+}
 
 function deduplicarEvidencias(evidencias) {
   const map = new Map();
@@ -303,6 +314,8 @@ async function gerarArtigo({
 }) {
   const hoje = new Date().toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
   const evidenciasLista = deduplicarEvidencias(evidenciasVerificadas);
+  const faixaSorteada = sortearFaixaPalavras();
+  const estruturaSorteada = sortearEstruturaArtigo();
   const listaFontes = (fontesApuracao || [])
     .map((f, i) => `${i + 1}. ${f.veiculo || 'Fonte'}: ${f.titulo || ''}${f.url ? ` (${f.url})` : ''}`)
     .join('\n');
@@ -365,13 +378,12 @@ ${formatoInvestigativa === 'listagem_nomes' ? `
 ` : `
 1. LEAD (1º <p>): o furo — o que aconteceu e por que o leitor deve se importar AGORA.
 2. DESENVOLVIMENTO (3–4 <p>): fatos, contexto breve, repercussão na comunidade gospel.
-3. <h2> + 1–2 <p>: detalhes ou desdobramento do caso.
-4. <h2> + 1–2 <p>: impacto, reações ou próximos passos.
-5. FECHAMENTO (1 <p> curto): síntese sem repetir o lead.
+3. VARIAÇÃO DESTA MATÉRIA: ${estruturaSorteada}
+4. FECHAMENTO (1 <p> curto): fato final, desdobramento ou expectativa — NUNCA resumo do texto.
 `}
 
 REGRAS DE ESCRITA:
-- ${IDEAL_MIN_PALAVRAS}–${IDEAL_MAX_PALAVRAS} palavras no corpo (nunca ultrapasse ${MAX_PALAVRAS_ARTIGO}).
+- ${faixaSorteada.min}–${faixaSorteada.max} palavras no corpo (nunca ultrapasse ${MAX_PALAVRAS_ARTIGO}).
 - Frases variadas; zero tom de release ou robô.
 - Valor único: o que sua redação acrescenta além de copiar a fonte.
 - Sem citações inventadas entre aspas.
@@ -388,7 +400,7 @@ Retorne APENAS JSON válido:
 {
   "titulo": "manchete com furo, máx 90 caracteres, sem clickbait",
   "resumo": "linha fina jornalística, máx 200 caracteres",
-  "conteudo": "HTML: <p> e 2 <h2> — entre ${IDEAL_MIN_PALAVRAS} e ${IDEAL_MAX_PALAVRAS} palavras",
+  "conteudo": "HTML com <p> e <h2> — entre ${faixaSorteada.min} e ${faixaSorteada.max} palavras",
   "meta_title": "SEO máx 60 caracteres",
   "meta_description": "SEO máx 160 caracteres",
   "pessoa_principal": "nome completo se houver pessoa identificada, senão null",
@@ -455,9 +467,36 @@ Retorne JSON completo enxuto.`;
     }
   }
 
+  const muletas = detectarMuletasIa(artigo.conteudo);
+  if (muletas.length >= 2) {
+    const humanizarPrompt = `Este artigo contém expressões de texto automatizado que precisam ser removidas: ${muletas.map((m) => `"${m}"`).join(', ')}.
+
+Reescreva APENAS as frases que contêm essas expressões, com redação natural de repórter (tom G1/Globo). Mantenha todos os fatos, títulos, nomes e a estrutura HTML. NÃO adicione novas muletas como "vale ressaltar", "além disso", "em suma".
+
+ARTIGO:
+${JSON.stringify({ titulo: artigo.titulo, resumo: artigo.resumo, conteudo: artigo.conteudo })}
+
+Retorne o JSON completo atualizado (mesmo formato).`;
+
+    try {
+      const humanizado = await chatCompletion(
+        [{ role: 'system', content: systemMsg }, { role: 'user', content: humanizarPrompt }],
+        { json: true, temperature: 0.7, maxTokens: 5000 }
+      );
+      const candidato = normalizarArtigo(humanizado);
+      if (detectarMuletasIa(candidato.conteudo).length < muletas.length) {
+        artigo = candidato;
+        qualidade = avaliarComprimento(artigo.conteudo);
+      }
+    } catch (e) {
+      console.warn('Humanizar artigo:', e.message);
+    }
+  }
+
   artigo._palavras = qualidade.palavras;
   artigo._qualidadeOk = qualidade.ok;
   artigo._avisoQualidade = mensagemAvisoQualidade(qualidade);
+  artigo._muletasIa = detectarMuletasIa(artigo.conteudo);
 
   return artigo;
 }
