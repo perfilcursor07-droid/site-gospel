@@ -34,7 +34,7 @@ async function criarMonitor({
   conteudoInternacional = false,
   opcoesBusca = {},
   quantidadePorCiclo = 1,
-  minutosIntervalo = 30,
+  minutosIntervalo = 5,
   inicioEm,
   fimEm
 }) {
@@ -59,7 +59,7 @@ async function criarMonitor({
     conteudoInternacional: !!conteudoInternacional,
     opcoesBusca: JSON.stringify(normalizarOpcoesBusca(opcoesBusca)),
     quantidadePorCiclo: Math.min(Math.max(parseInt(quantidadePorCiclo, 10) || 1, 1), 5),
-    minutosIntervalo: Math.min(Math.max(parseInt(minutosIntervalo, 10) || 30, 5), 720),
+    minutosIntervalo: Math.min(Math.max(parseInt(minutosIntervalo, 10) || 5, 5), 720),
     inicioEm: inicio,
     fimEm: fim,
     proximaExecucao,
@@ -94,7 +94,7 @@ async function processarMonitor(monitor) {
 
   let agendados = 0;
   if (selecionados.length) {
-    const intervaloPosts = Math.max(3, Math.floor(monitor.minutosIntervalo / Math.max(qtd, 1)));
+    const intervaloPosts = Math.max(1, Math.floor(monitor.minutosIntervalo / Math.max(qtd, 1)));
     const resultado = await agendarTopicos({
       topicos: selecionados,
       autorId: monitor.autorId,

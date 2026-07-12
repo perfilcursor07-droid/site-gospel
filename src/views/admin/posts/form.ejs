@@ -189,8 +189,8 @@
               <div class="ia-campo ia-campo-compacto">
                 <label for="ia-min-intervalo">Pausa</label>
                 <select id="ia-min-intervalo">
-                  <option value="5">5 min</option>
-                  <option value="15" selected>15 min</option>
+                  <option value="5" selected>5 min</option>
+                  <option value="15">15 min</option>
                   <option value="30">30 min</option>
                   <option value="60">1 h</option>
                   <option value="120">2 h</option>
@@ -319,8 +319,10 @@
             <div class="ia-campo ia-campo-compacto">
               <label for="ia-auto-intervalo">A cada</label>
               <select id="ia-auto-intervalo">
+                <option value="5" selected>5 min</option>
+                <option value="10">10 min</option>
                 <option value="15">15 min</option>
-                <option value="30" selected>30 min</option>
+                <option value="30">30 min</option>
                 <option value="60">1 h</option>
                 <option value="120">2 h</option>
                 <option value="240">4 h</option>
@@ -1118,7 +1120,7 @@
   function atualizarPlanoAuto() {
     if (!autoPlano) return;
     var qtd = parseInt(document.getElementById('ia-auto-qtd')?.value, 10) || 1;
-    var min = parseInt(document.getElementById('ia-auto-intervalo')?.value, 10) || 30;
+    var min = parseInt(document.getElementById('ia-auto-intervalo')?.value, 10) || 5;
     var palavras = autoPalavras?.value?.trim() || 'gospel';
     var termo = palavras.split(',')[0].trim();
     var inicio = autoInicio?.value ? formatarDataHoraLocal(autoInicio.value) : 'agora';
@@ -1235,7 +1237,7 @@
           categoriaId: document.getElementById('ia-auto-categoria')?.value || null,
           status: document.getElementById('ia-auto-status')?.value || 'publicado',
           quantidadePorCiclo: document.getElementById('ia-auto-qtd')?.value || 1,
-          minutosIntervalo: document.getElementById('ia-auto-intervalo')?.value || 30,
+          minutosIntervalo: document.getElementById('ia-auto-intervalo')?.value || 5,
           inicioEm: new Date(autoInicio.value).toISOString(),
           fimEm: autoFim?.value ? new Date(autoFim.value).toISOString() : null
         }, opcoesBuscaAuto());
@@ -1421,7 +1423,7 @@
       return;
     }
     var porLote = parseInt(document.getElementById('ia-qtd-intervalo').value, 10) || 1;
-    var minutos = parseInt(document.getElementById('ia-min-intervalo').value, 10) || 15;
+    var minutos = parseInt(document.getElementById('ia-min-intervalo').value, 10) || 5;
     var lotes = Math.ceil(total / porLote);
     var pausas = Math.max(lotes - 1, 0);
     var modoInicio = document.getElementById('ia-inicio-modo')?.value || 'agora';

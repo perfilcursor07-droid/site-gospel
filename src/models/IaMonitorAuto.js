@@ -13,7 +13,7 @@ const IaMonitorAuto = sequelize.define('IaMonitorAuto', {
   conteudoInternacional: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
   opcoesBusca: { type: DataTypes.TEXT('long'), allowNull: true },
   quantidadePorCiclo: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 1 },
-  minutosIntervalo: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 30 },
+  minutosIntervalo: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 5 },
   inicioEm: { type: DataTypes.DATE, allowNull: false },
   fimEm: { type: DataTypes.DATE, allowNull: true },
   proximaExecucao: { type: DataTypes.DATE, allowNull: false },
