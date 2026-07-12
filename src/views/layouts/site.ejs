@@ -207,17 +207,6 @@
         </div>
       </div>
     </div>
-
-    <nav id="menu-categorias" class="site-header-nav" aria-label="Categorias">
-      <div class="site-header-inner">
-        <div class="site-header-nav-list">
-          <a href="/" class="site-header-nav-link">início</a>
-          <% categoriasNav.forEach(function (c) { %>
-            <a href="/categoria/<%= c.slug %>" class="site-header-nav-link"><%= c.nome.toLowerCase() %></a>
-          <% }) %>
-        </div>
-      </div>
-    </nav>
   </header>
 
   <div class="site-drawer-overlay" id="menu-overlay" hidden></div>

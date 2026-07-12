@@ -146,7 +146,7 @@ body.has-admin-bar {
 }
 
 .site-header-bar {
-  border-bottom: 1px solid #eee;
+  border-bottom: none;
 }
 
 .site-header-inner {
