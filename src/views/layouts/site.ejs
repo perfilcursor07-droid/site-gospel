@@ -155,48 +155,123 @@
     </div>
   </div>
   <% } %>
-  <header id="site-header" class="site-header bg-white border-b border-gray-200 sticky z-50 shadow-sm" style="--cor-primaria: <%= corPrimaria %>">
-    <div class="site-header-inner max-w-6xl mx-auto px-4">
-      <div class="site-header-top relative flex items-center justify-center">
-        <button id="btn-menu" class="lg:hidden absolute left-0 top-1/2 -translate-y-1/2 p-2 text-gray-700" aria-label="Abrir menu" aria-expanded="false">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
-        </button>
-        <a href="/" class="site-header-logo flex items-center justify-center" style="color: <%= corPrimaria %>">
-          <% if (config.logo) { %>
-            <img src="<%= config.logo %>" alt="<%= nomeSite %>">
-          <% } else { %>
-            <span class="site-header-logo-text tracking-tight font-light">site<span class="font-extrabold">gospel</span></span>
-          <% } %>
-        </a>
-      </div>
-      <nav id="menu-categorias" class="site-header-nav hidden lg:block">
-        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-center gap-0 lg:overflow-x-auto">
-          <a href="/" class="px-3 py-2.5 lg:py-2 text-sm font-bold text-gray-600 whitespace-nowrap hover:text-primary transition">início</a>
-          <% categoriasNav.forEach(function (c) { %>
-            <a href="/categoria/<%= c.slug %>" style="--cat: <%= c.corHex || corPrimaria %>"
-              class="px-3 py-2.5 lg:py-2 text-sm font-bold text-gray-600 whitespace-nowrap hover:text-[color:var(--cat)] transition"><%= c.nome.toLowerCase() %></a>
-          <% }) %>
-        </div>
-      </nav>
-      <div class="site-header-actions" id="header-actions">
-        <a href="<%= usuarioLogado ? '/admin' : '/login' %>" class="site-header-admin-link p-2 text-gray-600 hover:text-primary rounded-full transition" title="<%= usuarioLogado ? 'Painel administrativo' : 'Entrar no admin' %>" aria-label="<%= usuarioLogado ? 'Painel administrativo' : 'Entrar no admin' %>">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
-        </a>
-        <div class="site-header-search-wrap" id="wrap-busca">
-        <button type="button" id="btn-busca-toggle" class="site-header-search-toggle p-2 text-gray-600 hover:text-primary rounded-full transition" aria-label="Abrir busca" aria-expanded="false" aria-controls="form-busca-header">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.2-5.2M11 18a7 7 0 100-14 7 7 0 000 14z"/></svg>
-        </button>
-        <form action="/busca" method="get" id="form-busca-header" class="site-header-search">
-          <label class="site-header-search-field">
-            <svg class="site-header-search-field-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.2-5.2M11 18a7 7 0 100-14 7 7 0 000 14z"/></svg>
-            <input type="search" name="q" id="input-busca-header" value="<%= typeof q !== 'undefined' ? q : '' %>" placeholder="Buscar no site..."
-              class="site-header-search-input" autocomplete="off">
-          </label>
-        </form>
+  <header id="site-header" class="site-header sticky z-50" style="--cor-primaria: <%= corPrimaria %>">
+    <div class="site-header-bar">
+      <div class="site-header-inner">
+        <div class="site-header-top">
+          <button type="button" id="btn-menu" class="site-header-menu-btn" aria-label="Abrir menu" aria-expanded="false" aria-controls="menu-lateral">
+            <span class="site-header-menu-icon" aria-hidden="true">
+              <span></span><span></span><span></span>
+              <span></span><span></span><span></span>
+              <span></span><span></span><span></span>
+            </span>
+            <span class="site-header-menu-label">Menu</span>
+          </button>
+
+          <a href="/" class="site-header-logo" style="color: <%= corPrimaria %>">
+            <% if (config.logo) { %>
+              <img src="<%= config.logo %>" alt="<%= nomeSite %>">
+            <% } else { %>
+              <span class="site-header-logo-text">site<span>gospel</span></span>
+            <% } %>
+          </a>
+
+          <div class="site-header-actions" id="header-actions">
+            <a href="<%= usuarioLogado ? '/admin' : '/login' %>" class="site-header-conta" title="<%= usuarioLogado ? 'Painel administrativo' : 'Entrar' %>">
+              <span class="site-header-conta-label"><%= usuarioLogado ? 'Conta' : 'Entrar' %></span>
+              <svg class="site-header-conta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <circle cx="12" cy="8" r="3.2"/>
+                <path stroke-linecap="round" d="M5.5 19.2c.8-3.2 3.2-5 6.5-5s5.7 1.8 6.5 5"/>
+              </svg>
+            </a>
+            <span class="site-header-sep" aria-hidden="true"></span>
+            <div class="site-header-search-wrap" id="wrap-busca">
+              <button type="button" id="btn-busca-toggle" class="site-header-busca-btn" aria-label="Abrir busca" aria-expanded="false" aria-controls="form-busca-header">
+                <span class="site-header-busca-label">Busca</span>
+                <svg class="site-header-busca-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <circle cx="11" cy="11" r="6.5"/>
+                  <path stroke-linecap="round" d="M16.5 16.5L21 21"/>
+                </svg>
+              </button>
+              <form action="/busca" method="get" id="form-busca-header" class="site-header-search">
+                <label class="site-header-search-field">
+                  <svg class="site-header-search-field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <circle cx="11" cy="11" r="6.5"/>
+                    <path stroke-linecap="round" d="M16.5 16.5L21 21"/>
+                  </svg>
+                  <input type="search" name="q" id="input-busca-header" value="<%= typeof q !== 'undefined' ? q : '' %>" placeholder="Buscar no site..." class="site-header-search-input" autocomplete="off">
+                </label>
+              </form>
+            </div>
+          </div>
         </div>
       </div>
     </div>
+
+    <nav id="menu-categorias" class="site-header-nav" aria-label="Categorias">
+      <div class="site-header-inner">
+        <div class="site-header-nav-list">
+          <a href="/" class="site-header-nav-link">início</a>
+          <% categoriasNav.forEach(function (c) { %>
+            <a href="/categoria/<%= c.slug %>" class="site-header-nav-link"><%= c.nome.toLowerCase() %></a>
+          <% }) %>
+        </div>
+      </div>
+    </nav>
   </header>
+
+  <div class="site-drawer-overlay" id="menu-overlay" hidden></div>
+  <aside class="site-drawer" id="menu-lateral" aria-hidden="true" aria-label="Menu do site">
+    <div class="site-drawer-inner">
+      <div class="site-drawer-topo">
+        <button type="button" class="site-drawer-fechar" id="btn-fechar-menu" aria-label="Fechar menu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path stroke-linecap="round" d="M6 6l12 12M18 6L6 18"/>
+          </svg>
+        </button>
+      </div>
+
+      <a href="<%= usuarioLogado ? '/admin' : '/login' %>" class="site-drawer-conta">
+        <span class="site-drawer-conta-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <circle cx="12" cy="8" r="3.2"/>
+            <path stroke-linecap="round" d="M5.5 19.2c.8-3.2 3.2-5 6.5-5s5.7 1.8 6.5 5"/>
+          </svg>
+        </span>
+        <span class="site-drawer-conta-texto">
+          <% if (usuarioLogado) { %>
+            <strong><%= usuarioLogado.nome %></strong>
+            <small>Acessar painel</small>
+          <% } else { %>
+            <strong>Acesse sua conta</strong>
+            <small>ou cadastre-se grátis</small>
+          <% } %>
+        </span>
+      </a>
+
+      <% if (categoriasNav && categoriasNav.length) { %>
+      <nav class="site-drawer-secao" aria-label="Categorias">
+        <% categoriasNav.forEach(function (c) { %>
+          <a href="/categoria/<%= c.slug %>" class="site-drawer-item">
+            <span class="site-drawer-item-marca" style="background: <%= c.corHex || corPrimaria %>" aria-hidden="true"><%= (c.nome || '?').charAt(0).toUpperCase() %></span>
+            <span class="site-drawer-item-nome"><%= c.nome %></span>
+          </a>
+        <% }) %>
+      </nav>
+      <% } %>
+
+      <nav class="site-drawer-secao site-drawer-secao--links" aria-label="Páginas">
+        <a href="/" class="site-drawer-link">Início</a>
+        <% (paginasNav || []).forEach(function (p) { %>
+          <a href="/pagina/<%= p.slug %>" class="site-drawer-link"><%= p.titulo %></a>
+        <% }) %>
+        <% linksFooterExtras.forEach(function (l) { %>
+          <a href="<%= l.url %>" class="site-drawer-link"><%= l.texto %></a>
+        <% }) %>
+        <a href="/busca" class="site-drawer-link">Busca</a>
+      </nav>
+    </div>
+  </aside>
 
   <main class="max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-8">
     <% mensagens.sucesso.forEach(function (m) { %><div class="mb-4 px-4 py-3 rounded-lg bg-green-100 text-green-800 text-sm"><%= m %></div><% }) %>
@@ -260,16 +335,46 @@
   <script>
     (function () {
       var btn = document.getElementById('btn-menu');
-      var menu = document.getElementById('menu-categorias');
+      var drawer = document.getElementById('menu-lateral');
+      var overlay = document.getElementById('menu-overlay');
+      var btnFechar = document.getElementById('btn-fechar-menu');
       var header = document.getElementById('site-header');
 
-      if (btn && menu) {
-        btn.addEventListener('click', function () {
-          var aberto = !menu.classList.contains('hidden');
-          menu.classList.toggle('hidden');
-          btn.setAttribute('aria-expanded', String(!aberto));
-        });
+      function abrirMenu() {
+        if (!drawer || !overlay) return;
+        drawer.classList.add('is-open');
+        overlay.hidden = false;
+        overlay.classList.add('is-open');
+        document.body.classList.add('menu-aberto');
+        drawer.setAttribute('aria-hidden', 'false');
+        if (btn) {
+          btn.setAttribute('aria-expanded', 'true');
+          btn.classList.add('is-active');
+        }
       }
+
+      function fecharMenu() {
+        if (!drawer || !overlay) return;
+        drawer.classList.remove('is-open');
+        overlay.classList.remove('is-open');
+        overlay.hidden = true;
+        document.body.classList.remove('menu-aberto');
+        drawer.setAttribute('aria-hidden', 'true');
+        if (btn) {
+          btn.setAttribute('aria-expanded', 'false');
+          btn.classList.remove('is-active');
+        }
+      }
+
+      if (btn) btn.addEventListener('click', function () {
+        if (drawer && drawer.classList.contains('is-open')) fecharMenu();
+        else abrirMenu();
+      });
+      if (btnFechar) btnFechar.addEventListener('click', fecharMenu);
+      if (overlay) overlay.addEventListener('click', fecharMenu);
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') fecharMenu();
+      });
 
       var compacto = false;
       var LIGAR = 90;
